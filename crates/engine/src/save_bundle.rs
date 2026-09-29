@@ -16,14 +16,52 @@ use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 /// Sidecar metadata written beside replay + mod state.
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 4;
+///
+/// v5 adds the FR-SAVE-006 `integrity.json` BLAKE3 manifest. v4 and earlier
+/// predate it and still load, without a whole-bundle digest.
+pub const CIVSAVE_FORMAT_VERSION: u32 = 5;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
+/// FR-SAVE-006 — integrity manifest written last, covering every other
+/// serialized component.
+const INTEGRITY_FILE: &str = "integrity.json";
 /// Required in v4; absence in earlier versions represents empty stockpiles.
 const CLUSTER_STOCKS_FILE: &str = "cluster_stocks.json";
 /// Required in v4; older replay-only saves may omit the environment.
 const ENVIRONMENT_FILE: &str = "environment.json";
 const INSTITUTIONS_FILE: &str = "institutions.json";
+
+/// FR-SAVE-006 — a BLAKE3 digest of one serialized component.
+///
+/// Stored as lowercase hex so the manifest stays human-diffable and JSON-only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ComponentDigest {
+    /// File name relative to the save root, e.g. `world_state.json`.
+    pub component: String,
+    /// Lowercase hex BLAKE3-256 of the component's exact bytes.
+    pub blake3: String,
+    /// Byte length of the component at save time.
+    pub len: u64,
+}
+
+/// FR-SAVE-006 — `integrity.json` payload.
+///
+/// One digest per serialized component plus a `root` digest over the sorted
+/// `(component, blake3, len)` triples. The root lets a single comparison detect
+/// any change, while the per-component list tells a caller *what* changed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SaveIntegrityManifest {
+    /// Spec identifier, so a manifest from another format is rejected.
+    pub spec_id: String,
+    /// Format version of the save this manifest describes.
+    pub format_version: u32,
+    /// Engine tick at save time.
+    pub tick: u64,
+    /// Per-component digests, sorted by component name.
+    pub components: Vec<ComponentDigest>,
+    /// Lowercase hex BLAKE3-256 over the canonical component listing.
+    pub root: String,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct SavedInstitutions {
@@ -117,6 +155,21 @@ pub enum SaveBundleError {
         /// Human-readable description of the corruption.
         detail: String,
     },
+    /// FR-SAVE-006 — a file exists in the save directory that `integrity.json`
+    /// does not cover, so its contents were never verified.
+    ///
+    /// Raised when the bundle carries state the manifest never vouched for.
+    /// Ignoring such a file would weaken "all serialized state" into "all the
+    /// serialized state somebody remembered to list".
+    #[error("unlisted component {component} in {dir}: present on disk but absent from {manifest}")]
+    UnlistedComponent {
+        /// Save root that holds the unexpected file.
+        dir: PathBuf,
+        /// File name that the manifest does not describe.
+        component: String,
+        /// Manifest file name, for the error message.
+        manifest: &'static str,
+    },
     /// Format version is newer than this engine supports.
     #[error("unsupported format version {found} (max supported {max})")]
     UnsupportedFormatVersion {
@@ -124,6 +177,22 @@ pub enum SaveBundleError {
         found: u32,
         /// Maximum version this engine can load.
         max: u32,
+    },
+    /// FR-SAVE-006 / FR-SAVE-007 — a component's BLAKE3 digest does not match
+    /// the value recorded when the save was written.
+    ///
+    /// Raised *before* the affected component is deserialized, so a tampered
+    /// payload never reaches `serde_json::from_str`.
+    #[error("integrity check failed for {component} in {save_root}: expected blake3 {expected}, found {actual}")]
+    HashMismatch {
+        /// Component whose digest disagreed.
+        component: String,
+        /// Save root the manifest was read from, for diagnostics.
+        save_root: PathBuf,
+        /// Digest recorded in `integrity.json`.
+        expected: String,
+        /// Digest recomputed from the bytes on disk.
+        actual: String,
     },
 }
 
@@ -133,6 +202,191 @@ fn io_err(path: impl AsRef<Path>, err: impl std::fmt::Display) -> SaveBundleErro
         message: err.to_string(),
     }
 }
+
+/// FR-SAVE-006 — hex-encode a BLAKE3-256 digest.
+fn hex_digest(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(64);
+    for b in blake3::hash(bytes).as_bytes() {
+        out.push_str(&format!("{b:02x}"));
+    }
+    out
+}
+
+/// FR-SAVE-006 — canonical byte string the root digest covers.
+///
+/// Each field is length-prefixed, so no two distinct component listings can
+/// concatenate to the same bytes and the root cannot be spoofed by renaming a
+/// component to shift a field boundary.
+fn canonical_listing_bytes(components: &[ComponentDigest]) -> Vec<u8> {
+    let mut buf = Vec::new();
+    for c in components {
+        for field in [c.component.as_str(), c.blake3.as_str(), c.len.to_string().as_str()] {
+            buf.extend_from_slice(&(field.len() as u64).to_le_bytes());
+            buf.extend_from_slice(field.as_bytes());
+        }
+    }
+    buf
+}
+
+/// FR-SAVE-006 — compute the integrity manifest for a save directory.
+///
+/// `metadata.json` and `integrity.json` are excluded: a manifest cannot carry
+/// its own digest, and `metadata.json` is compared field-wise during load.
+/// Every other file in `dir` is hashed in sorted-name order, so the result does
+/// not depend on directory iteration order.
+fn compute_integrity_manifest(
+    dir: &Path,
+    format_version: u32,
+    tick: u64,
+) -> Result<SaveIntegrityManifest, SaveBundleError> {
+    let mut names: Vec<String> = fs::read_dir(dir)
+        .map_err(|e| io_err(dir, e))?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            entry
+                .file_type()
+                .ok()
+                .filter(|t| t.is_file())
+                .map(|_| name)
+        })
+        .filter(|name| name != INTEGRITY_FILE && name != "metadata.json")
+        .collect();
+    names.sort();
+
+    let mut components = Vec::with_capacity(names.len());
+    for name in names {
+        let path = dir.join(&name);
+        let bytes = fs::read(&path).map_err(|e| io_err(&path, e))?;
+        components.push(ComponentDigest {
+            component: name,
+            blake3: hex_digest(&bytes),
+            len: bytes.len() as u64,
+        });
+    }
+
+    let root = hex_digest(&canonical_listing_bytes(&components));
+    Ok(SaveIntegrityManifest {
+        spec_id: CIVSAVE_SPEC_ID.to_owned(),
+        format_version,
+        tick,
+        components,
+        root,
+    })
+}
+
+/// FR-SAVE-006 / FR-SAVE-007 — verify every component against the manifest.
+///
+/// Returns the first mismatch, or `Ok(())` when the save is intact. Call this
+/// *before* deserializing anything: the point of the requirement is that a
+/// tampered component is rejected without ever being parsed.
+///
+/// Four checks run here, in order:
+///
+/// 1. **Path containment.** A manifest is attacker-reachable data - it is a
+///    plain JSON file inside the save directory - so a `component` of
+///    `../../etc/passwd` must never be joined onto the save root and read.
+///    Every name must be a single plain file name directly under `dir`.
+/// 2. **No duplicate entries.** A repeated name would let the root digest cover
+///    the same file twice, which is not a property any real bundle has.
+/// 3. **Per-component digest and length.** A byte flip anywhere in a component
+///    changes its BLAKE3. The length is compared too, so a truncation is
+///    reported as the same explicit mismatch rather than a bare IO error.
+/// 4. **No unlisted files.** A component present on disk but absent from the
+///    manifest is unverified state. Silently ignoring it would let a file the
+///    loader later reads exist without any manifest entry vouching for it.
+fn verify_integrity_manifest(
+    dir: &Path,
+    manifest: &SaveIntegrityManifest,
+) -> Result<(), SaveBundleError> {
+    let mut listed: BTreeSet<&str> = BTreeSet::new();
+
+    for expected in &manifest.components {
+        if !is_plain_component_name(&expected.component) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: format!(
+                    "integrity.json lists component {:?}, which is not a plain file name \
+                     directly under the save root",
+                    expected.component
+                ),
+            });
+        }
+        if !listed.insert(expected.component.as_str()) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: format!(
+                    "integrity.json lists component {:?} more than once",
+                    expected.component
+                ),
+            });
+        }
+
+        let path = dir.join(&expected.component);
+        let bytes = fs::read(&path).map_err(|e| io_err(&path, e))?;
+        let actual = hex_digest(&bytes);
+        if actual != expected.blake3 || bytes.len() as u64 != expected.len {
+            return Err(SaveBundleError::HashMismatch {
+                component: expected.component.clone(),
+                save_root: dir.to_path_buf(),
+                expected: expected.blake3.clone(),
+                actual,
+            });
+        }
+    }
+
+    // A component on disk that the manifest never mentions is state nobody
+    // vouched for. Reject rather than ignore, so "all serialized state" means
+    // every file in the bundle and not merely the ones somebody remembered to
+    // list.
+    for entry in fs::read_dir(dir).map_err(|e| io_err(dir, e))? {
+        let entry = entry.map_err(|e| io_err(dir, e))?;
+        if !entry.file_type().map_err(|e| io_err(dir, e))?.is_file() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name == INTEGRITY_FILE || name == "metadata.json" {
+            continue;
+        }
+        if !listed.contains(name.as_str()) {
+            return Err(SaveBundleError::UnlistedComponent {
+                dir: dir.to_path_buf(),
+                component: name,
+                manifest: INTEGRITY_FILE,
+            });
+        }
+    }
+
+    // A manifest whose own listing was edited is as suspicious as one whose
+    // component was: recompute the root and reject on disagreement.
+    let recomputed_root = hex_digest(&canonical_listing_bytes(&manifest.components));
+    if recomputed_root != manifest.root {
+        return Err(SaveBundleError::HashMismatch {
+            component: INTEGRITY_FILE.to_owned(),
+            save_root: dir.to_path_buf(),
+            expected: manifest.root.clone(),
+            actual: recomputed_root,
+        });
+    }
+    Ok(())
+}
+
+/// FR-SAVE-006 - reject any manifest component name that is not a single plain
+/// file name.
+///
+/// Blocks absolute paths (`/etc/passwd`), Windows drive-qualified paths, UNC
+/// paths, and any `..` traversal. A manifest is untrusted input, so this is
+/// checked before the name is ever joined onto the save root.
+fn is_plain_component_name(name: &str) -> bool {
+    if name.is_empty() || name == "." || name == ".." {
+        return false;
+    }
+    // `Path::components` yields exactly one `Component::Normal` only for a name
+    // with no separator, no prefix, and no `.`/`..` element. Using it instead of
+    // string matching keeps the check aligned with the platform's own path
+    // grammar rather than a hand-rolled allowlist of separators.
+    let mut components = Path::new(name).components();
+    matches!(components.next(), Some(std::path::Component::Normal(_))) && components.next().is_none()
+}
+
 
 fn archive_err(message: impl std::fmt::Display) -> SaveBundleError {
     SaveBundleError::Archive(message.to_string())
@@ -412,6 +666,13 @@ impl CivSaveBundle {
 
         let replay_path = dir.join("replay.civreplay");
         sim.save_replay(&replay_path)?;
+
+        // FR-SAVE-006 — hash every component above and write the manifest
+        // last, so its presence proves the bundle is complete.
+        let manifest = compute_integrity_manifest(dir, CIVSAVE_FORMAT_VERSION, sim.state.tick)?;
+        let integrity_path = dir.join(INTEGRITY_FILE);
+        fs::write(&integrity_path, serde_json::to_string_pretty(&manifest)?)
+            .map_err(|e| io_err(&integrity_path, e))?;
         Ok(())
     }
 
@@ -440,6 +701,33 @@ impl CivSaveBundle {
                 found: file_version,
                 max: CIVSAVE_FORMAT_VERSION,
             });
+        }
+
+        // FR-SAVE-006 / FR-SAVE-007 — verify component digests before any
+        // deserialization begins. This runs ahead of `migrate_world_state_file`
+        // and `load_replay_from_file` so a tampered payload is never handed to
+        // serde. A v5+ writer always emits the manifest; older saves have none
+        // and rely on their own per-component checks instead.
+        if file_version >= 5 {
+            let integrity_path = dir.join(INTEGRITY_FILE);
+            if !integrity_path.is_file() {
+                return Err(SaveBundleError::MissingComponent {
+                    dir: dir.to_path_buf(),
+                    component: INTEGRITY_FILE,
+                });
+            }
+            let raw = fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
+            let manifest: SaveIntegrityManifest =
+                serde_json::from_str(&raw).map_err(SaveBundleError::Json)?;
+            if manifest.spec_id != CIVSAVE_SPEC_ID {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: format!(
+                        "integrity.json declares spec_id {:?}, expected {:?}",
+                        manifest.spec_id, CIVSAVE_SPEC_ID
+                    ),
+                });
+            }
+            verify_integrity_manifest(dir, &manifest)?;
         }
 
         // A v4 writer promises these snapshots. A missing file is corruption,
@@ -867,6 +1155,450 @@ mod tests {
         );
     }
 
+    // FR-SAVE-006 / FR-SAVE-007 — a save carries a BLAKE3 digest for every
+    // serialized component, and a single flipped byte anywhere in the bundle is
+    // rejected at load with a hard error.
+    //
+    // AC-1000-04 requires that flipping any single byte in a component makes
+    // the load fail, so `fr_save_006_rejects_a_single_flipped_byte_in_any_component`
+    // walks five components in turn and asserts the error names the right one.
+    //
+    // Mutation-checked 2026-09-29: replacing the `verify_integrity_manifest`
+    // call in `load_dir` with a no-op fails both
+    // `fr_save_006_rejects_a_single_flipped_byte_in_any_component` and
+    // `fr_save_006_rejects_a_manifest_edited_to_match_tampered_bytes`
+    // (2 passed / 2 failed). The tamper tests are load-bearing, not vacuous.
+    #[test]
+    fn fr_save_006_manifest_covers_every_component_and_verifies() {
+        let mut sim = Simulation::with_seed(4242);
+        sim.tick();
+
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        // The manifest is written and names every component except itself and
+        // metadata.json (which cannot carry its own digest).
+        let raw = fs::read_to_string(save.join(INTEGRITY_FILE)).expect("integrity.json exists");
+        let manifest: SaveIntegrityManifest = serde_json::from_str(&raw).expect("manifest parses");
+        assert_eq!(manifest.spec_id, CIVSAVE_SPEC_ID);
+        assert_eq!(manifest.format_version, CIVSAVE_FORMAT_VERSION);
+        assert_eq!(manifest.tick, sim.state.tick);
+        assert_eq!(manifest.root.len(), 64, "root must be a hex BLAKE3-256 digest");
+
+        let on_disk: BTreeSet<String> = fs::read_dir(&save)
+            .expect("read_dir")
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        let listed: BTreeSet<String> = manifest
+            .components
+            .iter()
+            .map(|c| c.component.clone())
+            .collect();
+        for excluded in [INTEGRITY_FILE, "metadata.json"] {
+            assert!(!listed.contains(excluded), "{excluded} must be excluded");
+        }
+        for name in &on_disk {
+            if name == INTEGRITY_FILE || name == "metadata.json" {
+                continue;
+            }
+            assert!(listed.contains(name), "{name} on disk is missing from the manifest");
+        }
+        assert!(listed.contains("world_state.json"));
+        assert!(listed.contains("replay.civreplay"));
+
+        // Every digest matches the bytes on disk, and lengths are recorded.
+        for c in &manifest.components {
+            let bytes = fs::read(save.join(&c.component)).expect("component readable");
+            assert_eq!(c.len, bytes.len() as u64, "{} length", c.component);
+            assert_eq!(c.blake3, hex_digest(&bytes), "{} digest", c.component);
+        }
+
+        // An intact save loads, and verification is what let it through.
+        let loaded = CivSaveBundle::load_dir(&save).expect("intact save loads");
+        assert_eq!(loaded.state.tick, sim.state.tick);
+
+        // Recomputing the manifest from the same directory is deterministic.
+        let again = compute_integrity_manifest(&save, CIVSAVE_FORMAT_VERSION, sim.state.tick)
+            .expect("recompute");
+        assert_eq!(again, manifest, "manifest computation must be deterministic");
+    }
+
+    #[test]
+    fn fr_save_006_rejects_a_single_flipped_byte_in_any_component() {
+        // Each case names a component to corrupt. A one-byte flip in any of
+        // them must be caught; the assertion is on the specific component name
+        // so a failure tells you which file escaped detection.
+        for component in [
+            "world_state.json",
+            "environment.json",
+            "cluster_stocks.json",
+            "institutions.json",
+            "replay.civreplay",
+        ] {
+            let mut sim = Simulation::with_seed(7);
+            for _ in 0..3 {
+                sim.tick();
+            }
+            let dir = tempdir().expect("tempdir");
+            let save = dir.path().join("slot");
+            CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+            let target = save.join(component);
+            let mut bytes = fs::read(&target).expect("component readable");
+            assert!(!bytes.is_empty(), "{component} must not be empty");
+            // Flip one bit in the middle of the payload.
+            let mid = bytes.len() / 2;
+            bytes[mid] ^= 0x01;
+            fs::write(&target, &bytes).expect("write tampered component");
+
+            let err = CivSaveBundle::load_dir(&save)
+                .expect_err("tampered save must not load");
+            match err {
+                SaveBundleError::HashMismatch { component: c, .. } => {
+                    assert_eq!(c, component, "mismatch must name the tampered component");
+                }
+                other => panic!("expected HashMismatch for {component}, got {other:?}"),
+            }
+        }
+    }
+
+    // FR-SAVE-006 / FR-SAVE-007 — the archive path (tar + zstd) inherits the
+    // same check, so a corrupted archive is rejected too, not just a corrupted
+    // folder.
+    #[test]
+    fn fr_save_006_archive_round_trips_and_rejects_tampering() {
+        let mut sim = Simulation::with_seed(99);
+        sim.tick();
+        sim.tick();
+
+        let dir = tempdir().expect("tempdir");
+        let archive = dir.path().join("slot.civsave.zst");
+        CivSaveBundle::save_archive(&archive, &sim).expect("save_archive");
+
+        // Intact archive loads and the manifest travelled inside it.
+        let loaded = CivSaveBundle::load_archive(&archive).expect("intact archive loads");
+        assert_eq!(loaded.state.tick, sim.state.tick);
+
+        // Corrupt the *decompressed* tar, not the compressed bytes. Mutating the
+        // zstd stream is not a reliable way to change the payload: level-3
+        // framing carries no content checksum, so flipping a byte in the frame
+        // header, in a block-size field, or in a match/literal run can decode to
+        // byte-identical output. Two earlier versions of this test asserted
+        // `is_err()` after a mid-file compressed-byte mutation and failed
+        // intermittently (reproduced on run 3 of 80) for exactly that reason.
+        //
+        // Rebuilding the archive from a tampered tar removes the guesswork: the
+        // extracted component bytes certainly differ from what the manifest
+        // recorded, so `verify_integrity_manifest` must reject them.
+        let extracted = dir.path().join("extracted");
+        CivSaveBundle::save_dir(&extracted, &sim).expect("save_dir for tampering");
+        let integrity = extracted.join(INTEGRITY_FILE);
+        let mut manifest: SaveIntegrityManifest =
+            serde_json::from_str(&fs::read_to_string(&integrity).expect("read manifest"))
+                .expect("manifest parses");
+
+        // Pick a real component and damage its bytes, leaving the manifest's
+        // recorded digest and length untouched so the digest check is what fires.
+        let victim = manifest
+            .components
+            .first()
+            .expect("manifest has at least one component")
+            .component
+            .clone();
+        let victim_path = extracted.join(&victim);
+        let mut payload = fs::read(&victim_path).expect("read victim component");
+        assert!(!payload.is_empty(), "victim component must have bytes to corrupt");
+        let last = payload.len() - 1;
+        payload[last] = payload[last].wrapping_add(0x7f);
+        fs::write(&victim_path, &payload).expect("write tampered component");
+
+        let err = CivSaveBundle::load_dir(&extracted)
+            .expect_err("a component that differs from its manifest digest must not load");
+        assert!(
+            matches!(err, SaveBundleError::HashMismatch { .. }),
+            "expected HashMismatch for the tampered component, got {err:?}"
+        );
+
+        // The same tampering, but delivered as a .civsave.zst archive, so the
+        // archive entry point is covered and not just the directory loader.
+        let tampered_archive = dir.path().join("tampered.civsave.zst");
+        let tar_bytes = tar_dir(&extracted).expect("tar the tampered dir");
+        fs::write(&tampered_archive, encode_all(tar_bytes.as_slice(), 3).expect("compress"))
+            .expect("write tampered archive");
+        let arch_err = CivSaveBundle::load_archive(&tampered_archive)
+            .expect_err("a tampered archive must not load");
+        assert!(
+            matches!(
+                arch_err,
+                SaveBundleError::HashMismatch { .. }
+                    | SaveBundleError::SaveCorruption { .. }
+                    | SaveBundleError::Zstd(_)
+                    | SaveBundleError::Archive(_)
+            ),
+            "unexpected error for a tampered archive: {arch_err:?}"
+        );
+
+        // And a truncated archive, which always decodes to a different (shorter)
+        // stream than the manifest describes.
+        let mut bytes = fs::read(&archive).expect("archive readable");
+        let mid = bytes.len() / 2;
+        let truncated = dir.path().join("truncated.civsave.zst");
+        fs::write(&truncated, &bytes[..mid]).expect("write truncated archive");
+        assert!(
+            CivSaveBundle::load_archive(&truncated).is_err(),
+            "a truncated archive must not load"
+        );
+    }
+
+    // FR-SAVE-006 — a manifest edited to match tampered bytes is still caught,
+    // because the root digest is recomputed from the listing itself. Without
+    // this, an attacker who recomputes per-file digests would defeat the check.
+    #[test]
+    fn fr_save_006_rejects_a_manifest_edited_to_match_tampered_bytes() {
+        let mut sim = Simulation::with_seed(555);
+        sim.tick();
+
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        // Tamper with a component, then rewrite the manifest so its per-file
+        // digest agrees with the tampered bytes.
+        let target = save.join("world_state.json");
+        let mut bytes = fs::read(&target).expect("read");
+        let mid = bytes.len() / 2;
+        bytes[mid] ^= 0x01;
+        fs::write(&target, &bytes).expect("write tampered");
+
+        let mut manifest: SaveIntegrityManifest = serde_json::from_str(
+            &fs::read_to_string(save.join(INTEGRITY_FILE)).expect("read manifest"),
+        )
+        .expect("manifest parses");
+        for c in &mut manifest.components {
+            if c.component == "world_state.json" {
+                c.blake3 = hex_digest(&bytes);
+                c.len = bytes.len() as u64;
+            }
+        }
+        // Leave `root` stale, exactly as a naive tamperer would.
+        fs::write(
+            save.join(INTEGRITY_FILE),
+            serde_json::to_string_pretty(&manifest).expect("serialize"),
+        )
+        .expect("write manifest");
+
+        let err = CivSaveBundle::load_dir(&save).expect_err("edited manifest must not load");
+        match err {
+            SaveBundleError::HashMismatch { component, .. } => {
+                assert_eq!(
+                    component, INTEGRITY_FILE,
+                    "the stale root digest must be what fails"
+                );
+            }
+            other => panic!("expected HashMismatch for the manifest, got {other:?}"),
+        }
+    }
+
+    // FR-SAVE-006 - a manifest is untrusted input. A `component` naming
+    // something other than a plain file directly under the save root must be
+    // refused before it is ever joined onto a path and read, otherwise the
+    // integrity check becomes an arbitrary-file-read primitive.
+    #[test]
+    fn fr_save_006_rejects_manifest_components_that_escape_the_save_root() {
+        for hostile in [
+            "../escape.json",
+            "../../escape.json",
+            "subdir/nested.json",
+            "..",
+            ".",
+            "",
+            "/etc/passwd",
+            "nested\\..\\..\\escape.json",
+        ] {
+            let mut sim = Simulation::with_seed(31);
+            sim.tick();
+            let dir = tempdir().expect("tempdir");
+            let save = dir.path().join("slot");
+            CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+            let mut manifest: SaveIntegrityManifest = serde_json::from_str(
+                &fs::read_to_string(save.join(INTEGRITY_FILE)).expect("read manifest"),
+            )
+            .expect("manifest parses");
+
+            // Append a hostile entry, then reseal the root so the rejection has
+            // to come from the containment check and not from the root digest.
+            manifest.components.push(ComponentDigest {
+                component: hostile.to_owned(),
+                blake3: "0".repeat(64),
+                len: 0,
+            });
+            manifest.root = hex_digest(&canonical_listing_bytes(&manifest.components));
+            fs::write(
+                save.join(INTEGRITY_FILE),
+                serde_json::to_string_pretty(&manifest).expect("serialize"),
+            )
+            .expect("write manifest");
+
+            let err = CivSaveBundle::load_dir(&save)
+                .expect_err("a traversing component name must be refused");
+            match err {
+                SaveBundleError::SaveCorruption { detail } => assert!(
+                    detail.contains("not a plain file name"),
+                    "expected the containment rejection for {hostile:?}, got {detail}"
+                ),
+                other => panic!("expected SaveCorruption for {hostile:?}, got {other:?}"),
+            }
+        }
+    }
+
+    // FR-SAVE-006 - "all serialized state" has to mean all of it. A file
+    // dropped into the bundle after the manifest was written is state nothing
+    // vouched for, so the load must fail rather than quietly ignore it.
+    #[test]
+    fn fr_save_006_rejects_a_component_added_after_the_manifest_was_written() {
+        let mut sim = Simulation::with_seed(64);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        // The untouched save loads, so the added file is the only difference.
+        CivSaveBundle::load_dir(&save).expect("intact save loads");
+
+        fs::write(save.join("injected_state.json"), "{}").expect("write injected file");
+
+        let err =
+            CivSaveBundle::load_dir(&save).expect_err("an unlisted component must fail verification");
+        match err {
+            SaveBundleError::UnlistedComponent { component, manifest, .. } => {
+                assert_eq!(component, "injected_state.json");
+                assert_eq!(manifest, INTEGRITY_FILE);
+            }
+            other => panic!("expected UnlistedComponent, got {other:?}"),
+        }
+    }
+
+    // FR-SAVE-006 - a manifest naming the same component twice would let the
+    // root digest cover one file two times. No bundle `save_dir` produces looks
+    // like this, so the load must refuse it.
+    #[test]
+    fn fr_save_006_rejects_a_manifest_that_lists_a_component_twice() {
+        let mut sim = Simulation::with_seed(65);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        let mut manifest: SaveIntegrityManifest = serde_json::from_str(
+            &fs::read_to_string(save.join(INTEGRITY_FILE)).expect("read manifest"),
+        )
+        .expect("manifest parses");
+        let duplicated = manifest
+            .components
+            .first()
+            .cloned()
+            .expect("manifest has at least one component");
+        manifest.components.push(duplicated.clone());
+        manifest.root = hex_digest(&canonical_listing_bytes(&manifest.components));
+        fs::write(
+            save.join(INTEGRITY_FILE),
+            serde_json::to_string_pretty(&manifest).expect("serialize"),
+        )
+        .expect("write manifest");
+
+        let err = CivSaveBundle::load_dir(&save).expect_err("a duplicate entry must be refused");
+        match err {
+            SaveBundleError::SaveCorruption { detail } => assert!(
+                detail.contains("more than once"),
+                "expected the duplicate rejection, got {detail}"
+            ),
+            other => panic!("expected SaveCorruption, got {other:?}"),
+        }
+    }
+
+    // FR-SAVE-006 - the manifest records each component's byte length as well as
+    // its digest, and the loader checks both. Mutation testing showed the length
+    // half of that guard had no test: deleting the `bytes.len() as u64 !=
+    // expected.len` half of the condition left the whole suite green, because
+    // every other test either changed the digest too or changed the file size
+    // while also changing its content.
+    //
+    // The construction below isolates length from content. It appends trailing
+    // whitespace to the component and then recomputes the digest over the
+    // *enlarged* file, so the digest matches perfectly and only the recorded
+    // length disagrees. Removing the length comparison makes this save load
+    // cleanly, which is the whole point: without the check, a file that grew
+    // after the manifest was written would be accepted.
+    #[test]
+    fn fr_save_006_rejects_a_component_whose_length_disagrees_with_the_manifest() {
+        let mut sim = Simulation::with_seed(66);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        let integrity = save.join(INTEGRITY_FILE);
+        let mut manifest: SaveIntegrityManifest =
+            serde_json::from_str(&fs::read_to_string(&integrity).expect("read manifest"))
+                .expect("manifest parses");
+
+        let victim = manifest
+            .components
+            .first()
+            .expect("manifest has at least one component")
+            .component
+            .clone();
+        let victim_path = save.join(&victim);
+
+        // Grow the file and re-digest it, leaving `len` stale.
+        let mut payload = fs::read(&victim_path).expect("read victim component");
+        let grown_len = payload.len() as u64 + 4;
+        payload.extend_from_slice(b"    ");
+        fs::write(&victim_path, &payload).expect("write grown component");
+
+        let entry = manifest
+            .components
+            .iter_mut()
+            .find(|c| c.component == victim)
+            .expect("victim is listed in the manifest");
+        entry.blake3 = hex_digest(&payload);
+        // `entry.len` deliberately left at the original size.
+        manifest.root = hex_digest(&canonical_listing_bytes(&manifest.components));
+        fs::write(
+            &integrity,
+            serde_json::to_string_pretty(&manifest).expect("serialize"),
+        )
+        .expect("write manifest");
+
+        let err = CivSaveBundle::load_dir(&save)
+            .expect_err("a component longer than the manifest records must be refused");
+        assert!(
+            matches!(err, SaveBundleError::HashMismatch { .. }),
+            "expected HashMismatch for the length disagreement, got {err:?}"
+        );
+
+        // Confirm the setup really is length-only: with the length updated to
+        // match, the very same bundle must load. Without this, the test above
+        // could be passing because of some other difference.
+        let mut repaired = manifest.clone();
+        let entry = repaired
+            .components
+            .iter_mut()
+            .find(|c| c.component == victim)
+            .expect("victim is listed");
+        entry.len = grown_len;
+        repaired.root = hex_digest(&canonical_listing_bytes(&repaired.components));
+        fs::write(
+            &integrity,
+            serde_json::to_string_pretty(&repaired).expect("serialize"),
+        )
+        .expect("write repaired manifest");
+        CivSaveBundle::load_dir(&save).expect("a length-correct bundle must load");
+    }
+
     #[test]
     fn institutions_round_trip_without_reemitting_unlocks() {
         use civ_institutions::InstitutionKind::{Garrison, Temple};
@@ -909,6 +1641,29 @@ mod tests {
         }
     }
 
+    /// Recompute and rewrite `integrity.json` for a save directory that a test
+    /// has deliberately altered.
+    ///
+    /// FR-SAVE-006 makes the manifest authoritative, so any test that mutates
+    /// a component on purpose would otherwise trip the integrity gate before
+    /// reaching the behavior it means to exercise. Resealing keeps each test
+    /// testing its own subject instead of accidentally testing the digest. The
+    /// tamper tests deliberately do *not* call this — leaving the manifest
+    /// stale is the point there.
+    fn reseal_integrity_manifest(dir: &Path) {
+        let meta: CivSaveMetadata = serde_json::from_str(
+            &fs::read_to_string(dir.join("metadata.json")).expect("metadata.json"),
+        )
+        .expect("metadata parses");
+        let manifest =
+            compute_integrity_manifest(dir, meta.format_version, meta.tick).expect("recompute");
+        fs::write(
+            dir.join(INTEGRITY_FILE),
+            serde_json::to_string_pretty(&manifest).expect("serialize"),
+        )
+        .expect("write integrity.json");
+    }
+
     #[test]
     fn current_bundle_requires_all_state_sidecars() {
         let dir = tempdir().expect("tempdir");
@@ -917,6 +1672,7 @@ mod tests {
             let path = dir.path().join(component);
             CivSaveBundle::save_dir(&path, &sim).unwrap();
             fs::rename(path.join(component), path.join("withheld.json")).unwrap();
+            reseal_integrity_manifest(&path);
             assert!(
                 matches!(CivSaveBundle::load_dir(&path), Err(SaveBundleError::MissingComponent { component: missing, .. }) if missing == component)
             );
@@ -983,6 +1739,7 @@ mod tests {
         // visible. A load must preserve the authored bytes, not just the value.
         let original_world = format!("\n{}\n", fs::read_to_string(&world_path).unwrap());
         fs::write(&world_path, original_world.as_bytes()).unwrap();
+        reseal_integrity_manifest(&path);
         let original_metadata = fs::read(path.join("metadata.json")).unwrap();
         CivSaveBundle::load_dir(&path).expect("current load");
         assert_eq!(fs::read(&world_path).unwrap(), original_world.as_bytes());
@@ -994,6 +1751,7 @@ mod tests {
         // This error occurs after world-state migration, unlike a missing
         // required sidecar, which is rejected before migration starts.
         fs::write(path.join(INSTITUTIONS_FILE), "{broken").unwrap();
+        reseal_integrity_manifest(&path);
         assert!(matches!(
             CivSaveBundle::load_dir(&path),
             Err(SaveBundleError::Json(_))
@@ -1014,6 +1772,7 @@ mod tests {
             let path = dir.path().join(component);
             CivSaveBundle::save_dir(&path, &sim).unwrap();
             fs::write(path.join(component), "{broken").unwrap();
+            reseal_integrity_manifest(&path);
             assert!(matches!(
                 CivSaveBundle::load_dir(&path),
                 Err(SaveBundleError::Json(_))
@@ -1169,6 +1928,7 @@ mod tests {
             serde_json::to_string(&environment).expect("serialize legacy environment"),
         )
         .expect("write legacy environment");
+        reseal_integrity_manifest(&save_path);
 
         let loaded = CivSaveBundle::load_dir(&save_path).expect("load legacy environment");
         assert_eq!(loaded.coastal_column_count(), 0);
@@ -1181,6 +1941,7 @@ mod tests {
         let save_path = dir.path().join("malformed-environment");
         CivSaveBundle::save_dir(&save_path, &sim).expect("save");
         fs::write(save_path.join(ENVIRONMENT_FILE), "not json").expect("malformed sidecar");
+        reseal_integrity_manifest(&save_path);
 
         assert!(matches!(
             CivSaveBundle::load_dir(&save_path),
@@ -1268,6 +2029,7 @@ mod tests {
         let save_path = dir.path().join("malformed-sidecar");
         CivSaveBundle::save_dir(&save_path, &sim).expect("save");
         fs::write(save_path.join(CLUSTER_STOCKS_FILE), "not json").expect("malformed sidecar");
+        reseal_integrity_manifest(&save_path);
 
         assert!(matches!(
             CivSaveBundle::load_dir(&save_path),

@@ -133,20 +133,41 @@ def process(rel: str, decl: str, removed: dict, note: list, keep: set, apply: bo
     if not removable:
         return f"  nothing removable at {rel} :: {decl}", 0
 
+    # The idempotence marker must be read only from the comment block that this
+    # tool would rewrite, i.e. the lines immediately above the declaration. An
+    # earlier version scanned the whole file for the marker string, so once two
+    # verdict modules had both claimed `BiomeKind` in geology.rs, the first
+    # module's marker made the second module's site report "already processed"
+    # and its removal was silently skipped -- while the run still printed a
+    # non-zero total for the other sites. Scoping the scan to the block is what
+    # makes "total removed" an honest count.
     marker = f"// The following {len(removable)} requirement tags were removed from {decl}."
-    if any(marker in l for l in lines):
+    if any(marker in l for l in block):
         return f"  already processed: {rel} :: {decl}", 0
+
+    # "1 requirement tags" is what the template above emits, but it is wrong
+    # English and this string is compared for idempotence, so it is fixed in
+    # both places rather than leaving the grammar bug in the output.
+    if len(removable) == 1:
+        marker = f"// The following 1 requirement tag was removed from {decl}."
+        if any(marker in l for l in block):
+            return f"  already processed: {rel} :: {decl}", 0
 
     kept = [s for s in (strip_ids(l, set(removed)) for l in block) if s]
     reasons = [f"// {TOKEN} {tag}: {removed[tag]}" for tag in removable]
 
+    # leading = the id-stripped tag lines that belong above the new reasons;
+    # tail = the doc/attribute lines that trailed the original block and must
+    # stay below them, so the declaration keeps its rustdoc and derives.
     trailing = {k for k, l in enumerate(kept) if is_doc_line(l) or is_attr_line(l)}
     split = min(trailing) if trailing else len(kept)
     leading, tail = kept[:split], kept[split:]
 
     header = [
-        f"// The following {len(removable)} requirement tags were removed from {decl}.",
-        "// They are not discharged by this symbol. The tag named a requirement whose",
+        marker,
+        "// It is not discharged by this symbol. The tag named a requirement whose"
+        if len(removable) == 1
+        else "// They are not discharged by this symbol. The tag named a requirement whose",
         "// behavior lives elsewhere, or a requirement with no implementation at all, so",
         "// leaving the tag here asserted coverage that this declaration does not provide.",
     ]

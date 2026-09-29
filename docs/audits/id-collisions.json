@@ -1,20 +1,8 @@
 {
   "defined_id_count": 79,
-  "tagged_id_count": 1089,
+  "tagged_id_count": 1092,
   "cross_spec_collisions": {
-    "FR-SESSION-022": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-032": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-005": [
+    "FR-UX-022": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -22,7 +10,7 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-SESSION-017": [
+    "FR-SESSION-006": [
       "docs/fragemented/merged.md",
       "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
       "docs/fragemented/specs/merged.md",
@@ -34,167 +22,7 @@
       "docs/fragemented/specs/merged.md",
       "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
-    "FR-SESSION-028": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-019": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-003": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-UX-018": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-UX-004": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-SESSION-015": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-013": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-SESSION-009": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-024": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-SESSION-025": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-020": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-033": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-004": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-010": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-SESSION-029": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-027": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-007": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-023": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-002": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-012": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-012": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-SESSION-010": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-016": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-025": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-UX-008": [
+    "FR-UX-015": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -210,13 +38,185 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
+    "FR-SESSION-012": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-028": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-014": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-015": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-016": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-022": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-005": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-026": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-027": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-008": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-013": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-030": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-016": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-033": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
     "FR-SESSION-018": [
       "docs/fragemented/merged.md",
       "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
       "docs/fragemented/specs/merged.md",
       "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
+    "FR-UX-025": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-027": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-002": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-029": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-008": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-021": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-023": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-010": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-006": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
     "FR-UX-023": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-019": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-005": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-021": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -232,23 +232,13 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-UX-006": [
+    "FR-SESSION-011": [
       "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
-    "FR-UX-016": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-UX-007": [
+    "FR-UX-019": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -264,7 +254,43 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-UX-002": [
+    "FR-UX-020": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-UX-024": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-001": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-025": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-004": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-UX-010": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -280,13 +306,53 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-UX-020": [
+    "FR-UX-009": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
       "docs/models/civ-sim/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-UX-018": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-004": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-032": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-SESSION-007": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
+    ],
+    "FR-UX-013": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/models/civ-sim/USER_SPEC.md",
+      "docs/fragemented/models/civ-sim/merged.md",
+      "docs/models/civ-sim/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/USER_SPEC.md",
+      "docs/models/civ-sim/fragemented/merged.md"
+    ],
+    "FR-SESSION-020": [
+      "docs/fragemented/merged.md",
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
     "FR-UX-026": [
       "docs/fragemented/merged.md",
@@ -296,49 +362,13 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-SESSION-005": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-011": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-021": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
     "FR-SESSION-024": [
       "docs/fragemented/merged.md",
       "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
       "docs/fragemented/specs/merged.md",
       "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
-    "FR-SESSION-001": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-008": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-026": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-022": [
+    "FR-UX-012": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -346,13 +376,7 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-SESSION-013": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-019": [
+    "FR-UX-007": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -360,25 +384,11 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-SESSION-006": [
+    "FR-SESSION-002": [
       "docs/fragemented/merged.md",
       "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
       "docs/fragemented/specs/merged.md",
       "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-SESSION-030": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
-      "docs/fragemented/specs/merged.md",
-      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
-    ],
-    "FR-UX-009": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
     ],
     "FR-SESSION-003": [
       "docs/fragemented/merged.md",
@@ -386,7 +396,7 @@
       "docs/fragemented/specs/merged.md",
       "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
-    "FR-UX-021": [
+    "FR-UX-003": [
       "docs/fragemented/merged.md",
       "docs/fragemented/models/civ-sim/USER_SPEC.md",
       "docs/fragemented/models/civ-sim/merged.md",
@@ -394,27 +404,17 @@
       "docs/models/civ-sim/fragemented/USER_SPEC.md",
       "docs/models/civ-sim/fragemented/merged.md"
     ],
-    "FR-SESSION-014": [
+    "FR-SESSION-017": [
       "docs/fragemented/merged.md",
       "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
       "docs/fragemented/specs/merged.md",
       "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
-    "FR-UX-027": [
+    "FR-SESSION-009": [
       "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
-    ],
-    "FR-UX-015": [
-      "docs/fragemented/merged.md",
-      "docs/fragemented/models/civ-sim/USER_SPEC.md",
-      "docs/fragemented/models/civ-sim/merged.md",
-      "docs/models/civ-sim/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/USER_SPEC.md",
-      "docs/models/civ-sim/fragemented/merged.md"
+      "docs/fragemented/specs/CIV-0900-pve-session-and-ai-opponent-spec.md",
+      "docs/fragemented/specs/merged.md",
+      "docs/specs/CIV-0900-pve-session-and-ai-opponent-spec.md"
     ],
     "FR-CIV-DIPLO-003": [
       "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md",
@@ -484,22 +484,19 @@
     "FR-ASSET-001": [
       "crates/render/src/atlas.rs",
       "crates/render/src/lib.rs",
-      "crates/render/tests/fr_fr_asset_001.rs"
+      "crates/render/tests/atlas_svg_rasterised.rs"
     ],
     "FR-ASSET-002": [
       "crates/render/src/atlas.rs",
-      "crates/render/src/lib.rs",
-      "crates/render/tests/fr_fr_asset_002.rs"
+      "crates/render/tests/atlas_packed_per_lod.rs"
     ],
     "FR-ASSET-003": [
       "crates/render/src/atlas.rs",
-      "crates/render/src/lib.rs",
-      "crates/render/tests/fr_fr_asset_003.rs"
+      "crates/render/tests/atlas_build_events.rs"
     ],
     "FR-ASSET-004": [
       "crates/render/src/gltf.rs",
-      "crates/render/src/lib.rs",
-      "crates/render/tests/fr_fr_asset_004.rs"
+      "crates/render/tests/gltf_lazy_loaded.rs"
     ],
     "FR-ASSET-PIPELINE-001": [
       "crates/asset-pipeline/src/lib.rs"
@@ -516,13 +513,11 @@
     ],
     "FR-AUD-002": [
       "crates/engine/tests/fr_fr_aud_002.rs",
-      "crates/render/src/audio.rs",
-      "crates/render/src/lib.rs"
+      "crates/render/src/audio.rs"
     ],
     "FR-AUD-003": [
       "crates/engine/tests/fr_fr_aud_003.rs",
-      "crates/render/src/audio.rs",
-      "crates/render/src/lib.rs"
+      "crates/render/src/audio.rs"
     ],
     "FR-CIV-0104-001": [
       "crates/engine/src/constraints.rs",
@@ -575,7 +570,8 @@
     ],
     "FR-CIV-3D-001": [
       "crates/engine/src/lib.rs",
-      "crates/engine/tests/fr_fr_civ_3d_001.rs"
+      "crates/engine/tests/fr_fr_civ_3d_001.rs",
+      "crates/render/src/gltf.rs"
     ],
     "FR-CIV-3D-002": [
       "crates/agents/src/lib.rs",
@@ -878,35 +874,31 @@
     ],
     "FR-CIV-ASSET-001": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_001.rs"
+      "crates/render/src/atlas.rs"
     ],
     "FR-CIV-ASSET-003": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_002.rs"
+      "crates/engine/src/rts_types.rs"
     ],
     "FR-CIV-ASSET-004": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_003.rs"
+      "crates/engine/src/rts_types.rs"
     ],
     "FR-CIV-ASSET-005": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_nation_001.rs"
+      "crates/engine/src/rts_types.rs"
     ],
     "FR-CIV-ASSET-006": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_004.rs"
+      "crates/engine/src/rts_types.rs"
     ],
     "FR-CIV-ASSET-007": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_005.rs"
+      "crates/engine/src/rts_types.rs"
+    ],
+    "FR-CIV-ASSET-011": [
+      "crates/render/src/atlas.rs"
     ],
     "FR-CIV-ASSET-016": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_nation_002.rs"
+      "crates/engine/src/rts_types.rs"
     ],
     "FR-CIV-ASSET-018": [
-      "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_zoom_001.rs"
+      "crates/engine/src/rts_types.rs"
     ],
     "FR-CIV-ASSET-MANI-001": [
       "crates/asset-pipeline/src/manifest.rs"
@@ -920,7 +912,8 @@
     "FR-CIV-AUDIO-001": [
       "crates/audio/src/bus.rs",
       "crates/audio/src/lib.rs",
-      "crates/audio/src/mix.rs"
+      "crates/audio/src/mix.rs",
+      "crates/render/src/audio.rs"
     ],
     "FR-CIV-AUDIO-002": [
       "crates/audio/src/ambient.rs",
@@ -932,7 +925,9 @@
     ],
     "FR-CIV-AUDIO-004": [
       "crates/audio/src/lib.rs",
-      "crates/audio/src/mood.rs"
+      "crates/audio/src/mood.rs",
+      "crates/render/src/audio.rs",
+      "crates/render/src/lib.rs"
     ],
     "FR-CIV-AUDIO-005": [
       "crates/audio/src/lib.rs",
@@ -1228,6 +1223,7 @@
       "crates/agents/tests/fr_civ_cult_tests.rs"
     ],
     "FR-CIV-CULT-002": [
+      "crates/agents/src/culture.rs",
       "crates/agents/tests/fr_civ_cult_tests.rs",
       "crates/emergence-migration/src/lib.rs"
     ],
@@ -1722,6 +1718,7 @@
       "crates/engine/tests/fr_fr_civ_infoview_917.rs"
     ],
     "FR-CIV-INFOVIEW-918": [
+      "crates/engine/src/building_tiers.rs",
       "crates/engine/src/info_views.rs",
       "crates/engine/tests/fr_fr_civ_infoview_918.rs"
     ],
@@ -2131,6 +2128,7 @@
       "crates/mod-host/tests/fr_fr_civ_mod_005.rs"
     ],
     "FR-CIV-MOD-006": [
+      "crates/mod-host/src/capability.rs",
       "crates/mod-host/src/hooks.rs",
       "crates/mod-host/tests/fr_fr_civ_mod_006.rs"
     ],
@@ -2139,6 +2137,7 @@
       "crates/mod-host/tests/fr_fr_civ_mod_007.rs"
     ],
     "FR-CIV-MOD-008": [
+      "crates/mod-host/src/signature.rs",
       "crates/mod-host/src/wasm_guest.rs",
       "crates/mod-host/tests/fr_fr_civ_mod_008.rs"
     ],
@@ -2425,7 +2424,8 @@
     ],
     "FR-CIV-PROTO-002": [
       "crates/protocol-3d/src/lib.rs",
-      "crates/protocol-3d/tests/fr_fr_civ_proto_002.rs"
+      "crates/protocol-3d/tests/fr_fr_civ_proto_002.rs",
+      "crates/server/src/session.rs"
     ],
     "FR-CIV-PROTO-003": [
       "crates/protocol-3d/src/lib.rs",
@@ -2741,8 +2741,17 @@
       "crates/civ-traffic/tests/fr_fr_civ_road_921.rs"
     ],
     "FR-CIV-RTS-001": [
+      "crates/engine/src/rts_types.rs",
       "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs",
       "crates/engine/tests/fr_fr_civ_rts_001.rs",
+      "crates/engine/tests/rts_atlas_power_of_two.rs",
+      "crates/engine/tests/rts_nation_color_rgba.rs",
+      "crates/engine/tests/rts_nation_hex_parsing.rs",
+      "crates/engine/tests/rts_nation_shader_tolerance.rs",
+      "crates/engine/tests/rts_sprite_handle_zoom.rs",
+      "crates/engine/tests/rts_supersampling_4x_ratio.rs",
+      "crates/engine/tests/rts_supersampling_render_size.rs",
+      "crates/engine/tests/rts_uv_rect_containment.rs",
       "crates/tactics/src/movement.rs"
     ],
     "FR-CIV-RTS-002": [
@@ -2790,34 +2799,34 @@
       "crates/engine/tests/fr_fr_civ_rts_015.rs"
     ],
     "FR-CIV-RTS-NATION-001": [
-      "crates/engine/tests/fr_fr_civ_rts_nation_001.rs"
+      "crates/engine/tests/rts_nation_color_rgba.rs"
     ],
     "FR-CIV-RTS-NATION-002": [
-      "crates/engine/tests/fr_fr_civ_rts_nation_002.rs"
+      "crates/engine/tests/rts_nation_shader_tolerance.rs"
     ],
     "FR-CIV-RTS-RENDER-001": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_001.rs"
+      "crates/engine/tests/rts_supersampling_render_size.rs"
     ],
     "FR-CIV-RTS-RENDER-002": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_002.rs"
+      "crates/engine/tests/rts_supersampling_4x_ratio.rs"
     ],
     "FR-CIV-RTS-RENDER-003": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_003.rs"
+      "crates/engine/tests/rts_nation_hex_parsing.rs"
     ],
     "FR-CIV-RTS-RENDER-004": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_004.rs"
+      "crates/engine/tests/rts_atlas_power_of_two.rs"
     ],
     "FR-CIV-RTS-RENDER-005": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_render_005.rs"
+      "crates/engine/tests/rts_uv_rect_containment.rs"
     ],
     "FR-CIV-RTS-ZOOM-001": [
       "crates/engine/src/rts_types.rs",
-      "crates/engine/tests/fr_fr_civ_rts_zoom_001.rs"
+      "crates/engine/tests/rts_sprite_handle_zoom.rs"
     ],
     "FR-CIV-SAVE-001": [
       "crates/server/src/jsonrpc.rs",
@@ -3124,6 +3133,7 @@
       "crates/mod-host/src/lib.rs"
     ],
     "FR-CIV-TACTICS-076": [
+      "crates/tactics/src/morale.rs",
       "crates/tactics/tests/fr_civ_tactics_tests.rs",
       "crates/tactics/tests/fr_fr_civ_tactics_076.rs"
     ],
@@ -3499,6 +3509,7 @@
       "crates/tactics/tests/fr_fr_civ_war_013.rs"
     ],
     "FR-CIV-WAR-021": [
+      "crates/tactics/src/doctrine_fitness.rs",
       "crates/tactics/src/morale.rs",
       "crates/tactics/tests/fr_fr_civ_war_021.rs"
     ],
@@ -3989,9 +4000,11 @@
     ],
     "FR-PERF-002": [
       "crates/engine/src/perf.rs",
-      "crates/engine/tests/fr_fr_perf_002.rs"
+      "crates/engine/tests/fr_fr_perf_002.rs",
+      "crates/render/src/frame.rs"
     ],
     "FR-PERF-003": [
+      "crates/engine/src/lib.rs",
       "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs",
       "crates/engine/tests/fr_fr_perf_003.rs",
       "crates/render/src/frame.rs",
@@ -4091,8 +4104,17 @@
       "crates/save-db/src/lib.rs",
       "crates/save-db/tests/fr_save_tests.rs"
     ],
+    "FR-SAVE-006": [
+      "crates/engine/src/save_bundle.rs"
+    ],
     "FR-SAVE-007": [
+      "crates/engine/src/save_bundle.rs",
       "crates/save-db/src/lib.rs"
+    ],
+    "FR-SAVE-009": [
+      "crates/engine/src/replay.rs",
+      "crates/engine/src/save_bundle.rs",
+      "crates/research/src/lib.rs"
     ],
     "FR-SAVE-010": [
       "crates/save-db/src/lib.rs",
@@ -4430,6 +4452,7 @@
       "crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs"
     ],
     "NFR-CIV-SCALE-002": [
+      "crates/voxel/src/window/mod.rs",
       "crates/voxel/tests/fr_civ_render_001_chunk_stream_radius.rs"
     ],
     "NFR-CIV-SCALE-901": [
@@ -4584,27 +4607,23 @@
     "FR-UX-001": [
       "crates/render/src/hex_map.rs",
       "crates/render/src/lib.rs",
-      "crates/render/tests/fr_fr_ux_001.rs"
+      "crates/render/tests/hex_map_draw_list.rs"
     ],
     "FR-UX-002": [
       "crates/render/src/camera.rs",
-      "crates/render/src/lib.rs",
-      "crates/render/tests/fr_fr_ux_002.rs"
+      "crates/render/tests/rts_camera_controls.rs"
     ],
     "FR-UX-003": [
-      "crates/render/src/lib.rs",
       "crates/render/src/timeline.rs",
-      "crates/render/tests/fr_fr_ux_003.rs"
+      "crates/render/tests/timeline_scrubber_rewind.rs"
     ],
     "FR-UX-004": [
-      "crates/render/src/lib.rs",
       "crates/render/src/lod.rs",
-      "crates/render/tests/fr_fr_ux_004.rs"
+      "crates/render/tests/lod_seamless_transition.rs"
     ],
     "FR-UX-005": [
-      "crates/render/src/lib.rs",
       "crates/render/src/state.rs",
-      "crates/render/tests/fr_fr_ux_005.rs"
+      "crates/render/tests/state_from_events_only.rs"
     ]
   }
 }

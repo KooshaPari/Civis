@@ -95,6 +95,7 @@ pub enum RejectReason {
     NoEffects,
 }
 
+// FR-CIV-TECH-007
 /// Per-save progression mode (ADR-006).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ReplayMode {
@@ -158,6 +159,7 @@ pub enum ReplayAdvanceOutcome {
     Refused(ReplayRefusal),
 }
 
+// FR-CIV-TECH-009
 /// Apply replay rules from ADR-006 for a single `LlmEvent`.
 ///
 /// During live play (`is_replay == false`) all modes advance. During replay,
@@ -198,6 +200,8 @@ pub enum ResearchOutcome {
     ClientError(LlmError),
 }
 
+// FR-CIV-TECH-008
+// FR-CIV-TECH-002
 /// Validate `card` against `db`. Pure function; no I/O.
 #[must_use]
 pub fn validate(card: &TechCard, db: &LawDb) -> ValidationOutcome {

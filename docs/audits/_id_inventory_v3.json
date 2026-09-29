@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-09-27",
+  "generated_at": "2026-09-29",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -9134,7 +9134,7 @@
         "docs/traceability/fr-emergence-matrix.md:204"
       ],
       "in_code": [
-        "crates/agents/src/psyche.rs:428",
+        "crates/agents/src/psyche.rs:429",
         "crates/engine/src/emergence_coupling.rs:329",
         "crates/engine/src/emergence_coupling.rs:351"
       ],
@@ -18198,7 +18198,7 @@
         "docs/traceability/fr-civ-psyche-001/fr-civ-psyche-001-plan.md:1"
       ],
       "in_code": [
-        "crates/agents/src/psyche.rs:316"
+        "crates/agents/src/psyche.rs:317"
       ],
       "in_tests": [
         "crates/agents/tests/fr_civ_psyche_tests.rs:3",
@@ -18408,8 +18408,18 @@
         "docs/traceability/fr-civ-psyche-010/fr-civ-psyche-010-intent.md:15",
         "docs/traceability/fr-civ-psyche-010/fr-civ-psyche-010-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/agents/src/psyche.rs:172"
+      ],
+      "in_tests": [
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:1",
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:22",
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:35",
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:48",
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:69",
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:88",
+        "crates/agents/tests/fr_civ_psyche_010_tests.rs:99"
+      ],
       "in_stub_tests": []
     },
     {
@@ -18727,8 +18737,8 @@
         "docs/traceability/fr-civ-psyche-900/fr-civ-psyche-900-intent.md:15"
       ],
       "in_code": [
-        "crates/agents/src/psyche.rs:316",
-        "crates/agents/src/psyche.rs:428",
+        "crates/agents/src/psyche.rs:317",
+        "crates/agents/src/psyche.rs:429",
         "crates/engine/src/dormant_phases.rs:3"
       ],
       "in_tests": [
@@ -18831,7 +18841,7 @@
         "docs/traceability/fr-civ-psyche-911/fr-civ-psyche-911-plan.md:1"
       ],
       "in_code": [
-        "crates/agents/src/psyche.rs:495",
+        "crates/agents/src/psyche.rs:496",
         "crates/engine/src/engine/ai_decision.rs:57",
         "crates/engine/src/engine.rs:763"
       ],
@@ -19551,12 +19561,12 @@
         "docs/traceability/fr-civ-research-000/fr-civ-research-000-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:374",
-        "crates/research/src/lib.rs:375"
+        "crates/research/src/lib.rs:378",
+        "crates/research/src/lib.rs:379"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:374",
-        "crates/research/src/lib.rs:375"
+        "crates/research/src/lib.rs:378",
+        "crates/research/src/lib.rs:379"
       ],
       "in_stub_tests": []
     },
@@ -19585,14 +19595,14 @@
       ],
       "in_code": [
         "crates/engine/src/engine.rs:554",
-        "crates/research/src/lib.rs:381",
-        "crates/research/src/lib.rs:412",
-        "crates/research/src/lib.rs:413"
+        "crates/research/src/lib.rs:385",
+        "crates/research/src/lib.rs:416",
+        "crates/research/src/lib.rs:417"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:381",
-        "crates/research/src/lib.rs:412",
-        "crates/research/src/lib.rs:413"
+        "crates/research/src/lib.rs:385",
+        "crates/research/src/lib.rs:416",
+        "crates/research/src/lib.rs:417"
       ],
       "in_stub_tests": []
     },
@@ -19647,12 +19657,12 @@
         "docs/traceability/fr-civ-research-002/fr-civ-research-002-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:606",
-        "crates/research/src/lib.rs:607"
+        "crates/research/src/lib.rs:610",
+        "crates/research/src/lib.rs:611"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:606",
-        "crates/research/src/lib.rs:607"
+        "crates/research/src/lib.rs:610",
+        "crates/research/src/lib.rs:611"
       ],
       "in_stub_tests": []
     },
@@ -19706,12 +19716,12 @@
         "docs/traceability/fr-civ-research-003/fr-civ-research-003-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:622",
-        "crates/research/src/lib.rs:623"
+        "crates/research/src/lib.rs:626",
+        "crates/research/src/lib.rs:627"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:622",
-        "crates/research/src/lib.rs:623"
+        "crates/research/src/lib.rs:626",
+        "crates/research/src/lib.rs:627"
       ],
       "in_stub_tests": []
     },
@@ -19763,9 +19773,9 @@
         "docs/traceability/fr-civ-research-004/fr-civ-research-004-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:657",
-        "crates/research/src/lib.rs:667",
-        "crates/research/src/lib.rs:695"
+        "crates/research/src/lib.rs:661",
+        "crates/research/src/lib.rs:671",
+        "crates/research/src/lib.rs:699"
       ],
       "in_tests": [
         "crates/engine/tests/fr_engine_replay_integrity_tests.rs:4",
@@ -19773,9 +19783,9 @@
         "crates/engine/tests/fr_engine_replay_integrity_tests.rs:61",
         "crates/engine/tests/fr_engine_replay_integrity_tests.rs:68",
         "crates/engine/tests/fr_engine_replay_integrity_tests.rs:77",
-        "crates/research/src/lib.rs:657",
-        "crates/research/src/lib.rs:667",
-        "crates/research/src/lib.rs:695"
+        "crates/research/src/lib.rs:661",
+        "crates/research/src/lib.rs:671",
+        "crates/research/src/lib.rs:699"
       ],
       "in_stub_tests": []
     },
@@ -19816,10 +19826,10 @@
         "docs/traceability/fr-civ-research-010/fr-civ-research-010-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:429"
+        "crates/research/src/lib.rs:433"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:429"
+        "crates/research/src/lib.rs:433"
       ],
       "in_stub_tests": []
     },
@@ -19839,10 +19849,10 @@
         "docs/traceability/fr-civ-research-011/fr-civ-research-011-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:447"
+        "crates/research/src/lib.rs:451"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:447"
+        "crates/research/src/lib.rs:451"
       ],
       "in_stub_tests": []
     },
@@ -19862,10 +19872,10 @@
         "docs/traceability/fr-civ-research-012/fr-civ-research-012-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:465"
+        "crates/research/src/lib.rs:469"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:465"
+        "crates/research/src/lib.rs:469"
       ],
       "in_stub_tests": []
     },
@@ -19885,10 +19895,10 @@
         "docs/traceability/fr-civ-research-020/fr-civ-research-020-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:483"
+        "crates/research/src/lib.rs:487"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:483"
+        "crates/research/src/lib.rs:487"
       ],
       "in_stub_tests": []
     },
@@ -19908,10 +19918,10 @@
         "docs/traceability/fr-civ-research-030/fr-civ-research-030-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:515"
+        "crates/research/src/lib.rs:519"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:515"
+        "crates/research/src/lib.rs:519"
       ],
       "in_stub_tests": []
     },
@@ -19931,10 +19941,10 @@
         "docs/traceability/fr-civ-research-031/fr-civ-research-031-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:545"
+        "crates/research/src/lib.rs:549"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:545"
+        "crates/research/src/lib.rs:549"
       ],
       "in_stub_tests": []
     },
@@ -19954,10 +19964,10 @@
         "docs/traceability/fr-civ-research-032/fr-civ-research-032-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:568"
+        "crates/research/src/lib.rs:572"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:568"
+        "crates/research/src/lib.rs:572"
       ],
       "in_stub_tests": []
     },
@@ -19977,10 +19987,10 @@
         "docs/traceability/fr-civ-research-033/fr-civ-research-033-plan.md:1"
       ],
       "in_code": [
-        "crates/research/src/lib.rs:638"
+        "crates/research/src/lib.rs:642"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:638"
+        "crates/research/src/lib.rs:642"
       ],
       "in_stub_tests": []
     },
@@ -21457,10 +21467,10 @@
         "docs/traceability/fr-civ-species-000/fr-civ-species-000-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:147"
+        "crates/species/src/lib.rs:148"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:147"
+        "crates/species/src/lib.rs:148"
       ],
       "in_stub_tests": []
     },
@@ -21484,10 +21494,10 @@
         "docs/traceability/fr-civ-species-001/fr-civ-species-001-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:160"
+        "crates/species/src/lib.rs:161"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:160"
+        "crates/species/src/lib.rs:161"
       ],
       "in_stub_tests": []
     },
@@ -21507,10 +21517,10 @@
         "docs/traceability/fr-civ-species-002/fr-civ-species-002-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:169"
+        "crates/species/src/lib.rs:170"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:169"
+        "crates/species/src/lib.rs:170"
       ],
       "in_stub_tests": []
     },
@@ -21530,10 +21540,10 @@
         "docs/traceability/fr-civ-species-003/fr-civ-species-003-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:179"
+        "crates/species/src/lib.rs:180"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:179"
+        "crates/species/src/lib.rs:180"
       ],
       "in_stub_tests": []
     },
@@ -21553,10 +21563,10 @@
         "docs/traceability/fr-civ-species-004/fr-civ-species-004-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:208"
+        "crates/species/src/lib.rs:209"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:208"
+        "crates/species/src/lib.rs:209"
       ],
       "in_stub_tests": []
     },
@@ -21576,10 +21586,10 @@
         "docs/traceability/fr-civ-species-005/fr-civ-species-005-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:225"
+        "crates/species/src/lib.rs:226"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:225"
+        "crates/species/src/lib.rs:226"
       ],
       "in_stub_tests": []
     },
@@ -21599,10 +21609,10 @@
         "docs/traceability/fr-civ-species-006/fr-civ-species-006-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:248"
+        "crates/species/src/lib.rs:249"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:248"
+        "crates/species/src/lib.rs:249"
       ],
       "in_stub_tests": []
     },
@@ -21622,10 +21632,10 @@
         "docs/traceability/fr-civ-species-007/fr-civ-species-007-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:268"
+        "crates/species/src/lib.rs:269"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:268"
+        "crates/species/src/lib.rs:269"
       ],
       "in_stub_tests": []
     },
@@ -21645,10 +21655,10 @@
         "docs/traceability/fr-civ-species-008/fr-civ-species-008-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:286"
+        "crates/species/src/lib.rs:287"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:286"
+        "crates/species/src/lib.rs:287"
       ],
       "in_stub_tests": []
     },
@@ -21668,10 +21678,10 @@
         "docs/traceability/fr-civ-species-009/fr-civ-species-009-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:330"
+        "crates/species/src/lib.rs:331"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:330"
+        "crates/species/src/lib.rs:331"
       ],
       "in_stub_tests": []
     },
@@ -21691,10 +21701,10 @@
         "docs/traceability/fr-civ-species-010/fr-civ-species-010-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:341"
+        "crates/species/src/lib.rs:342"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:341"
+        "crates/species/src/lib.rs:342"
       ],
       "in_stub_tests": []
     },
@@ -21714,10 +21724,10 @@
         "docs/traceability/fr-civ-species-011/fr-civ-species-011-plan.md:1"
       ],
       "in_code": [
-        "crates/species/src/lib.rs:359"
+        "crates/species/src/lib.rs:360"
       ],
       "in_tests": [
-        "crates/species/src/lib.rs:359"
+        "crates/species/src/lib.rs:360"
       ],
       "in_stub_tests": []
     },
@@ -21979,8 +21989,16 @@
         "docs/traceability/fr-civ-species-200/fr-civ-species-200-intent.md:15",
         "docs/traceability/fr-civ-species-200/fr-civ-species-200-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/species/src/lib.rs:74"
+      ],
+      "in_tests": [
+        "crates/species/tests/fr_civ_species_200_tests.rs:1",
+        "crates/species/tests/fr_civ_species_200_tests.rs:14",
+        "crates/species/tests/fr_civ_species_200_tests.rs:45",
+        "crates/species/tests/fr_civ_species_200_tests.rs:61",
+        "crates/species/tests/fr_civ_species_200_tests.rs:83"
+      ],
       "in_stub_tests": []
     },
     {
@@ -24422,8 +24440,17 @@
         "docs/traceability/fr-civ-tech-002/fr-civ-tech-002-intent.md:15",
         "docs/traceability/fr-civ-tech-002/fr-civ-tech-002-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/research/src/lib.rs:204"
+      ],
+      "in_tests": [
+        "crates/research/tests/fr_civ_tech_tests.rs:3",
+        "crates/research/tests/fr_civ_tech_tests.rs:57",
+        "crates/research/tests/fr_civ_tech_tests.rs:61",
+        "crates/research/tests/fr_civ_tech_tests.rs:69",
+        "crates/research/tests/fr_civ_tech_tests.rs:78",
+        "crates/research/tests/fr_civ_tech_tests.rs:87"
+      ],
       "in_stub_tests": []
     },
     {
@@ -24527,8 +24554,15 @@
         "docs/traceability/fr-civ-tech-007/fr-civ-tech-007-intent.md:15",
         "docs/traceability/fr-civ-tech-007/fr-civ-tech-007-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/research/src/lib.rs:98"
+      ],
+      "in_tests": [
+        "crates/research/tests/fr_civ_tech_tests.rs:3",
+        "crates/research/tests/fr_civ_tech_tests.rs:97",
+        "crates/research/tests/fr_civ_tech_tests.rs:138",
+        "crates/research/tests/fr_civ_tech_tests.rs:163"
+      ],
       "in_stub_tests": []
     },
     {
@@ -24548,8 +24582,14 @@
         "docs/traceability/fr-civ-tech-008/fr-civ-tech-008-intent.md:15",
         "docs/traceability/fr-civ-tech-008/fr-civ-tech-008-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/research/src/lib.rs:203"
+      ],
+      "in_tests": [
+        "crates/research/tests/fr_civ_tech_tests.rs:3",
+        "crates/research/tests/fr_civ_tech_tests.rs:97",
+        "crates/research/tests/fr_civ_tech_tests.rs:101"
+      ],
       "in_stub_tests": []
     },
     {
@@ -24569,8 +24609,15 @@
         "docs/traceability/fr-civ-tech-009/fr-civ-tech-009-intent.md:15",
         "docs/traceability/fr-civ-tech-009/fr-civ-tech-009-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/research/src/lib.rs:162"
+      ],
+      "in_tests": [
+        "crates/research/tests/fr_civ_tech_tests.rs:3",
+        "crates/research/tests/fr_civ_tech_tests.rs:115",
+        "crates/research/tests/fr_civ_tech_tests.rs:118",
+        "crates/research/tests/fr_civ_tech_tests.rs:153"
+      ],
       "in_stub_tests": []
     },
     {

@@ -169,6 +169,7 @@ pub fn tick_maturity(
     psyche.maturity = (psyche.maturity + delta).clamp(0.0, 1.0);
 }
 
+// FR-CIV-PSYCHE-010
 /// Update temperament with a small lived-experience nudge.
 pub fn nudge_temperament(
     temperament: &mut Temperament,

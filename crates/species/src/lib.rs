@@ -71,6 +71,7 @@ pub struct Phenotype {
     pub behavior: BehaviorWeights,
 }
 
+// FR-CIV-SPECIES-200
 /// Deterministic DNA → Phenotype mapping. Layout (first 9 bytes used; remaining
 /// bytes are reserved for future fields and currently ignored):
 ///

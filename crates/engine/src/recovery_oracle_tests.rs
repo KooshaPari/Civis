@@ -36,7 +36,7 @@ fn recovery_oracle_save_roundtrip_preserves_runtime_economy_policy() {
 fn recovery_oracle_save_roundtrip_preserves_research_cache_state() {
     let mut sim = Simulation::with_seed(0xC1A15);
     sim.research_cache_mut().researched = vec!["pottery".into(), "masonry".into()];
-    sim.research_cache_mut().queued = Some("writing".into());
+    sim.research_cache_mut().queued.push_back("writing".into());
 
     let dir = tempdir().expect("tempdir");
     let save = dir.path().join("research.civsave");
@@ -60,7 +60,7 @@ fn recovery_oracle_guest_memory_does_not_prove_loaded_mod_restoration() {
     let mut sim = Simulation::with_seed(0xC1A15);
     let orphan_id = "recovery-orphan-mod";
     assert!(
-        !sim.mod_host().mods().iter().any(|m| m.manifest.id == orphan_id),
+        !sim.mod_host().mods().iter().any(|m| m.manifest.meta.id == orphan_id),
         "fixture requires the mod to be absent"
     );
     sim.mod_host_mut()

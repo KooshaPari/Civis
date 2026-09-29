@@ -34,10 +34,17 @@ pub const MIN_PRICE_CENTS: i64 = 1;
 pub const DEFAULT_SMOOTHING_FACTOR: i64 = 8;
 
 /// Per-good clearing prices in fixed-point cents (stub; full clearing in CIV-0100 §3c).
-// FR-CIV-MARKET-002
-// FR-CIV-MARKET-003
-// FR-CIV-MARKET-004
-// FR-CIV-MARKET-005
+// The following 4 requirement tags were removed from MarketState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The crate is 1149 lines of order-book machinery; having many functions is not evidence that the named market model exists.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MARKET-002: The requirement in agileplus-specs/civ-002-economy-joule-system/spec.md is "Two projector functions SHALL produce the price field". `MarketState` is a struct wrapping a `BTreeMap<String, i64>` of per-good prices. Grepping crates/economy/src for `projector` and `price_field` returns zero matches; market.rs implements order-book mechanics (place_bid, place_ask, clear_all, ask_vwap, price_impact), so no projector function and no implementing symbol exist.
+// [unbound] FR-CIV-MARKET-003: The requirement in agileplus-specs/civ-002-economy-joule-system/spec.md is "Locales SHALL hold a soft membership over types (weights), not a hard switch". `MarketState` has no membership vector: it maps a good id directly to a single price, which is a hard switch. Grepping the crate for `membership_weights` returns zero matches, so no soft-membership model and no implementing symbol exist.
+// [unbound] FR-CIV-MARKET-004: The requirement in agileplus-specs/civ-002-economy-joule-system/spec.md is "Every priced locale SHALL run damped tatonnement as the baseline price-discovery dynamic". `MarketState` stores prices without recording how they were discovered. Grepping the whole crate for `tâtonnement` and `tatonnement` returns zero matches, so the damped-walrasian iteration and no implementing symbol exist.
+// [unbound] FR-CIV-MARKET-005: The requirement in agileplus-specs/civ-002-economy-joule-system/spec.md is "Where trust and trade volume are high AND the locale is near-camera or active, the locale SHALL upgrade to a CDA". `MarketState` has no trust, volume, camera-proximity or activity field, and no upgrade path. The only `CDA` hit in the crate is a doc comment in allocator.rs, so no trust-gated upgrade and no implementing symbol exist.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MarketState {
     /// Good id → price in cents.

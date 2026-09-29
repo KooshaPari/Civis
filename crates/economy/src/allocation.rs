@@ -50,7 +50,14 @@ impl AllocationEngine for PlannedAllocator {
 /// Joule / thermodynamic regime: identical fill curve to the planned regime at a
 /// single good, but kept distinct so engines can weight by joule cost when the
 /// hybrid scheduler routes energy-priced goods through it.
-// FR-CIV-ECON-003
+// The following 1 requirement tags were removed from JouleAllocator.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The allocator returns a quantity, not a price, so it has nothing in which a numeraire could be expressed even indirectly.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-ECON-003: The requirement in agileplus-specs/civ-002-economy-joule-system/spec.md is that the economy SHALL perform numeraire selection: the good chosen as the unit of account SHALL be selected rather than assumed, and prices SHALL be expressed relative to it. `JouleAllocator` is a unit struct whose `AllocationEngine::allocate` implementation is a linear `demand.min(budget)` clamp. Grepping the crate for `numeraire` returns zero matches, so no numeraire is ever selected and no implementing symbol exists.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct JouleAllocator;
 
@@ -168,9 +175,16 @@ pub fn allocate_by_priority(
 }
 
 /// Selectable allocation regime — the economy layer picks one and routes all
+// The following 1 requirement tags were removed from AllocationRegime.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The enum supplies the vocabulary for the requirement but no code path ever changes a locale's regime as coercion rises.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-MARKET-006: The requirement in agileplus-specs/civ-002-economy-joule-system/spec.md is "Polity coercion overlap SHALL flip the locale's regime to Planned": a locale under coercive polity overlap SHALL be forced into the planned allocation regime. `AllocationRegime` is a three-variant enum (Capitalist / Planned / Joule); the free function `allocate_with` merely dispatches on it. No coercion signal is ever fed into regime selection, so the coercion-to-regime flip has no implementing symbol.
 /// rationing through [`allocate_with`] (FR-ECON-005). Serializable so a scenario
 /// or policy can set the regime deterministically.
-// FR-CIV-MARKET-006
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum AllocationRegime {
     /// Proportional market rationing (price-clearing proxy). Default.

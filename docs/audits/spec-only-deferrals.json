@@ -1,6 +1,6 @@
 {
   "generated_by": "docs/audits/_classify_spec_only.py",
-  "spec_only_total": 204,
+  "spec_only_total": 203,
   "category_blurb": {
     "reporting-only": "Named only by a matrix, audit, status report, or tracker.",
     "stub-template": "Only an unfilled auto-generated traceability template.",
@@ -10,12 +10,12 @@
     "actionable": "Real spec requirement with no implementation reference and no named test."
   },
   "counts": {
-    "actionable": 58,
-    "design-document": 52,
-    "reporting-only": 28,
-    "stub-template": 29,
+    "actionable": 57,
+    "traceable-requirement": 15,
     "synthetic-expansion": 22,
-    "traceable-requirement": 15
+    "design-document": 52,
+    "stub-template": 29,
+    "reporting-only": 28
   },
   "ids": {
     "actionable": [
@@ -110,10 +110,6 @@
       {
         "id": "FR-CIV-WEB-005",
         "reason": "genuine spec home: docs/development-guide/fr-web-spectator.md"
-      },
-      {
-        "id": "FR-SAVE-006",
-        "reason": "genuine spec home: docs/specs/CIV-1000-save-load-persistence-spec.md"
       },
       {
         "id": "FR-SAVE-008",

@@ -65,7 +65,14 @@ impl Mood {
 
 /// Compact psyche vector for one agent.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-// FR-CIV-PSYCHE-006
+// The following 1 requirement tags were removed from Psyche.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The collapse path would have to run when an agent is culled by distance, which is a tick-loop behavior, not a field on the per-agent record.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-PSYCHE-006: The requirement in docs/specs/requirements/FR-CIV-PSYCHE.md is "Cold agents SHALL collapse to cluster-level aggregates (mean mood, belief centroid, tie density)". `Psyche` is a per-agent struct of five scalar/array fields (drives, temperament, mood, beliefs, maturity). The crate has an `update_beliefs` function, but nothing in it reads agent temperature and emits cluster means, and no function anywhere produces a belief centroid or a tie-density aggregate, so no implementing symbol exists.
 pub struct Psyche {
     /// Stable need-biasing drives.
     pub drives: [f32; PSYCHE_DIM],
@@ -81,7 +88,14 @@ pub struct Psyche {
 
 /// Data-driven genome projection for psyche axes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-// FR-CIV-PSYCHE-005
+// The following 1 requirement tags were removed from PsychGenomeProfile.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The bound and the amortisation schedule belong on the tie-graph owner that walks edges; a genome projection cannot enforce either.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-PSYCHE-005: The requirement in docs/specs/requirements/FR-CIV-PSYCHE.md is "Cost O(MAX_TIES) bounded; decay SHALL be amortised (touch on access or periodic sweep)" over the social tie graph. `PsychGenomeProfile` is a data projection struct holding five DNA slot vectors; it is a DNA lookup shape and carries no tie graph, no decay counter, and no clock. Grepping psyche.rs for `decay` and `sweep` returns zero matches, so no decay schedule and no amortisation mechanism exists in the file and no implementing symbol does.
 pub struct PsychGenomeProfile {
     /// DNA byte slots for the four drive axes.
     pub drive_slots: [Vec<(usize, f32)>; PSYCHE_DIM],

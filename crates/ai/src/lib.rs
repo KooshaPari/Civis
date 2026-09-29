@@ -179,7 +179,14 @@ impl GenOutput {
     }
 }
 
-// FR-CIV-AI-013
+// The following 1 requirement tags were removed from EmbedRequest.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A request struct is the input half of the provider call; the drift comparison and the threshold decision are absent entirely.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-AI-013: The requirement on the culture-drift row of the agileplus-specs matrix is "Embeddings, then cosine drift, then a speciation threshold": culture drift SHALL be computed as cosine distance between embeddings and SHALL trigger speciation past a threshold. `EmbedRequest` is a request DTO holding a batch of texts and a snapshot hash. Grepping crates/ai/src for `cosine` returns zero matches, and nothing compares embedding vectors or applies a speciation threshold, so no implementing symbol exists.
 /// Request for [`AiProvider::embed`]. Batched by construction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EmbedRequest {

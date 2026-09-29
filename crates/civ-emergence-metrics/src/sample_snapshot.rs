@@ -7,7 +7,14 @@
 /// `EmergenceSample`; the snapshot is a flat, transport-safe DTO
 /// (no `Option`s except via the `criticality_*` band) so the
 /// dashboard can read each tile as a single JSON number.
-// FR-CIV-EMERGENCE-011
+// The following 1 requirement tags were removed from EmergenceSampleSnapshot.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A data carrier tagged with an id that no specification ever defined.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-EMERGENCE-011: The report's Spec file:line column for this row reads "(no spec text; requirement empty)" and no spec under docs/specs/ or agileplus-specs/ defines this id at all, so there is no requirement sentence to satisfy. `EmergenceSampleSnapshot` is a flat, transport-safe DTO mirroring the engine's EmergenceSample fields, so the tag is unjustified in either direction and no implementing symbol exists.
 pub struct EmergenceSampleSnapshot {
     /// Total live civilian count.
     pub agent_count: u32,

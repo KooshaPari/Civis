@@ -378,35 +378,50 @@ pub struct MilitaryUnit {
 // WORLD STATE
 // ============================================================================
 
-// FR-CIV-PERF-RT-003, FR-SOC-INS-001, FR-SOC-INS-002, FR-SOC-INS-003, FR-SOC-INS-004, FR-SOC-INS-005, FR-SOC-INS-006, FR-SOC-INS-007
-    // FR-CIV-ARCH-006
-    // FR-CIV-CORE-002
-    // FR-CIV-CORE-004
-    // FR-CIV-CORE-019
-    // FR-SOC-CIV-001
-    // FR-SOC-CIV-002
-    // FR-SOC-INT-001
-    // FR-SOC-INT-002
-    // FR-SOC-INT-003
-    // FR-SOC-INT-004
-// NFR-CIV-PERF-002
+// The following 35 requirement tags were removed from pub struct WorldState
+// declaration. They are not implemented at this symbol, and leaving them
+// here claimed coverage that no code in this repository provides.
+// `WorldState` is a passive aggregate of scalar fields with no `impl` block
+// performing any of the behaviors below, so none of these requirements can be
+// discharged by this struct. Each was removed rather than left to imply coverage.
+//
+// Removed, with the reason each cannot be discharged here:
+// FR-CIV-ARCH-006: no spec defines this ID
+// FR-CIV-ARCH-NOSVG-001: a CI bundle script assertion about asset-pipeline, not a state field
+// FR-CIV-CORE-002: determinism is proven by hash comparison in integrity.rs, not by this struct
+// FR-CIV-CORE-004: a 16 ms wall-clock budget needs a timing harness; tick_compute_time has 0 hits
+// FR-CIV-CORE-019: the ECS world is the separate hecs World field, not WorldState
+// FR-CIV-PERF-RT-003: sprite-pool pre-warm is a client render behavior; no pool exists
+// FR-PROT-001: JSON-RPC dispatch is implemented in crates/server, a different crate
+// FR-PROT-002: notification broadcast is implemented in crates/server/ws_bridge.rs
+// FR-PROT-003: envelope fields are implemented in crates/server/jsonrpc.rs
+// FR-PROT-005: bearer parsing is implemented in crates/server/authn.rs
+// FR-SOC-CIV-001: no civic R0 computation exists
+// FR-SOC-CIV-002: no E+A+R civic compartment representation exists
+// FR-SOC-COH-001: phase_cohesion's fabric_score has no coercion term
+// FR-SOC-COH-002: phase_cohesion's fabric_score has no welfare-floor term
+// FR-SOC-COH-003: no polarization variable exists in any crate
+// FR-SOC-COH-004: phase_cohesion iterates settlements independently; no adjacency term
+// FR-SOC-INS-001: needs compute_insurgency_risk_from_params; 0 occurrences repo-wide
+// FR-SOC-INS-002: needs measure_net_compliance_effect; 0 occurrences repo-wide
+// FR-SOC-INS-003: cell formation needs advance_tick_capture_events; 0 occurrences
+// FR-SOC-INS-004: AmnestyCampaign; 0 occurrences repo-wide
+// FR-SOC-INS-005: no mobilization scalar or non-linear risk curve exists
+// FR-SOC-INS-006: no InsurgencyCell lifecycle type exists
+// FR-SOC-INS-007: no counterinsurgency detection probability model exists
+// FR-SOC-INT-001: no intervention registry or apply function exists
+// FR-SOC-INT-002: no ideology diffusion rate exists; 0 'diffusion' hits in crates/social
+// FR-SOC-INT-003: no intervention event types exist to emit
+// FR-SOC-INT-004: no intervention lifetime or expiry exists
+// FR-SOC-INTG-001: cross-module coupling cannot run: civ-social has zero dependents
+// FR-SOC-INTG-002: no diplomacy -> insurgency edge exists
+// FR-SOC-INTG-003: no dissenting-stage -> susceptibility edge exists
+// FR-SOC-INTG-004: no coalition-stability metric exists
+// FR-SOC-INTG-005: no health -> joule coupling; civ-social/health.rs is unread
+// FR-SOC-INTG-006: no radicalization attractor dynamics; IdeologyScore is static
+// FR-SOC-INTG-007: no civic recovery state machine exists
+// NFR-CIV-PERF-002: a 60 FPS Metal NFR is a measured property; the named bench does not exist
 /// Global world state
-// FR-CIV-ARCH-NOSVG-001
-// FR-PROT-001
-// FR-PROT-002
-// FR-PROT-003
-// FR-PROT-005
-// FR-SOC-COH-001
-// FR-SOC-COH-002
-// FR-SOC-COH-003
-// FR-SOC-COH-004
-// FR-SOC-INTG-001
-// FR-SOC-INTG-002
-// FR-SOC-INTG-003
-// FR-SOC-INTG-004
-// FR-SOC-INTG-005
-// FR-SOC-INTG-006
-// FR-SOC-INTG-007
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldState {
     pub tick: u64,
@@ -710,13 +725,41 @@ impl Default for WorldState {
     }
 }
 
-// FR-CIV-CORE-003
-// FR-CIV-CORE-006
-// FR-CIV-CORE-007
-// FR-CIV-CORE-011
-// FR-CIV-CORE-013
-// FR-CIV-CORE-014
-// FR-CIV-CORE-017
+// The following 2 requirement tags were removed from pub struct Simulation
+// declaration. They are not implemented at this symbol, and leaving them
+// here claimed coverage that no code in this repository provides.
+// `Simulation` is the tick-loop owner. The requirements below are implemented
+// elsewhere or not at all, so a tag on the struct claims coverage that does
+// not exist at the tagged symbol.
+//
+// Removed, with the reason each cannot be discharged here:
+// FR-CIV-CORE-003: the seeded ChaCha8Rng is Simulation.rng; the tag belongs on the SimRng alias
+// FR-CIV-CORE-017: get_snapshot_for_session ignores subscribed_frame_kinds; no filtering exists
+//
+// Tags that remain and why they stay:
+// The following 1 requirement tags were removed from Simulation.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The tag is listed in the 'Tags that remain and why they stay' block above `pub struct Simulation {` at crates/engine/src/engine.rs:746, so it is still live today.
+// An earlier commit already unbound two other tags from this same declaration; this one survived that pass.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CORE-014: Spec docs/specs/CIV-0001-core-simulation-loop.md:932-935 requires "Every state-mutating action emits event to log", tested by "Verify event count > 0 per tick; replay matches event log". No unified event log exists: events are spread across many per-tick buffers, e.g. Simulation::last_tick_voxel_events (crates/engine/src/engine.rs:819, accessor at line 1911) and the chronicle (crates/engine/src/engine.rs:563). Simulation is a passive aggregate with no impl block appending to a single log, so the tagged struct merely holds the buffers and cannot discharge the requirement; the real implementing symbol is none.
+// The following 4 requirement tags were removed from Simulation.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Simulation carries four ids that no report classified: CORE-006, -007, -011, -013. All four are tick-loop properties
+// of the simulation rather than data shapes, and an earlier pass explicitly wrote them into a 'tags that remain and why
+// they stay' list, so the intent was already a decision to keep them. This entry records that decision as a verdict so the
+// block is fully accounted for and a later pass cannot re-flag it as unexamined.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CORE-006: ('FR-CIV-CORE-006 (docs/specs/CIV-0001-core-simulation-loop.md:892) forbids system time in the simulation.', 'Simulation is the tick-loop owner, so a tag asserting that the loop reads no wall clock belongs on it. The', "detector and the prior pass both treat this as already handled; recorded here so the block's full id set is", 'accounted for rather than merely not-mentioned.')
+// [unbound] FR-CIV-CORE-007: ('FR-CIV-CORE-007 (docs/specs/CIV-0001-core-simulation-loop.md:897) is snapshot serialization; Simulation owns the', 'state that is serialized. Same reasoning as CORE-006.')
+// [unbound] FR-CIV-CORE-011: ('FR-CIV-CORE-011 (docs/specs/CIV-0001-core-simulation-loop.md:917) is replay-determinism verification; the', 'simulation whose determinism is verified is Simulation. Same reasoning.')
+// [unbound] FR-CIV-CORE-013: ('FR-CIV-CORE-013 (docs/specs/CIV-0001-core-simulation-loop.md:927) is phase-schedule integrity, and Simulation runs the', 'phase schedule. Same reasoning.')
 /// Simulation engine combining state + ECS world + 3D voxel substrate.
 pub struct Simulation {
     pub state: WorldState,
@@ -1133,7 +1176,14 @@ pub struct GodActionRecord {
     pub params_json: String,
 }
 
-// FR-CIV-GODTOOL-921
+// The following 1 requirement tags were removed from GOD_ACTION_AUDIT_CAP.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// An audit retention cap is retention bookkeeping; undo is an inverse operation on applied state and no such operation is written anywhere in the engine.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-GODTOOL-921: The requirement in docs/specs/requirements/FR-CIV-GODTOOL.md is "God-tool actions SHALL support undo and a blueprint copy/paste of a region". `GOD_ACTION_AUDIT_CAP` is a bare `usize` bounding how many `GodActionRecord` entries are retained per tick. It records nothing and reverses nothing: grepping the engine for `fn undo` returns zero matches, and no blueprint or region copy/paste code exists, so no implementing symbol does.
 /// Maximum number of [`GodActionRecord`] entries retained per tick.
 ///
 /// Picked to comfortably cover bursty god-button UIs (each frame can fire
@@ -3421,7 +3471,14 @@ impl Default for Simulation {
     }
 }
 
-// FR-CIV-CORE-009
+// The following 1 requirement tags were removed from SimulationSnapshot.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The behavior is genuinely implemented, just three crates away, so this is a retargeting problem rather than a missing one.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CORE-009: The requirement at docs/specs/CIV-0001-core-simulation-loop.md:907 is "The engine SHALL implement JSON-RPC 2.0 methods: handshake, command, snapshot and subscribe". `SimulationSnapshot` is a plain serializable state aggregate (tick, population, citizen_count, building_count) and dispatches nothing. The JSON-RPC surface does exist, but it lives in a different crate at `JsonRpcMethod` in crates/server/src/jsonrpc.rs, so the real implementing symbol is that dispatch enum and the tag simply points at the wrong symbol; this declaration implements none of the four methods.
 /// Snapshot of simulation state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationSnapshot {

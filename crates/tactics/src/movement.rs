@@ -24,7 +24,14 @@ impl Default for OperationalMovementConfig {
     }
 }
 
-// FR-CIV-RTS-001
+// The following 1 requirement tags were removed from GridMove.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// This is a client input-binding requirement filed against a server-side movement intent struct.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-RTS-001: The requirement in agileplus-specs/civ-012-godot-secondary-client/spec.md is "Q - Move command (click target to confirm)": the client SHALL bind the Q key to a move command and SHALL require a click on the target to confirm it. `GridMove` is a three-field move intent (unit_index, new_grid_x, new_grid_y). It carries no keybinding and no confirmation state, and no keybinding or click-to-confirm handler exists anywhere in crates/, so no implementing symbol does.
 /// Grid position update for a unit index in the operational slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GridMove {

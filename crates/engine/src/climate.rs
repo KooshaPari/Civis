@@ -9,14 +9,28 @@ use civ_voxel::{MaterialId, WorldCoord};
 use serde::{Deserialize, Serialize};
 
 /// Water marker material used for coastal tide voxel writes.
-// FR-CIV-TERRAIN-005
+// The following 1 requirement tags were removed from WATER_MARKER_MATERIAL.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The const is a reasonable thing to point at as the source of truth, but the requirement is about tools honoring it, and no tool lives here.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-TERRAIN-005: The requirement in docs/specs/CIV-0102-climate-followup-v1.md is that water placement tools SHALL respect a single source of truth for the water marker. `WATER_MARKER_MATERIAL` is a `const MaterialId` alias equal to WATER, which does correctly name the one marker that the tool writes, and `register_coastal_water_column` uses it. But a type alias is not a tool behavior: nothing here intercepts a placement tool and validates it against the constant, so the single-source-of-truth enforcement has no implementing symbol.
 pub const WATER_MARKER_MATERIAL: MaterialId = WATER;
 
 /// A coastal water column registered with the engine. Each column anchors a
 /// single water-marker voxel that shifts vertically with the climate tide
+// The following 1 requirement tags were removed from CoastalColumn.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A rendering property of the voxel client cannot be discharged by a tide-tracking record.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-TERRAIN-002: The requirement in docs/specs/CIV-0101-two-zoom-lod-v1.md is that civ-voxel chunk seams SHALL be free of visible artifacts. `CoastalColumn` is a two-field water-level record (base_y, last_water_y) and contains no geometry, no mesh and no seam logic. No seam-hiding or seam-subtraction code exists anywhere in the crate, so no implementing symbol does.
 /// offset every tick (FR-CIV-PLANET-020). Iteration order is deterministic
 /// because columns live in a [`BTreeMap`](std::collections::BTreeMap).
-// FR-CIV-TERRAIN-002
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CoastalColumn {
     /// Sea-level y in fixed-point world units.

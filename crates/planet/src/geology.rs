@@ -16,8 +16,15 @@ use crate::PlanetConfig;
 /// backward compatibility. The remaining variants are the enriched
 /// Whittaker-style biomes produced by [`classify_biome`] from per-cell
 /// elevation / temperature / moisture.
+// The following 1 requirement tags were removed from BiomeKind.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A complete biome enum is the necessary precondition for atlas completeness but does not establish it; the sibling biome-coverage id is the one this enum really discharges.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-3D-015: The requirement on the Texture Atlas Completeness row of docs/specs/CIV-0101-two-zoom-lod-v1.md is an atlas table mapping every biome to its texture slots. `BiomeKind` enumerates biomes and is driven by a real elevation/temperature/moisture classifier, but it carries no texture or slot field. Grepping geology.rs for `atlas` returns zero matches, so the atlas table and any implementing symbol are absent.
 // FR-CIV-3D-011
-// FR-CIV-3D-015
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BiomeKind {
     /// Open water — radius-derived; large planets have proportionally more ocean.

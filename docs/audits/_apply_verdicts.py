@@ -109,6 +109,12 @@ def process(rel: str, decl: str, removed: dict, note: list, keep: set, apply: bo
     if idx is None:
         return f"  MISSING declaration {decl} in {rel}", 0
 
+    # A site entry may name ids it deliberately keeps on this declaration, which
+    # is how a block of N ids ends up with some removed and some retained. This
+    # has to be per-site: a module-level KEEP applies to every declaration in the
+    # module, and would silence a genuinely unclassified id on a different one.
+    keep = set(keep) | set(removed.get("__keep__", ()))
+
     tags_start = None
     i = idx - 1
     while i >= 0 and (is_doc_line(lines[i]) or is_tag_line(lines[i]) or is_attr_line(lines[i])):
@@ -120,7 +126,7 @@ def process(rel: str, decl: str, removed: dict, note: list, keep: set, apply: bo
 
     block = lines[tags_start:idx]
     present = collect_ids("\n".join(block))
-    removable = sorted(present & set(removed))
+    removable = sorted(present & (set(removed) - {"__keep__"}))
     unknown = sorted(present - set(removed) - keep)
     if unknown:
         return f"  WARNING {rel} :: {decl} unclassified ids {unknown}", 0
@@ -166,14 +172,30 @@ def main() -> int:
     names = args.modules or sorted(
         p.stem for p in AUDITS.glob("_verdicts_*.py")
     )
+    mods = [(n, load(f"{n}.py")) for n in names]
+
+    # An id counts as adjudicated if *any* verdict module names it, not just the
+    # one that happens to own the site. Two modules routinely split one
+    # declaration -- the sim/domain report takes a subset of a block and this
+    # module decides the rest -- and a per-module view reports the other's ids
+    # as unexamined. The union is the honest set of "a human looked at this".
+    known = set()
+    for _, mod in mods:
+        known |= set(getattr(mod, "KEEP", {}))
+        for _rel, _decl, removed, _note in mod.SITES:
+            known |= set(removed)
+    known.discard("__keep__")
+
     total = 0
-    for name in names:
-        mod = load(f"{name}.py")
+    warnings = 0
+    for name, mod in mods:
         keep = set(getattr(mod, "KEEP", {}))
         print(f"### {name}: {len(mod.SITES)} site(s)")
         for rel, decl, removed, note in mod.SITES:
-            msg, n = process(rel, decl, removed, note, keep, args.apply)
+            msg, n = process(rel, decl, removed, note, keep | known, args.apply)
             print(msg)
+            if "unclassified" in msg or "MISSING" in msg:
+                warnings += 1
             total += n
     print(f"\ntotal removed: {total}")
     if not args.apply:
@@ -182,16 +204,18 @@ def main() -> int:
 
     # Idempotence: a second pass must find nothing left to do.
     recheck = 0
-    for name in names:
-        mod = load(f"{name}.py")
+    for name, mod in mods:
         keep = set(getattr(mod, "KEEP", {}))
         for rel, decl, removed, note in mod.SITES:
-            _, n = process(rel, decl, removed, note, keep, False)
+            _, n = process(rel, decl, removed, note, keep | known, False)
             recheck += n
     if recheck:
         print(f"NOT IDEMPOTENT: a second pass would remove {recheck} more tag(s)")
         return 1
     print("idempotent: second pass would remove 0")
+    if warnings:
+        print(f"WARNING: {warnings} site(s) still carry an unclassified id")
+        return 1
     return 0
 
 

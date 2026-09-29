@@ -38,7 +38,15 @@ pub fn tick_hash(prev: &[u8; HASH_LEN], tick_event_bytes: &[u8]) -> [u8; HASH_LE
     *hasher.finalize().as_bytes()
 }
 
-// FR-CIV-CORE-015
+// The following 1 requirement tags were removed from HashChainState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The tag sits directly above `pub struct HashChainState {` at line 44 and is still live in the source today.
+// A sibling requirement with nearly the same wording was independently unbound elsewhere in the workspace because the priority field does not exist anywhere.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CORE-015: Spec docs/specs/CIV-0001-core-simulation-loop.md:937-940 requires "Every event includes hash of state that produced it", tested by "Replay event, verify state hash matches; mismatch -> error". Hash-chain machinery is real but it is per-tick, not per-event: HashChainState holds a single running_hash (crates/engine/src/hash_chain.rs:44-46), HashChainState::advance (line 58) folds only tick_event_bytes, and chain_root_from_ticks (line 67) chains bare little-endian tick counters. The hash is read out as one whole-run root via Simulation::hash_chain_root (crates/engine/src/engine.rs:2940) and surfaced as a single snapshot field (crates/server/src/jsonrpc.rs:493), so no event object ever carries the hash of the state that produced it. The implementing symbol is HashChainState::advance / chain_root_from_ticks, a run-level chain that cannot stamp individual events.
 /// Running hash-chain state for a simulation run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct HashChainState {

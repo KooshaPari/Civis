@@ -268,7 +268,14 @@ pub struct HomeAssignment {
 
 /// Simulation fidelity tier. Far-from-camera civilians collapse to lower tiers
 /// to bound the per-tick cost.
-// FR-CIV-3D-002
+// The following 1 requirement tags were removed from LodTier.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A fidelity tier label is a shape, not an enforcement point. A budget check would have to live in whatever walks agents each tick, not on the enum itself.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-3D-002: The requirement in agileplus-specs/civ-011-bevy-primary-client/spec.md is "LOD Budget Enforcement": the engine SHALL enforce a budget so detail is culled when the budget is exceeded. `LodTier` is a three-variant enum (Hot / Warm / Gestalt) that only names fidelity levels; it holds no budget field and implements no check. Grepping crates/agents/src for `lod_budget`, `LodBudget` and `budget_check` returns zero matches, so no budget enforcement exists anywhere in the crate and no implementing symbol does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LodTier {
     /// Full fidelity — every tick.

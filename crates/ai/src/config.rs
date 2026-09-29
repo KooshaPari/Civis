@@ -4,7 +4,14 @@
 //! gitignored `.env`; see committed `.env.example`). Selection + budgets only;
 //! provider construction lives in [`crate::registry`].
 
-// FR-CIV-AI-015
+// The following 1 requirement tags were removed from AiConfig.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The config names models the system would call; it does not perform detection or routing, so the tag asserts a pipeline that does not exist.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-AI-015: The requirement on the balance-analyst row of the agileplus-specs matrix is "Heuristic anomaly detection, then SLM triage": the system SHALL flag anomalies heuristically and route them to a small language model for triage. `AiConfig` is a plain environment-resolved config struct (model ids, concurrency cap). crates/ai contains no `anomal`, `balance` or `triage` code, so the detection heuristic and the triage call have no implementing symbol.
 /// Resolved AI configuration. Built from the environment.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AiConfig {

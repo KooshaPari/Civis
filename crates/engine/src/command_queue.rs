@@ -21,13 +21,28 @@ pub enum CommandKind {
     PolicyOverride { key: String, value: f64 },
 }
 
-// FR-CIV-CORE-008
-// FR-CIV-CORE-016
+// The following 1 requirement tags were removed from CommandQueue.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The tag sits directly above `pub struct CommandQueue {` at line 31 and is still live in the source today.
+// CommandQueue is referenced only from its own unit tests and from integration tests; no production path in the workspace uses it.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CORE-008: Spec docs/specs/CIV-0001-core-simulation-loop.md:902-905 requires "Commands from multiple clients applied in deterministic order (priority queue)", tested by "Issue 10 commands from 3 clients, verify order matches priority + FIFO". CommandQueue is a plain VecDeque<Command> FIFO with only a max_pending bound (command_queue.rs:31-34); Command (command_queue.rs:5-10) has no priority field, and push/pop (command_queue.rs:58,72) only push_back/pop_front. The real implementing symbol is CommandQueue::push / CommandQueue::pop -- a FIFO queue that cannot produce priority ordering; the test at crates/engine/tests/fr_fr_civ_core_008.rs:14 asserts FIFO only, and no production code constructs this type.
+// The following 2 requirement tags were removed from CommandQueue.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Two of the three ids want an ordering key the queue never had, and the third is a client input concern.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CORE-016: The requirement at docs/specs/CIV-0001-core-simulation-loop.md:917 is "Commands SHALL be prioritized by (client_priority, tick_received)". `Command` carries only client_id, seq, kind and tick_issued, and `CommandQueue` is a flat deque, so neither half of the sort key exists and no implementing symbol does.
+// [unbound] FR-CIV-NOTIFY-921: The requirement in docs/specs/requirements/FR-CIV-NOTIFY.md is "a rebindable hotkey map". `CommandQueue` is a server-side data structure holding pending commands and a capacity bound; it holds no key, no binding and no input manager, so the rebinding behavior has no implementing symbol.
 /// A bounded multi-client command queue.
 ///
 /// Commands are processed in FIFO order. The queue enforces a maximum
 /// number of pending commands to prevent unbounded growth.
-// FR-CIV-NOTIFY-921
 pub struct CommandQueue {
     commands: VecDeque<Command>,
     max_pending: usize,

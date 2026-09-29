@@ -25,6 +25,18 @@
 use serde::{Deserialize, Serialize};
 
 /// All five dashboard summary metrics computed from a single tick's
+// The following 5 requirement tags were removed from EmergenceDashboard.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The RPC half of the metrics-exposure requirement is real and the tag is aimed near it; the event-emission half and both client panels are absent.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-EMERG-004: The requirement at agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:51 is "The web dashboard SHALL provide an EmergencePanel component with a per-metric sparkline covering the last 120 ticks and a threshold-color chip". `EmergenceDashboard` is a Rust value struct and cannot render a React component. web/dashboard/src contains no EmergencePanel file - the panel set is agents, diplomacy, economy, religion, mods, perf, stats and tech_tree. A sparkline.tsx primitive exists but is not wired to emergence metrics, so no implementing symbol exists.
+// [unbound] FR-CIV-EMERG-005: The requirement at agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:55 is "The Bevy primary client SHALL provide a live_emergence_overlay HUD toggle on the E key with a glassmorphism chip group". `EmergenceDashboard` is a plain data struct with no HUD, keybinding or rendering. Grepping clients/ for `live_emergence_overlay` returns zero matches, so no implementing symbol exists.
+// [unbound] FR-CIV-EMERGENCE-003: The requirement at agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:47 is "Metrics SHALL be exposed on sim.snapshot.emergence AND the emergence_metrics.v1 replay-bus event SHALL be emitted once per N ticks". `EmergenceDashboard` is a Copy struct of normalized f32 metric values; its own `compute` fills those fields and jsonrpc.rs does build a `sim.snapshot.emergence` block, so the RPC half is genuinely met. The `emergence_metrics.v1` replay-bus event has no type and no emitter anywhere, so the requirement is only half discharged: the real implementing symbol for the event half is none, because nothing emits it.
+// [unbound] FR-CIV-EMERGENCE-012: The report's Spec file:line column for this row reads "(no spec text; requirement empty)" and no spec under docs/specs/ or agileplus-specs/ defines this id at all, so there is no requirement sentence to satisfy. `EmergenceDashboard` is a metric value struct, so the tag is unjustified in either direction and no implementing symbol exists.
+// [unbound] FR-CIV-EMERGENCE-013: The report's Spec file:line column for this row reads "(no spec text; requirement empty)" and no spec under docs/specs/ or agileplus-specs/ defines this id at all, so there is no requirement sentence to satisfy. `EmergenceDashboard` is a metric value struct, so the tag is unjustified in either direction and no implementing symbol exists.
 /// pre-aggregated inputs (FR-CIV-EMERG-001). The struct is the
 /// engine's hand-off shape: the engine builds the input slices, calls
 /// [`EmergenceDashboard::compute`], and stores the result on
@@ -35,11 +47,6 @@ use serde::{Deserialize, Serialize};
 /// keeps the engine's first-sample state (`Option<EmergenceSample>`)
 /// from leaking `0.0` readings that the dashboard would mis-render as
 /// "all minimum".
-// FR-CIV-EMERGENCE-003
-// FR-CIV-EMERGENCE-012
-// FR-CIV-EMERGENCE-013
-    // FR-CIV-EMERG-004
-    // FR-CIV-EMERG-005
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct EmergenceDashboard {
     /// Normalised Shannon entropy over per-cluster population sizes.

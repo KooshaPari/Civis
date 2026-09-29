@@ -12,18 +12,6 @@
     "requirement": "Phase 1: Culture entity (FR-CIV-CULT-001)"
   },
   {
-    "file": "crates/agents/src/lib.rs",
-    "line": 271,
-    "ids": [
-      "FR-CIV-3D-002"
-    ],
-    "kind": "enum",
-    "name": "LodTier",
-    "id": "FR-CIV-3D-002",
-    "defined_by_spec": true,
-    "requirement": "\u2014 LOD Budget Enforcement"
-  },
-  {
     "file": "crates/agents/src/psyche.rs",
     "line": 20,
     "ids": [
@@ -48,204 +36,6 @@
     "requirement": "ADR: FR-CIV-PSYCHE-002 -- Psychological and social modelling"
   },
   {
-    "file": "crates/agents/src/psyche.rs",
-    "line": 68,
-    "ids": [
-      "FR-CIV-PSYCHE-006"
-    ],
-    "kind": "struct",
-    "name": "Psyche",
-    "id": "FR-CIV-PSYCHE-006",
-    "defined_by_spec": true,
-    "requirement": "Cold agents collapse to cluster-level aggregates (mean mood, belief centroid, intra/inter tie density) \u2014 no per-tie sim far from camera, matching the agent-LOD charter rule. Promotion rehydrates ties lazily from a compac"
-  },
-  {
-    "file": "crates/agents/src/psyche.rs",
-    "line": 84,
-    "ids": [
-      "FR-CIV-PSYCHE-005"
-    ],
-    "kind": "struct",
-    "name": "PsychGenomeProfile",
-    "id": "FR-CIV-PSYCHE-005",
-    "defined_by_spec": true,
-    "requirement": "Per-agent cost is O(MAX_TIES) bounded; decay is amortised (touch on access / periodic sweep). **FR-CIV-PSYCHE-005**."
-  },
-  {
-    "file": "crates/ai/src/config.rs",
-    "line": 7,
-    "ids": [
-      "FR-CIV-AI-015"
-    ],
-    "kind": "struct",
-    "name": "AiConfig",
-    "id": "FR-CIV-AI-015",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-AI-015 -- Artificial intelligence"
-  },
-  {
-    "file": "crates/ai/src/lib.rs",
-    "line": 182,
-    "ids": [
-      "FR-CIV-AI-013"
-    ],
-    "kind": "struct",
-    "name": "EmbedRequest",
-    "id": "FR-CIV-AI-013",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-AI-013 -- Artificial intelligence"
-  },
-  {
-    "file": "crates/build/src/lib.rs",
-    "line": 50,
-    "ids": [
-      "FR-API-002",
-      "FR-API-003",
-      "FR-API-004"
-    ],
-    "kind": "const",
-    "name": "SCHEMA_VERSION",
-    "id": "FR-API-002",
-    "defined_by_spec": true,
-    "requirement": "Phase 3: Python scenario runner (FR-API-002, FR-API-003)"
-  },
-  {
-    "file": "crates/build/src/lib.rs",
-    "line": 50,
-    "ids": [
-      "FR-API-002",
-      "FR-API-003",
-      "FR-API-004"
-    ],
-    "kind": "const",
-    "name": "SCHEMA_VERSION",
-    "id": "FR-API-003",
-    "defined_by_spec": true,
-    "requirement": "Phase 3: Python scenario runner (FR-API-002, FR-API-003)"
-  },
-  {
-    "file": "crates/build/src/lib.rs",
-    "line": 50,
-    "ids": [
-      "FR-API-002",
-      "FR-API-003",
-      "FR-API-004"
-    ],
-    "kind": "const",
-    "name": "SCHEMA_VERSION",
-    "id": "FR-API-004",
-    "defined_by_spec": true,
-    "requirement": "Phase 4: Data export (FR-API-004)"
-  },
-  {
-    "file": "crates/build/src/lib.rs",
-    "line": 116,
-    "ids": [
-      "FR-CIV-CLIENT-GODOT-001"
-    ],
-    "kind": "struct",
-    "name": "CultureEraWealthVector",
-    "id": "FR-CIV-CLIENT-GODOT-001",
-    "defined_by_spec": true,
-    "requirement": "Phase 1: WebSocket connection and handshake (FR-CIV-CLIENT-GODOT-001)"
-  },
-  {
-    "file": "crates/build/src/lib.rs",
-    "line": 117,
-    "ids": [
-      "FR-CIV-CLIENT-GODOT-002"
-    ],
-    "kind": "struct",
-    "name": "CultureEraWealthVector",
-    "id": "FR-CIV-CLIENT-GODOT-002",
-    "defined_by_spec": true,
-    "requirement": "Phase 2: 3D scene rendering (FR-CIV-CLIENT-GODOT-002)"
-  },
-  {
-    "file": "crates/build/src/lib.rs",
-    "line": 285,
-    "ids": [
-      "FR-CIV-BIO-001"
-    ],
-    "kind": "struct",
-    "name": "BuildingGraph",
-    "id": "FR-CIV-BIO-001",
-    "defined_by_spec": true,
-    "requirement": "Phase 1: Species registry and YAML schema (FR-CIV-BIO-001)"
-  },
-  {
-    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
-    "line": 38,
-    "ids": [
-      "FR-CIV-EMERGENCE-003"
-    ],
-    "kind": "struct",
-    "name": "EmergenceDashboard",
-    "id": "FR-CIV-EMERGENCE-003",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-EMERGENCE-003 -- Emergence metrics"
-  },
-  {
-    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
-    "line": 39,
-    "ids": [
-      "FR-CIV-EMERGENCE-012"
-    ],
-    "kind": "struct",
-    "name": "EmergenceDashboard",
-    "id": "FR-CIV-EMERGENCE-012",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-EMERGENCE-012 -- Emergence metrics"
-  },
-  {
-    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
-    "line": 40,
-    "ids": [
-      "FR-CIV-EMERGENCE-013"
-    ],
-    "kind": "struct",
-    "name": "EmergenceDashboard",
-    "id": "FR-CIV-EMERGENCE-013",
-    "defined_by_spec": true,
-    "requirement": "FR-CIV-EMERGENCE-001 through FR-CIV-EMERGENCE-013** \u2014 new series for life and social emergence:"
-  },
-  {
-    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
-    "line": 41,
-    "ids": [
-      "FR-CIV-EMERG-004"
-    ],
-    "kind": "struct",
-    "name": "EmergenceDashboard",
-    "id": "FR-CIV-EMERG-004",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-EMERG-004**: The web dashboard SHALL provide an"
-  },
-  {
-    "file": "crates/civ-emergence-metrics/src/dashboard.rs",
-    "line": 42,
-    "ids": [
-      "FR-CIV-EMERG-005"
-    ],
-    "kind": "struct",
-    "name": "EmergenceDashboard",
-    "id": "FR-CIV-EMERG-005",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-EMERG-005**: The Bevy primary client SHALL provide a"
-  },
-  {
-    "file": "crates/civ-emergence-metrics/src/sample_snapshot.rs",
-    "line": 10,
-    "ids": [
-      "FR-CIV-EMERGENCE-011"
-    ],
-    "kind": "struct",
-    "name": "EmergenceSampleSnapshot",
-    "id": "FR-CIV-EMERGENCE-011",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-EMERGENCE-011 -- Emergence metrics"
-  },
-  {
     "file": "crates/civ-traffic/src/lib.rs",
     "line": 52,
     "ids": [
@@ -256,42 +46,6 @@
     "id": "FR-CIV-ROAD-902",
     "defined_by_spec": true,
     "requirement": "ADR: FR-CIV-ROAD-902 -- Road and path systems"
-  },
-  {
-    "file": "crates/diplomacy/src/shadow_networks.rs",
-    "line": 192,
-    "ids": [
-      "FR-DIPL-007"
-    ],
-    "kind": "struct",
-    "name": "ShadowNetworkState",
-    "id": "FR-DIPL-007",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-DIPL-007 -- Diplomacy"
-  },
-  {
-    "file": "crates/economy/src/allocation.rs",
-    "line": 53,
-    "ids": [
-      "FR-CIV-ECON-003"
-    ],
-    "kind": "struct",
-    "name": "JouleAllocator",
-    "id": "FR-CIV-ECON-003",
-    "defined_by_spec": true,
-    "requirement": "Traceability:** FR-CIV-MARKET-001..008 (carry-over from `polities-markets.md` \u00a72 \u2014 fully consumed by this spec), FR-CIV-ECON-003 (numeraire emergence), FR-CIV-EMERGENCE-001 (micro-driver \u2192 macro-pattern mapping), FR-CIV-"
-  },
-  {
-    "file": "crates/economy/src/allocation.rs",
-    "line": 173,
-    "ids": [
-      "FR-CIV-MARKET-006"
-    ],
-    "kind": "enum",
-    "name": "AllocationRegime",
-    "id": "FR-CIV-MARKET-006",
-    "defined_by_spec": true,
-    "requirement": "\u2014 Planned override.** When a coercive coordinator overlaps the locale (FR-CIV-POLITY-008), price discovery is partially or fully replaced by `AllocationEngine` decisions; the read-out becomes **planned**. Mis-set planned"
   },
   {
     "file": "crates/economy/src/currency_trust.rs",
@@ -319,31 +73,7 @@
   },
   {
     "file": "crates/economy/src/lib.rs",
-    "line": 87,
-    "ids": [
-      "FR-CIV-ECON-001-MARKET"
-    ],
-    "kind": "const",
-    "name": "SCHEMA_VERSION",
-    "id": "FR-CIV-ECON-001-MARKET",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-ECON-001-MARKET** \u2014 Market price tracking"
-  },
-  {
-    "file": "crates/economy/src/lib.rs",
-    "line": 89,
-    "ids": [
-      "FR-CIV-MARKET-001"
-    ],
-    "kind": "const",
-    "name": "SCHEMA_VERSION",
-    "id": "FR-CIV-MARKET-001",
-    "defined_by_spec": true,
-    "requirement": "Traceability:** FR-CIV-MARKET-001..008 (carry-over from `polities-markets.md` \u00a72 \u2014 fully consumed by this spec), FR-CIV-ECON-003 (numeraire emergence), FR-CIV-EMERGENCE-001 (micro-driver \u2192 macro-pattern mapping), FR-CIV-"
-  },
-  {
-    "file": "crates/economy/src/lib.rs",
-    "line": 101,
+    "line": 113,
     "ids": [
       "FR-CIV-ECON-004"
     ],
@@ -352,54 +82,6 @@
     "id": "FR-CIV-ECON-004",
     "defined_by_spec": true,
     "requirement": "[ ] **FR-CIV-ECON-004** \u2014 Policy-driven fiscal control via"
-  },
-  {
-    "file": "crates/economy/src/market.rs",
-    "line": 37,
-    "ids": [
-      "FR-CIV-MARKET-002"
-    ],
-    "kind": "struct",
-    "name": "MarketState",
-    "id": "FR-CIV-MARKET-002",
-    "defined_by_spec": true,
-    "requirement": "Two projector functions produce the price field that overlays, dashboards, and the polity market-type classifier (FR-CIV-MARKET-002) read. Both are *pure*, *read-only*, and re-evaluated every call \u2014 never stored on `Mark"
-  },
-  {
-    "file": "crates/economy/src/market.rs",
-    "line": 38,
-    "ids": [
-      "FR-CIV-MARKET-003"
-    ],
-    "kind": "struct",
-    "name": "MarketState",
-    "id": "FR-CIV-MARKET-003",
-    "defined_by_spec": true,
-    "requirement": "\u2014 One spectrum, smooth transitions.** Locales hold a soft membership over types (weights), not a hard switch, so a market can be \"mostly barter, partly credit.\" Read-out picks the argmax for the label; mechanics blend."
-  },
-  {
-    "file": "crates/economy/src/market.rs",
-    "line": 39,
-    "ids": [
-      "FR-CIV-MARKET-004"
-    ],
-    "kind": "struct",
-    "name": "MarketState",
-    "id": "FR-CIV-MARKET-004",
-    "defined_by_spec": true,
-    "requirement": "\u2014 T\u00e2tonnement is the default law.** Every priced locale runs **damped t\u00e2tonnement** as the baseline price-discovery dynamic (game-rnd \u00a71.3, \"now\"). Replace the current placeholder `MarketState::step` random-walk delta wi"
-  },
-  {
-    "file": "crates/economy/src/market.rs",
-    "line": 40,
-    "ids": [
-      "FR-CIV-MARKET-005"
-    ],
-    "kind": "struct",
-    "name": "MarketState",
-    "id": "FR-CIV-MARKET-005",
-    "defined_by_spec": true,
-    "requirement": "\u2014 CDA upgrade near high-trust settlements.** Where `trust` and trade volume are high AND the locale is near-camera/active, the locale upgrades to a **continuous double auction** (order-book bid/ask matching \u2014 game-rnd \u00a71"
   },
   {
     "file": "crates/engine/src/building_tiers.rs",
@@ -414,30 +96,6 @@
     "requirement": "ADR: FR-CIV-INFOVIEW-914 -- Info views and inspectors"
   },
   {
-    "file": "crates/engine/src/climate.rs",
-    "line": 12,
-    "ids": [
-      "FR-CIV-TERRAIN-005"
-    ],
-    "kind": "const",
-    "name": "WATER_MARKER_MATERIAL",
-    "id": "FR-CIV-TERRAIN-005",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-TERRAIN-005**: Water placement tools SHALL respect a single source of"
-  },
-  {
-    "file": "crates/engine/src/climate.rs",
-    "line": 19,
-    "ids": [
-      "FR-CIV-TERRAIN-002"
-    ],
-    "kind": "struct",
-    "name": "CoastalColumn",
-    "id": "FR-CIV-TERRAIN-002",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-TERRAIN-002**: `civ-voxel` chunk seams SHALL be free of visible"
-  },
-  {
     "file": "crates/engine/src/command_queue.rs",
     "line": 14,
     "ids": [
@@ -450,68 +108,8 @@
     "requirement": "Phase 4: Role authorization (E3.7, FR-CLIENT-003)"
   },
   {
-    "file": "crates/engine/src/command_queue.rs",
-    "line": 24,
-    "ids": [
-      "FR-CIV-CORE-008"
-    ],
-    "kind": "struct",
-    "name": "CommandQueue",
-    "id": "FR-CIV-CORE-008",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-008 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/command_queue.rs",
-    "line": 25,
-    "ids": [
-      "FR-CIV-CORE-016"
-    ],
-    "kind": "struct",
-    "name": "CommandQueue",
-    "id": "FR-CIV-CORE-016",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-016 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/command_queue.rs",
-    "line": 30,
-    "ids": [
-      "FR-CIV-NOTIFY-921"
-    ],
-    "kind": "struct",
-    "name": "CommandQueue",
-    "id": "FR-CIV-NOTIFY-921",
-    "defined_by_spec": true,
-    "requirement": "FR-CIV-QOL-140..145.** Extends `FR-CIV-NOTIFY-921` (rebindable hotkey map). Priority: **7**. Crate: **`leafwing-input-manager`** (Bevy gold-standard: action-based, rebindable, gamepad+kb). Wrap, don't hand-roll a keymap."
-  },
-  {
     "file": "crates/engine/src/constraints.rs",
-    "line": 560,
-    "ids": [
-      "FR-CIV-0104-010"
-    ],
-    "kind": "struct",
-    "name": "ConstraintState",
-    "id": "FR-CIV-0104-010",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-0104-010 -- Core civilisation simulation"
-  },
-  {
-    "file": "crates/engine/src/constraints.rs",
-    "line": 561,
-    "ids": [
-      "FR-CIV-0104-007"
-    ],
-    "kind": "struct",
-    "name": "ConstraintState",
-    "id": "FR-CIV-0104-007",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-0104-007 -- Core civilisation simulation"
-  },
-  {
-    "file": "crates/engine/src/constraints.rs",
-    "line": 562,
+    "line": 569,
     "ids": [
       "FR-CIV-0104-003"
     ],
@@ -558,90 +156,6 @@
     "requirement": "\u2014 Coercion derives, never declared.** `coercion(i\u2192j)` measures `i`'s capacity to compel `j`, computed from substrate only:"
   },
   {
-    "file": "crates/engine/src/engine.rs",
-    "line": 740,
-    "ids": [
-      "FR-CIV-CORE-006"
-    ],
-    "kind": "struct",
-    "name": "Simulation",
-    "id": "FR-CIV-CORE-006",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-006 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/engine.rs",
-    "line": 741,
-    "ids": [
-      "FR-CIV-CORE-007"
-    ],
-    "kind": "struct",
-    "name": "Simulation",
-    "id": "FR-CIV-CORE-007",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-007 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/engine.rs",
-    "line": 742,
-    "ids": [
-      "FR-CIV-CORE-011"
-    ],
-    "kind": "struct",
-    "name": "Simulation",
-    "id": "FR-CIV-CORE-011",
-    "defined_by_spec": true,
-    "requirement": "/// FR-CIV-CORE-011: Replay Determinism Verification"
-  },
-  {
-    "file": "crates/engine/src/engine.rs",
-    "line": 743,
-    "ids": [
-      "FR-CIV-CORE-013"
-    ],
-    "kind": "struct",
-    "name": "Simulation",
-    "id": "FR-CIV-CORE-013",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-013 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/engine.rs",
-    "line": 744,
-    "ids": [
-      "FR-CIV-CORE-014"
-    ],
-    "kind": "struct",
-    "name": "Simulation",
-    "id": "FR-CIV-CORE-014",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-014 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/engine.rs",
-    "line": 1161,
-    "ids": [
-      "FR-CIV-GODTOOL-921"
-    ],
-    "kind": "const",
-    "name": "GOD_ACTION_AUDIT_CAP",
-    "id": "FR-CIV-GODTOOL-921",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-GODTOOL-921 -- Civ Godtool"
-  },
-  {
-    "file": "crates/engine/src/engine.rs",
-    "line": 3449,
-    "ids": [
-      "FR-CIV-CORE-009"
-    ],
-    "kind": "struct",
-    "name": "SimulationSnapshot",
-    "id": "FR-CIV-CORE-009",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-009 -- Core simulation engine"
-  },
-  {
     "file": "crates/engine/src/fixed_math.rs",
     "line": 3,
     "ids": [
@@ -664,78 +178,6 @@
     "id": "FR-CIV-CORE-012",
     "defined_by_spec": true,
     "requirement": "ADR: FR-CIV-CORE-012 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/hash_chain.rs",
-    "line": 41,
-    "ids": [
-      "FR-CIV-CORE-015"
-    ],
-    "kind": "struct",
-    "name": "HashChainState",
-    "id": "FR-CIV-CORE-015",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-CORE-015 -- Core simulation engine"
-  },
-  {
-    "file": "crates/engine/src/info_views.rs",
-    "line": 89,
-    "ids": [
-      "FR-CIV-INFOVIEW-916"
-    ],
-    "kind": "struct",
-    "name": "InfoOverlay",
-    "id": "FR-CIV-INFOVIEW-916",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-INFOVIEW-916 -- Info views and inspectors"
-  },
-  {
-    "file": "crates/engine/src/info_views.rs",
-    "line": 90,
-    "ids": [
-      "FR-CIV-INFOVIEW-917"
-    ],
-    "kind": "struct",
-    "name": "InfoOverlay",
-    "id": "FR-CIV-INFOVIEW-917",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-INFOVIEW-917 -- Info views and inspectors"
-  },
-  {
-    "file": "crates/engine/src/info_views.rs",
-    "line": 91,
-    "ids": [
-      "FR-CIV-INFOVIEW-918"
-    ],
-    "kind": "struct",
-    "name": "InfoOverlay",
-    "id": "FR-CIV-INFOVIEW-918",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-INFOVIEW-918 -- Info views and inspectors"
-  },
-  {
-    "file": "crates/engine/src/info_views.rs",
-    "line": 92,
-    "ids": [
-      "FR-CIV-INFOVIEW-919"
-    ],
-    "kind": "struct",
-    "name": "InfoOverlay",
-    "id": "FR-CIV-INFOVIEW-919",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-INFOVIEW-919 -- Info views and inspectors"
-  },
-  {
-    "file": "crates/engine/src/info_views.rs",
-    "line": 93,
-    "ids": [
-      "FR-CIV-INFOVIEW-921"
-    ],
-    "kind": "struct",
-    "name": "InfoOverlay",
-    "id": "FR-CIV-INFOVIEW-921",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-INFOVIEW-921 -- Info views and inspectors"
   },
   {
     "file": "crates/engine/src/lib.rs",
@@ -762,42 +204,6 @@
     "requirement": "[ ] **FR-CIV-TERRAIN-004**: Map2D zoom levels SHALL round-trip without voxel-data"
   },
   {
-    "file": "crates/engine/src/metrics.rs",
-    "line": 40,
-    "ids": [
-      "FR-CIV-METRICS-001-TIMESERIES"
-    ],
-    "kind": "struct",
-    "name": "MetricsFixed",
-    "id": "FR-CIV-METRICS-001-TIMESERIES",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-METRICS-001-TIMESERIES -- Metrics and monitoring"
-  },
-  {
-    "file": "crates/engine/src/perf.rs",
-    "line": 11,
-    "ids": [
-      "FR-CIV-PERF-006"
-    ],
-    "kind": "struct",
-    "name": "TickProfile",
-    "id": "FR-CIV-PERF-006",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-PERF-006 -- Performance"
-  },
-  {
-    "file": "crates/engine/src/perf.rs",
-    "line": 12,
-    "ids": [
-      "FR-CIV-PERF-004"
-    ],
-    "kind": "struct",
-    "name": "TickProfile",
-    "id": "FR-CIV-PERF-004",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-PERF-004 -- Performance"
-  },
-  {
     "file": "crates/engine/src/replay.rs",
     "line": 156,
     "ids": [
@@ -808,42 +214,6 @@
     "id": "FR-SAVE-009",
     "defined_by_spec": true,
     "requirement": "ADR: FR-SAVE-009 -- Save system"
-  },
-  {
-    "file": "crates/engine/src/social_types.rs",
-    "line": 102,
-    "ids": [
-      "FR-CIV-POLITY-007"
-    ],
-    "kind": "enum",
-    "name": "StratBand",
-    "id": "FR-CIV-POLITY-007",
-    "defined_by_spec": true,
-    "requirement": "\u2014 Collapse.** A polity dissolves when its internal mean coord falls below the anarchic floor for a sustained window (population loss, surplus collapse starving payoff, or coercion capacity evaporating). Collapse emits it"
-  },
-  {
-    "file": "crates/engine/src/social_types.rs",
-    "line": 336,
-    "ids": [
-      "FR-CIV-NOTIFY-901"
-    ],
-    "kind": "enum",
-    "name": "UnrestLevel",
-    "id": "FR-CIV-NOTIFY-901",
-    "defined_by_spec": true,
-    "requirement": "Data-driven thresholds** (`FR-CIV-NOTIFY-901`): alert rules in RON (happiness < X, population collapse, hyperinflation) \u2014 measured, not scripted."
-  },
-  {
-    "file": "crates/engine/src/tutorial.rs",
-    "line": 13,
-    "ids": [
-      "FR-CIV-NOTIFY-920"
-    ],
-    "kind": "enum",
-    "name": "TutorialMilestone",
-    "id": "FR-CIV-NOTIFY-920",
-    "defined_by_spec": true,
-    "requirement": "FR-CIV-QOL-100..109.** Extends `FR-CIV-NOTIFY-920`. Priority: **8 (must-ship)**."
   },
   {
     "file": "crates/engine/src/vehicle_types.rs",
@@ -895,7 +265,7 @@
   },
   {
     "file": "crates/planet/src/geology.rs",
-    "line": 19,
+    "line": 27,
     "ids": [
       "FR-CIV-3D-011"
     ],
@@ -904,18 +274,6 @@
     "id": "FR-CIV-3D-011",
     "defined_by_spec": true,
     "requirement": "\u2014 Biome Coverage"
-  },
-  {
-    "file": "crates/planet/src/geology.rs",
-    "line": 20,
-    "ids": [
-      "FR-CIV-3D-015"
-    ],
-    "kind": "enum",
-    "name": "BiomeKind",
-    "id": "FR-CIV-3D-015",
-    "defined_by_spec": true,
-    "requirement": "\u2014 Texture Atlas Completeness"
   },
   {
     "file": "crates/protocol-3d/src/bundle.rs",
@@ -943,43 +301,7 @@
   },
   {
     "file": "crates/research/src/lib.rs",
-    "line": 27,
-    "ids": [
-      "FR-CIV-RESEARCH-003-EXPORT"
-    ],
-    "kind": "struct",
-    "name": "TechCard",
-    "id": "FR-CIV-RESEARCH-003-EXPORT",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-RESEARCH-003-EXPORT -- Technology research"
-  },
-  {
-    "file": "crates/research/src/lib.rs",
-    "line": 28,
-    "ids": [
-      "FR-CIV-RESEARCH-001-SCENARIO"
-    ],
-    "kind": "struct",
-    "name": "TechCard",
-    "id": "FR-CIV-RESEARCH-001-SCENARIO",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-RESEARCH-001-SCENARIO -- Technology research"
-  },
-  {
-    "file": "crates/research/src/lib.rs",
-    "line": 48,
-    "ids": [
-      "FR-CIV-RESEARCH-002-SNAPSHOT"
-    ],
-    "kind": "enum",
-    "name": "ValidationOutcome",
-    "id": "FR-CIV-RESEARCH-002-SNAPSHOT",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-RESEARCH-002-SNAPSHOT -- Technology research"
-  },
-  {
-    "file": "crates/research/src/lib.rs",
-    "line": 98,
+    "line": 112,
     "ids": [
       "FR-CIV-TECH-007"
     ],
@@ -1027,7 +349,7 @@
   },
   {
     "file": "crates/tactics/src/fog_of_war.rs",
-    "line": 30,
+    "line": 49,
     "ids": [
       "FR-CIV-FOG-001"
     ],
@@ -1036,54 +358,6 @@
     "id": "FR-CIV-FOG-001",
     "defined_by_spec": true,
     "requirement": "[ ] **FR-CIV-FOG-001**: Fog-of-war visibility SHALL be a function of `(unit"
-  },
-  {
-    "file": "crates/tactics/src/fog_of_war.rs",
-    "line": 31,
-    "ids": [
-      "FR-CIV-FOG-002"
-    ],
-    "kind": "struct",
-    "name": "FogOfWar",
-    "id": "FR-CIV-FOG-002",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-FOG-002**: The war bridge SHALL NOT queue `DamageEvent`s for"
-  },
-  {
-    "file": "crates/tactics/src/fog_of_war.rs",
-    "line": 32,
-    "ids": [
-      "FR-CIV-FOG-003"
-    ],
-    "kind": "struct",
-    "name": "FogOfWar",
-    "id": "FR-CIV-FOG-003",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-FOG-003**: Scenario `fog_vision_radius` SHALL be respected"
-  },
-  {
-    "file": "crates/tactics/src/fog_of_war.rs",
-    "line": 33,
-    "ids": [
-      "FR-CIV-FOG-004"
-    ],
-    "kind": "struct",
-    "name": "FogOfWar",
-    "id": "FR-CIV-FOG-004",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-FOG-004**: The web dashboard SHALL provide a tactics panel"
-  },
-  {
-    "file": "crates/tactics/src/fog_of_war.rs",
-    "line": 34,
-    "ids": [
-      "FR-CIV-FOG-005"
-    ],
-    "kind": "struct",
-    "name": "FogOfWar",
-    "id": "FR-CIV-FOG-005",
-    "defined_by_spec": true,
-    "requirement": "[ ] **FR-CIV-FOG-005**: Fog-of-war observer mode (per the legacy"
   },
   {
     "file": "crates/tactics/src/lib.rs",
@@ -1156,18 +430,6 @@
     "id": "FR-CIV-WAR-011",
     "defined_by_spec": true,
     "requirement": "2.4 Maneuver \u2014 `FR-CIV-WAR-011`"
-  },
-  {
-    "file": "crates/tactics/src/movement.rs",
-    "line": 27,
-    "ids": [
-      "FR-CIV-RTS-001"
-    ],
-    "kind": "struct",
-    "name": "GridMove",
-    "id": "FR-CIV-RTS-001",
-    "defined_by_spec": true,
-    "requirement": "ADR: FR-CIV-RTS-001 -- RTS gameplay"
   },
   {
     "file": "crates/tactics/src/war_bridge.rs",

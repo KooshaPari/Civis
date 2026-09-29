@@ -1,14 +1,21 @@
-//! Tests for FR-CIV-RTS-RENDER-004
+//! Behavior tests for `atlas config dimensions are pow2`.
 //!
+//! These assertions are real and were previously filed under `FR-CIV-RTS-RENDER-004`.
+//! That ID is not a requirement: the only place it appears in the repository
+//! is the middle column of CIV-0600's §14 traceability table
+//! (`docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3205-3224`), which uses it
+//! as a "verification owner" label for a test file that does not exist.
+//! CIV-0300 §12.1 owns `FR-CIV-RTS-001..015` and never mentions the
+//! RENDER/ZOOM/NATION sub-namespaces.
 //!
-//! This test file verifies FR FR-CIV-RTS-RENDER-004.
-//! Maps to CIV-0600 FR-CIV-ASSET-006: Power-of-Two Atlas Dimensions.
+//! So the ID was dropped rather than satisfied: there is no requirement text to
+//! implement, and inventing one would be the same defect in a new place. The
+//! behavior is still worth a test, so the test stays under a name that says
+//! what it checks.
 
 #[cfg(test)]
-mod fr_fr_civ_rts_render_004 {
+mod rts_atlas_power_of_two {
     use civ_engine::rts_types::{all_atlases, AtlasConfig};
-
-    /// FR-CIV-RTS-RENDER-004 -- All atlas configs have power-of-two dimensions.
     #[test]
     fn verify_fr_civ_rts_render_004_basic() {
         for atlas in all_atlases() {

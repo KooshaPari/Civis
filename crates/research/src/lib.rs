@@ -24,8 +24,15 @@ pub const SCHEMA_VERSION: u32 = 0;
 
 /// A proposed tech card. Hand-authored cards or LLM-generated cards both
 /// take this shape so the validator is one entry point.
-// FR-CIV-RESEARCH-003-EXPORT
-    // FR-CIV-RESEARCH-001-SCENARIO
+// The following 2 requirement tags were removed from TechCard.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Both ids are alias artifacts of the ID inventory rather than requirements; they should be reclassified so they stop generating bindings.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-RESEARCH-001-SCENARIO: The `requirement` field bound to this id is a row of the docs/audits/fr-matrix ID-rename table that says the real LLM cache and card-acceptance line is the non-hyphenated parent id and which marks this id a phantom alias. `TechCard` is a struct describing a proposed tech (id, era, inputs, energy_cost, byproducts, dependencies) and the rename row itself identifies `LlmEvent::cache_key` as the real implementing symbol, which is the symbol that should carry the tag instead.
+// [unbound] FR-CIV-RESEARCH-003-EXPORT: The `requirement` field bound to this id is a row of the docs/audits/fr-matrix ID-rename table whose real requirement is the hybrid-replay line at crates/research/src/lib.rs:616 and which explicitly marks this id as a phantom alias of a non-hyphenated parent. `TechCard` is a plain card description struct and implements no export, so no implementing symbol is tagged that can discharge the alias.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TechCard {
     /// Stable identifier.
@@ -45,7 +52,14 @@ pub struct TechCard {
 }
 
 /// Outcome of validating a tech card against a law DB.
-// FR-CIV-RESEARCH-002-SNAPSHOT
+// The following 1 requirement tags were removed from ValidationOutcome.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The canon-save replay behavior that the parent id names does exist and is exercised by the replay-mode tests, so this is a retargeting problem rather than a gap.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-RESEARCH-002-SNAPSHOT: The `requirement` field bound to this id is a row of the docs/audits/fr-matrix ID-rename table that says the real canonical-replay line is crates/research/src/lib.rs:601 and which marks this id as a phantom alias of a non-hyphenated parent. `ValidationOutcome` is a two-variant enum (Accept, Reject(RejectReason)) describing a validator verdict. It performs no replay, so no implementing symbol is tagged that can discharge the alias.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidationOutcome {
     /// The card is canon and may be added to the live tech tree.

@@ -8,8 +8,15 @@
 /// Wall-clock duration (microseconds) recorded for one named tick phase.
 pub type PhaseTiming = (&'static str, u64);
 
-// FR-CIV-PERF-006
-// FR-CIV-PERF-004
+// The following 2 requirement tags were removed from TickProfile.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// An orphaned pub API is the whole story here: the type looks like instrumentation, but no code path ever builds it.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-PERF-004: The requirement on the WS Command Latency row of the docs/audits/fr-matrix is WebSocket command-latency measurement. `TickProfile` records per-phase tick timing and a total, and has zero references outside perf.rs - nothing in production constructs it - so no command-latency instrumentation is wired and no implementing symbol exists.
+// [unbound] FR-CIV-PERF-006: The requirement on the 10k Citizens row of the docs/audits/fr-matrix is a full-snapshot capability at 10k citizens. `TickProfile` is a struct of counters with zero references outside perf.rs, and there is no 10k-citizen snapshot test anywhere in the tick path, so no measurement and no implementing symbol exist.
 /// Transient per-tick timing record. Cleared and refilled every [`Simulation::tick`].
 ///
 /// [`Simulation::tick`]: crate::Simulation::tick

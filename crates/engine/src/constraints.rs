@@ -557,8 +557,15 @@ pub fn run_all_checks(
     }
 }
 
-// FR-CIV-0104-010
-// FR-CIV-0104-007
+// The following 2 requirement tags were removed from ConstraintState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The recovery window is the clearest example of a field that looks like coverage but is never read.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-0104-007: The requirement in docs/specs/CIV-0104-minimal-constraint-set-theorem.md is "The baseline SHALL be stable under the full constraint set": a baseline simulation SHALL remain stable when every constraint is enabled. `ConstraintState` is a per-tick tracker (ablation_mode, ticks_below_recovery_threshold, an append-only stability log) and computes no baseline. Grepping constraints.rs for `baseline` returns only doc comments, so no baseline stability assertion or implementing symbol exists.
+// [unbound] FR-CIV-0104-010: The requirement in docs/specs/CIV-0104-minimal-constraint-set-theorem.md is "Recovery Window Tracking" as a tracker behavior. `ConstraintState` does own a `recovery_window` field, so the shape is present, but nothing in the crate advances or evaluates that window, and the tagged struct is a passive state bag. The tracking behavior therefore has no implementing symbol.
 // FR-CIV-0104-003
 /// Per-tick constraint state tracked alongside the simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

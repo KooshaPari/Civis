@@ -126,8 +126,15 @@ pub struct FacadeStyle {
 }
 
 /// Vectorized cultural-ecological input used to choose a tile-set family.
-// FR-CIV-CLIENT-GODOT-001
-// FR-CIV-CLIENT-GODOT-002
+// The following 2 requirement tags were removed from CultureEraWealthVector.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Both ids are client-lifecycle requirements filed against a procedural-generation input vector.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-CLIENT-GODOT-001: The requirement on the Phase 1 row of agileplus-specs/civ-012-godot-secondary-client/spec.md is "WebSocket connection and handshake". `CultureEraWealthVector` is a three-field data DTO (culture, era, wealth) used to pick a tile-set family for procedural generation. It contains no transport code and crates/build has no client handshake, so no implementing symbol exists.
+// [unbound] FR-CIV-CLIENT-GODOT-002: The requirement on the Phase 2 row of agileplus-specs/civ-012-godot-secondary-client/spec.md is "3D scene rendering". `CultureEraWealthVector` is a plain serializable DTO and crates/build performs no rendering, so no implementing symbol exists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CultureEraWealthVector {
     /// Culture identifier for style-family lookup.
@@ -295,7 +302,14 @@ impl Allocator {
 
 /// Shared building graph for both autonomous growth and freehand authoring.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-// FR-CIV-BIO-001
+// The following 1 requirement tags were removed from BuildingGraph.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The crate has a real serialization story, which is why the tag looks plausible, but the entity being serialized is the wrong one.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-BIO-001: The requirement on the Phase 1 row of agileplus-specs/civ-008-genetics-species/spec.md is "a species registry and YAML schema": organisms SHALL be registered under a schema that round-trips from YAML. `BuildingGraph` is a building graph (parcels, facades, provenance, completed buildings). It does round-trip RON, but the tagged type models structures, not species, and contains no genome, trait or species-registry entry, so no implementing symbol exists.
 pub struct BuildingGraph {
     /// All known parcels in deterministic order.
     pub parcels: Vec<Parcel>,

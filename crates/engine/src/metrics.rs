@@ -37,7 +37,14 @@ pub fn compute(energy_budget_joules: f64, consumption_joules: f64) -> Metrics {
 }
 
 /// Fixed-point metrics for deterministic replay and cross-platform simulation.
-// FR-CIV-METRICS-001-TIMESERIES
+// The following 1 requirement tags were removed from MetricsFixed.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// This id should be reclassified as an alias in the ID inventory so it stops producing bindings at all.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-METRICS-001-TIMESERIES: The `requirement` field bound to this id is a row of the docs/audits/fr-matrix ID-rename table that explicitly calls it a phantom alias and states that the non-hyphenated form is the real requirement, with the real hybrid-replay line living in PLAN.md. `MetricsFixed` is a Copy wrapper of four Fixed fields, so the phantom id cannot be discharged by it and no implementing symbol exists.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MetricsFixed {
     pub waste_joules: Fixed,

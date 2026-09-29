@@ -85,12 +85,19 @@ pub struct LegendStop {
     pub color: [f32; 3],
 }
 
+// The following 5 requirement tags were removed from InfoOverlay.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The registry is the right place to hang a pointer to a future overlay compute function, but as written each tag claims an overlay that was never computed.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-INFOVIEW-916: The requirement on the A3 Temperature row of the docs/audits/fr-matrix is a temperature overlay. `InfoOverlay` is a catalog entry (id, name, group, render_kind, legend stops) and computes no overlay values. No function in info_views.rs derives a temperature value per cell, so no implementing symbol exists.
+// [unbound] FR-CIV-INFOVIEW-917: The requirement on the A8 Resource Deposits row of the docs/audits/fr-matrix is a resource-deposit overlay. `InfoOverlay` is a catalog entry and no deposit-overlay compute function exists in the file, so no implementing symbol exists.
+// [unbound] FR-CIV-INFOVIEW-918: The requirement on the E1 Roads row of the docs/audits/fr-matrix is a roads overlay. The matrix row itself notes that the traffic graph exists but that this is only the first Gizmo render-kind exemplar, i.e. the overlay is aspirational. `InfoOverlay` is a catalog entry and no roads-overlay compute function exists, so no implementing symbol exists.
+// [unbound] FR-CIV-INFOVIEW-919: The requirement on the C4 Wealth row of the docs/audits/fr-matrix is a wealth overlay, which the matrix rates NEAR priority. `InfoOverlay` is a catalog entry and no wealth-overlay compute function exists, so no implementing symbol exists.
+// [unbound] FR-CIV-INFOVIEW-921: The requirement on the B6 Migration Flow row of the docs/audits/fr-matrix is a migration-flow overlay, also rated NEAR. `InfoOverlay` is a catalog entry and no migration-flow overlay compute function exists, so no implementing symbol exists.
 /// A data-driven info overlay registration (FR-CIV-INFOVIEW-900, extended).
-// FR-CIV-INFOVIEW-916
-// FR-CIV-INFOVIEW-917
-// FR-CIV-INFOVIEW-918
-// FR-CIV-INFOVIEW-919
-// FR-CIV-INFOVIEW-921
 #[derive(Debug, Clone)]
 pub struct InfoOverlay {
     /// Unique overlay identifier (stable across saves).

@@ -99,7 +99,14 @@ impl From<u64> for SimSeed {
 /// Ordered from lowest to highest: Poor < Middle < Rich < Elite. The numeric
 /// rank returned by [`StratBand::rank`] is used for promotion/demotion
 /// detection in `phase_stratification`.
-// FR-CIV-POLITY-007
+// The following 1 requirement tags were removed from StratBand.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The enum supplies an ordering, not a dissolution trigger, and nothing in the crate tracks a mean coordination value to threshold against.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-POLITY-007: The requirement in agileplus-specs/civ-007-diplomacy-laws-government/spec.md is "a polity SHALL dissolve when its internal mean coordination falls below the anarchic floor for a sustained window". `StratBand` is a four-variant stratification enum (Poor / Middle / Rich / Elite) with a rank used for promotion and demotion. Grepping the crate for `anarch` and `dissolve` returns nothing, and the enum has no coordination value and no sustained-window logic, so no implementing symbol exists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum StratBand {
     Poor,
@@ -333,7 +340,14 @@ pub struct CohesionSnapshot {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
-// FR-CIV-NOTIFY-901
+// The following 1 requirement tags were removed from UnrestLevel.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// The hardcoded ladder produces plausible levels from the same inputs, which is why the tag survives review, but it is the opposite of the authored-rule model the requirement asks for.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-NOTIFY-901: The requirement in docs/specs/requirements/FR-CIV-NOTIFY.md is "alert rules in RON, for example happiness below X, which are measured rather than scripted". `UnrestLevel` is a four-variant enum (Stable / Restless / Rioting / Revolting) with a hardcoded `from_score` ladder of fixed score thresholds. No RON file is loaded and no threshold is data-driven, so the requirement's explicit intent - rules authored in RON rather than compiled into Rust - is violated outright and no implementing symbol exists.
 pub enum UnrestLevel {
     Stable,
     Restless,

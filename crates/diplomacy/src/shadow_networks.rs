@@ -189,7 +189,14 @@ pub struct PairShadowAggregate {
 // Shadow network state
 // ---------------------------------------------------------------------------
 
-// FR-DIPL-007
+// The following 1 requirement tags were removed from ShadowNetworkState.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// An empty requirement field means the binding was generated from id provenance with nothing to check against.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-DIPL-007: The report's Spec file:line column for this row reads "(no spec text; requirement empty)" and no spec under docs/specs/ or agileplus-specs/ defines this id at all, so no requirement sentence could be located to quote. `ShadowNetworkState` is a state record holding a config, per-pair leakage aggregates and a per-tick event buffer, so the tag is unjustified in either direction and no implementing symbol exists.
 /// The shadow network system state. Owns all tracked flows and the
 /// per-tick event buffer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

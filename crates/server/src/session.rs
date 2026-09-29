@@ -24,7 +24,48 @@ use serde::{Deserialize, Serialize};
 
 use crate::jsonrpc::SnapshotFields;
 
-// FR-SESSION-001, FR-SESSION-002, FR-SESSION-003, FR-SESSION-004, FR-SESSION-005, FR-SESSION-006, FR-SESSION-007, FR-SESSION-008, FR-SESSION-009, FR-SESSION-010, FR-SESSION-011, FR-SESSION-012, FR-SESSION-013, FR-SESSION-014, FR-SESSION-015, FR-SESSION-016, FR-SESSION-017, FR-SESSION-018, FR-SESSION-019, FR-SESSION-020, FR-SESSION-021, FR-SESSION-022, FR-SESSION-023, FR-SESSION-024, FR-SESSION-025, FR-SESSION-026, FR-SESSION-027, FR-SESSION-028, FR-SESSION-029, FR-SESSION-030, FR-SESSION-031, FR-SESSION-032, FR-SESSION-033
+// The following 33 requirement tags were removed from pub const SESSION_HISTORY_CAP
+// declaration. They are not implemented at this symbol, and leaving them
+// here claimed coverage that no code in this repository provides.
+// `SESSION_HISTORY_CAP` is a ring-buffer size for the audit log. The PvE session
+// requirements below need turn tokens, hot-seat, observers, challenge HTTP routes,
+// UUIDv7 ids, and autosave timers; none exist in this file, and the crate has no
+// database layer. `SESSION_HISTORY_CAP` is 32, a tuning constant, not a session model.
+//
+// Removed, with the reason each cannot be discharged here:
+// FR-SESSION-001: needs a pve session type with one human plus AI nations; no session-type field exists
+// FR-SESSION-002: needs a per-AI-nation ChaCha20Rng sub-stream from the session seed; no RNG field exists
+// FR-SESSION-003: needs human permanent input authority; SharedSession.role is an operator role
+// FR-SESSION-004: needs a NationAction queue; that type does not exist anywhere in crates/
+// FR-SESSION-005: needs rejection of non-NationAction AI submissions; depends on that absent type
+// FR-SESSION-006: needs a hot_seat multi-human shared WebSocket; no session-type field exists
+// FR-SESSION-007: needs turn-token enforcement with error -32001; no turn token, and -32001 has 0 hits in the crate
+// FR-SESSION-008: needs a session.turn.end RPC advancing and validating rotation; the method enum has no turn methods
+// FR-SESSION-009: needs turn-timeout auto-advance at expires_at_tick; no such field exists
+// FR-SESSION-010: needs simultaneous-turn action collection and deterministic resolution; not implemented
+// FR-SESSION-011: needs observers that receive broadcasts without injection ability; no observer flag exists
+// FR-SESSION-012: needs observer RPCs rejected with a specific error code; neither exists
+// FR-SESSION-013: needs omniscient observer mode with tick_stride; no mode field exists
+// FR-SESSION-014: needs server-side visibility filtering; get_snapshot_for_session returns the full snapshot
+// FR-SESSION-015: needs an ENDED-session replay observer with seek; no session status or seek handler exists
+// FR-SESSION-016: needs POST /api/v1/challenges with challenge_id and queue position; no HTTP route exists
+// FR-SESSION-017: needs fully headless challenge sessions at max tick rate; no such mode exists
+// FR-SESSION-018: needs a baseline score from an AI-only session; no scoring code exists
+// FR-SESSION-019: needs weighted normalized metric deltas in fixed point; no score computation exists
+// FR-SESSION-020: needs GET /api/v1/challenges/{id}/replay storing .civreplay; no route or storage exists
+// FR-SESSION-021: needs a session.pause RPC halting the tick loop; no such method or field exists
+// FR-SESSION-022: needs a session.resume RPC restoring the loop and BLAKE3 chain; not implemented
+// FR-SESSION-023: needs session.set_speed accepting 1..=100 applied at a boundary; no handler exists
+// FR-SESSION-024: needs session.fast_forward suppressing broadcasts then sending a final snapshot; not implemented
+// FR-SESSION-025: needs session.paused.v1 / resumed.v1 / speed_changed.v1 events; no such event types exist
+// FR-SESSION-026: needs a session.save RPC writing a named slot with a BLAKE3 hash; no save RPC exists here
+// FR-SESSION-027: needs a session.load RPC verifying the BLAKE3 hash before restore; no load RPC exists here
+// FR-SESSION-028: needs autosave to the autosave slot every autosave_interval_ticks; no timer exists
+// FR-SESSION-029: needs loading from an ENDED session to branch a new session_id; no status or branch logic
+// FR-SESSION-030: needs a UUIDv7 at session.create; SharedSession::new mints a UUID v4 and no create RPC exists
+// FR-SESSION-031: needs full SessionConfig validation at create; no SessionConfig type exists
+// FR-SESSION-032: needs persisting session state to a sessions table; the crate has no database layer
+// FR-SESSION-033: needs reloading incomplete sessions on restart; there is no persistence to reload from
 /// Maximum number of recent frames a session will remember for ack tracking.
 ///
 /// Kept small: the only consumer that walks this is the audit log + tests.

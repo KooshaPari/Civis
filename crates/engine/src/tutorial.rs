@@ -10,7 +10,14 @@ use crate::engine::Simulation;
 
 /// Ordered tutorial milestones surfaced to clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-// FR-CIV-NOTIFY-920
+// The following 1 requirement tags were removed from TutorialMilestone.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// A retarget onto advance_from_sim would be correct today; the tag currently claims coverage from a bare enum.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-NOTIFY-920: The requirement in docs/specs/requirements/FR-CIV-NOTIFY.md is tutorial milestones as a behavior: milestones SHALL advance as the simulation reaches them. `TutorialMilestone` is a five-variant ordered enum naming the stages. The advancement does exist, but it is `advance_from_sim` further down the same file, which is therefore the real implementing symbol; the tag sits on the enum that only enumerates them, and that enum implements nothing.
 pub enum TutorialMilestone {
     FirstFaction,
     FirstTech,

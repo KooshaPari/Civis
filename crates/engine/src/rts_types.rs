@@ -32,9 +32,16 @@ use serde::{Deserialize, Serialize};
 // ── Nation color types (§6.3, §10.3 of CIV-0600) ─────────────────────────────
 
 /// A nation's color palette for sprite recoloring.
-// FR-CIV-RTS-RENDER-003
 /// Nation colors are not baked into atlas sprites; a fragment shader
 /// replaces palette indices at render time.
+///
+/// The `FR-CIV-RTS-RENDER-003` tag that used to sit here was removed. That ID
+/// is not a requirement: its only occurrence in the repository is the middle
+/// column of CIV-0600's §14 table, which uses it as a "verification owner"
+/// label for `test_rembg_batch.py`. The nearest real requirement is
+/// FR-CIV-ASSET-004, "reject any output sprite with alpha channel coverage
+/// below 60%", which is a background-removal gate and has nothing to do with a
+/// nation palette. See the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NationColor {
     /// Primary color as hex string (e.g. "#c8303c").
@@ -80,15 +87,13 @@ pub const BAKED_SECONDARY: &str = "#f0c040";
 
 // ── Atlas configuration (§7.2) ───────────────────────────────────────────────
 
-// FR-CIV-RTS-RENDER-004
 /// Atlas dimensions are fixed by asset category. Power-of-two required
 /// for WebGL texture compatibility.
 ///
-/// This records the *intended* dimensions only. FR-CIV-ASSET-006 ("all output
-/// atlas PNGs SHALL have power-of-two width and height") was previously tagged
-/// here and removed: nothing in this repo packs or emits an atlas PNG, so
-/// there is no output for this constant to constrain. See the module-level
-/// scope warning.
+/// The `FR-CIV-RTS-RENDER-004` tag that used to sit here was removed. That ID
+/// is not a requirement — it appears only in CIV-0600's §14 table as an alias
+/// for FR-CIV-ASSET-006, which is about *output* atlas PNGs, not this struct.
+/// See the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AtlasConfig {
     /// Atlas name (e.g. "terrain_atlas").
@@ -195,14 +200,17 @@ impl ZoomTier {
     }
 }
 
-// FR-CIV-RTS-ZOOM-001
 /// A sprite handle that references a specific asset at a zoom level.
 ///
-/// FR-CIV-ASSET-018 ("when SpriteManager.setZoomLevel() is called, all active
-/// sprite handles SHALL swap textures within the same JS event loop tick") was
-/// previously tagged here and removed. This is a record of a handle's state,
-/// not the synchronous swap; there is no SpriteManager and no JavaScript
-/// runtime in this repository. See the module-level scope warning.
+/// Two tags that used to sit here were removed.
+/// `FR-CIV-RTS-ZOOM-001` is not a requirement: CIV-0300 §12.1 owns
+/// `FR-CIV-RTS-001..015` and never defines a ZOOM sub-namespace; the ID exists
+/// only in CIV-0600's §14 table. `FR-CIV-ASSET-018` ("when
+/// `SpriteManager.setZoomLevel()` is called, all active sprite handles SHALL swap
+/// textures within the same JavaScript event loop tick") is a manager behavior
+/// over all live handles. This struct records one handle's state, mutates no
+/// texture, and there is no SpriteManager and no JS runtime in this repository.
+/// See the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpriteHandle {
     /// Asset identifier (e.g. "terrain_plains").
@@ -237,14 +245,14 @@ impl SpriteHandle {
 
 // ── UV rect (§7.3) ───────────────────────────────────────────────────────────
 
-// FR-CIV-RTS-RENDER-005
 /// Rectangle within an atlas, used for UV mapping.
 ///
-/// FR-CIV-ASSET-007 ("every sprite entry in an atlas JSON SHALL have a frame
-/// rect fully contained within the atlas dimensions, with no overflow and no
-/// overlap") was previously tagged here and removed. A rect type cannot
-/// enforce containment, and the atlas JSON that the requirement validates is
-/// never produced. See the module-level scope warning.
+/// The `FR-CIV-RTS-RENDER-005` tag that used to sit here was removed. That ID
+/// is not a requirement — it appears only in CIV-0600's §14 table as an alias
+/// for FR-CIV-ASSET-007, which requires a containment *validation sweep* over
+/// every frame in a produced atlas JSON. `fits_in` and `overlaps` are the right
+/// predicates, but no packer calls them and no atlas JSON is ever produced. See
+/// the module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UvRect {
     /// X offset in pixels.
@@ -279,15 +287,17 @@ impl UvRect {
 
 // ── Supersampling (§3.2) ─────────────────────────────────────────────────────
 
-// FR-CIV-RTS-RENDER-001, FR-CIV-RTS-RENDER-002
 /// Supersampling configuration for sprite rasterization.
 ///
-/// FR-CIV-ASSET-001 ("render every `.svg.j2` template for every parameter
-/// combination in asset_parameters.yaml") and FR-CIV-ASSET-003 ("the resvg
-/// renderer SHALL apply 4x supersampling ... downscale with Lanczos3") were
-/// previously tagged here and removed. This type stores the intended factor;
-/// no code rasterizes an SVG through it, and neither `asset_parameters.yaml`
-/// nor any `.svg.j2` template exists. See the module-level scope warning.
+/// Three tags that used to sit here were removed. `FR-CIV-RTS-RENDER-001` and
+/// `FR-CIV-RTS-RENDER-002` are not requirements: they appear only in CIV-0600's
+/// §14 table as aliases for FR-CIV-ASSET-001 and FR-CIV-ASSET-003.
+/// FR-CIV-ASSET-001 is "render every `.svg.j2` template for every parameter
+/// combination in asset_parameters.yaml" and FR-CIV-ASSET-003 is "the resvg
+/// renderer SHALL apply 4x supersampling ... downscale with Lanczos3". This
+/// type stores the intended factor; no code rasterizes an SVG through it, and
+/// neither `asset_parameters.yaml` nor any `.svg.j2` template exists. See the
+/// module-level scope warning.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SsConfig {
     /// Supersampling factor (e.g. 4 for 4x).

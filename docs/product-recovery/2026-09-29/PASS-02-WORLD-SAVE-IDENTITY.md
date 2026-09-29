@@ -2,33 +2,28 @@
 
 Date 2026-09-29. Original frozen source remains `b3cd62a7394878cc64d024fbfcfd398b8bb88bf1`. This pass also inspects concurrent main `54d5758970249c8d1f24688ea45920b530e77299`; findings are revision-bound and do not silently rebase the original assessment.
 
-## C-F05 — one UI action can target server and local simulation
+## C-F05 — corrected after caller-composition falsification: remote save/load UI is gated off
 
-At concurrent main, `clients/bevy-ref/src/save_load_ui.rs` blob `ab33270ad1c15cc6800fe8cd200874c443d32929` was read through `apply_save_slot_action`.
+An intermediate reading of `save_load_ui.rs` suggested one action might dispatch both server RPC and local save/load because `apply_save_slot_action` contains both branches. **Further source tracing falsified that as the normal standalone composition.**
 
-For SaveAs:
-1. if `server_bridge` exists, the UI sends RPC `save.slot`;
-2. it then requires a local `SimState`;
-3. if local state exists, it also calls local `save_to_slot`.
+At concurrent main:
+- `standalone.rs` always installs `SimBridgePlugin` and installs `LiveAttachPlugin` only when `AttachMode::Server`.
+- `SimBridgePlugin` blob `055ab371c1d34f490a57e94215513c08a468a091` reads AttachMode at build time and creates `SimState` only when mode is not Server.
+- Its unit tests explicitly assert Server mode does not contain `SimState`.
+- `LiveAttachPlugin` blob `3dfdcd65c266e97544311c7c624240cff0d31c46` inserts the `ServerBridge` in Server mode.
 
-For Load:
-1. if `server_bridge` exists, it sends RPC `save.slot` with action load;
-2. if local `SimState` exists, it also calls local `load_from_slot`;
-3. the loaded local simulation replaces `sim.0` and the local UI transitions to Playing.
+So the intended resource invariant is LOCAL=`SimState`, REMOTE=`ServerBridge`, not both. That is a good architectural boundary and should become an explicit world-authority invariant.
 
-The code does not make these paths mutually exclusive. Therefore the architecture cannot assume a Save/Load button has one authoritative target merely because a server bridge is connected.
+However, `save_load_ui.rs` derives `has_local_sim = sim.is_some()` and disables **Save As, Load, and Delete** controls when no local simulation exists. In Server mode, the source-defined invariant makes `SimState` absent, so the buttons that would enter `apply_save_slot_action` and send `save.slot` are disabled. The function contains remote RPC code, but the ordinary UI gate prevents the user from reaching it. If another caller invokes the action directly, the remote RPC is sent and then the function reports "No local simulation..." and returns, which is also misleading for a successfully queued remote request.
 
-This is a source-observed dual-dispatch condition. Whether normal plugin/resource composition can actually provide both resources simultaneously must still be traced. If mutually exclusive by construction elsewhere, that invariant needs explicit enforcement/test. If both can coexist, the UI action can mutate/persist two different simulations under one user gesture.
+**Replacement finding:** not "one click definitely mutates two worlds"; rather, the inspected normal composition prevents that dual authority, but the save/load UI is local-authority-gated and therefore does not expose its own remote save/load branch correctly.
 
-### Required decision
+Required behavior decision:
+- LOCAL: controls operate local SimState.
+- REMOTE: controls remain enabled based on server connection/capability, issue RPC, and show server acknowledgement/result rather than requiring local SimState.
+- DELETE/REFRESH require the same explicit authority; do not delete local filesystem slots while presenting a remote-session browser unless intentionally separated.
 
-Define one authority mode per session/action:
-
-- LOCAL: local SimState is authoritative; server bridge cannot also mutate a different world.
-- REMOTE: server world is authoritative; local state is a projection/cache and local save/load is disabled or explicitly separate.
-- MIRRORED/DUAL: only if intentionally supported, with shared world identity and a synchronization/commit contract. It must not arise accidentally from optional resources.
-
-REC-CIVIS-WORLD-IDENTITY should carry this as a first-class invariant.
+Negative controls: server mode with no local SimState must permit supported remote save/load and must not display a local-state error after a successful server acknowledgement; disconnected server mode must disable or fail clearly; standalone mode must not emit server RPC.
 
 ## C-F06 — autosave filename tick can diverge from written tick
 

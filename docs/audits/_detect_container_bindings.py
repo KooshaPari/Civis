@@ -97,8 +97,35 @@ def find_tag_blocks() -> list[dict]:
 
 
 def spec_files() -> list[Path]:
+    """Every markdown file that may authoritatively define a requirement id.
+
+    This list was too narrow and produced real false alarms. It originally
+    covered only `docs/specs`, `docs/models`, `docs/design`, and
+    `agileplus-specs`, and reported 8 ids as having "no authoritative
+    definition". All 8 are in fact defined, in directories this function never
+    looked at:
+
+      FR-CIV-EMERGENCE-003/011/012/013, FR-CIV-RENDER-001/002
+        docs/guides/voxel-emergent-vision-and-migration.md
+      NFR-CIV-DET-003
+        docs/reference/non-functional-requirements.md:158
+      FR-DIPL-007
+        docs/traceability/TRACEABILITY_MATRIX.md:137
+
+    so `docs/guides`, `docs/reference`, and `docs/traceability` are now included.
+    `docs/traceability` in particular holds a per-id spec folder for most of the
+    generated id space, and it is the most authoritative of the four.
+    """
     out: set[Path] = set()
-    for d in ("docs/specs", "docs/models", "docs/design", "agileplus-specs"):
+    for d in (
+        "docs/specs",
+        "docs/models",
+        "docs/design",
+        "docs/reference",
+        "docs/guides",
+        "docs/traceability",
+        "agileplus-specs",
+    ):
         root = REPO / d
         if root.is_dir():
             out |= {f for f in root.rglob("*.md") if "fragemented" not in f.parts}
@@ -110,6 +137,15 @@ def load_spec_texts() -> dict[str, str]:
 
     Prefers a bolded/heading-style definition, else the first line that looks
     like prose rather than a table row.
+
+    The `>= 12` character floor is not sufficient. A middle cell of a markdown
+    table row is a legitimate-looking string, so the loader accepted fragments
+    such as `": Snapshot Filtering"` as the requirement text and graded the row
+    against them. 30 of the 34 `protocol-3d` rows in
+    docs/audits/container-bindings.json carried a fragment, and the resulting
+    `defined_by_spec` flag was wrong as a result. A line is now rejected when it
+    is a table row (leading or interior pipe), when the leftover text starts
+    with a colon, or when it is a bare reference to another file.
     """
     texts: dict[str, str] = {}
     for f in spec_files():
@@ -118,13 +154,32 @@ def load_spec_texts() -> dict[str, str]:
         except OSError:
             continue
         for line in body.splitlines():
-            for ident in ID_RE.findall(line):
+            raw = line.strip()
+            # A table row is `| a | b | c |`; a row with interior pipes is a
+            # cell of one. Either way its middle columns are not a definition.
+            is_row = raw.startswith("|") or ("|" in raw and raw.count("|") >= 1)
+            if is_row:
+                cells = [c.strip() for c in raw.strip("|").split("|")]
+                # Only a single-column layout can carry a definition sentence.
+                if len(cells) > 1:
+                    continue
+                candidate = cells[0] if cells else ""
+            else:
+                candidate = raw
+            for ident in ID_RE.findall(raw):
                 if ident in texts:
                     continue
-                s = line.strip()
-                s = re.sub(r"^[#>*\-|\s]+", "", s)
-                s = re.sub(r"^\|?\s*" + re.escape(ident) + r"\s*\|?", "", s).strip(" |")
-                if len(s) < 12 or s.startswith("|") or s.isdigit():
+                s = re.sub(r"^[#>*\-\s]+", "", candidate)
+                s = re.sub(
+                    r"^\|?\s*" + re.escape(ident) + r"\s*\|?", "", s
+                ).strip(" |")
+                if len(s) < 12:
+                    continue
+                # A definition sentence states a requirement. A leftover label
+                # beginning with a colon is the tail of a table cell.
+                if s.startswith(":"):
+                    continue
+                if s.isdigit():
                     continue
                 texts[ident] = s[:220]
     return texts

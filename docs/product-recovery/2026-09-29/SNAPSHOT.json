@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "program_id": "gaming-pair-20260929",
+  "product": "Civis",
+  "repository": "KooshaPari/Civis",
+  "repository_id": 1164684442,
+  "observed_date": "2026-09-29",
+  "source_snapshot": {
+    "branch": "main",
+    "commit": "b3cd62a7394878cc64d024fbfcfd398b8bb88bf1",
+    "tree": "184f53f90e983ef5d9da5fc5f926bdd564ad0819"
+  },
+  "registry_snapshot": {
+    "repository": "KooshaPari/PhenoRegistry",
+    "repository_id": 1201113097,
+    "commit": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
+    "tree": "e1fdef39df291c5aab7532cda0e8ca43d50d7dbf",
+    "branch": "research/gaming-pair-20260929"
+  },
+  "specification_branch": "spec/mature-recovery-20260929",
+  "implementation_candidate": null,
+  "active_product_repositories": ["KooshaPari/Dino", "KooshaPari/Civis"],
+  "registry_role": "evidence index, lineage and research only; not a third product program",
+  "scope_authority": "User assignment on 2026-09-29: execute exactly two mature-first recovery programs; no third product until both design gates pass.",
+  "artifact_authority": "RECOVERY_DRAFT; does not supersede accepted product contracts",
+  "completion": "INCOMPLETE",
+  "architecture_freeze": "BLOCKED",
+  "native_validation": "NOT_RUN",
+  "environment_limits": [
+    "This execution environment has no cargo or dotnet executable.",
+    "Read-only git clone attempted; container cannot resolve github.com. Source inspection uses the authorized GitHub connector.",
+    "No Civis executable, renderer session, or fresh save/replay artifact was executed in this cycle."
+  ],
+  "known_authority_conflicts": [
+    "Registry docs/boundary/Civis.md says archived/read-only, contradicted by live GitHub metadata and 2026-09-29 main history.",
+    "README 95% completion and AGENTS mature-replay assertions are not accepted product evidence."
+  ],
+  "snapshot_policy": "Evidence at another revision is historical or candidate-specific, never silently rebound to this snapshot. Specification commits are not implementation candidates."
+}

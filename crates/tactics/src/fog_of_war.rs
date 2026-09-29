@@ -27,11 +27,26 @@ const DEFAULT_VISION_RADIUS: u32 = 8;
 /// Visibility is re-derived from scratch on every call to [`Self::update`];
 /// there is no incremental state. This keeps the data model simple and
 /// deterministic: two identical inputs always produce identical visibility.
+// The following 4 requirement tags were removed from FogOfWar.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Five ids were stacked in one tag block above the struct. Only the first is
+// discharged by the struct and its impl. The verdicts differ per id on purpose:
+// two are implemented in other subsystems and only the binding is wrong, one is
+// partially implemented, and one does not exist anywhere. Collapsing those into
+// a single 'false tag' verdict would have thrown away real coverage.
+// 
+// All five ids are unchecked boxes in the civ-015 spec. That is a coverage fact
+// worth recording separately, not a reason to drop a tag whose implementation is
+// real and tagged elsewhere.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-FOG-002: MIS-BOUND, IMPLEMENTED ELSEWHERE. The requirement is that the war bridge SHALL NOT queue DamageEvents for engagements where the attacker has no friendly unit with line of sight to the defender (civ-015 spec:51-53). That is implemented and tested, at WarBridge::resolve_combat in crates/tactics/src/war_bridge.rs, which gates engagement on fog.is_visible(shooter.faction_id, cell) at war_bridge.rs:151, with tests attack_blocked_when_no_los, attack_succeeds_with_clear_los, and fog_blocks_engagement_beyond_vision. The behavior carries FR-CIV-TACTICS-042, the id the spec names for the same gate, so the coverage is not lost when the tag moves off FogOfWar. A visibility grid cannot decide which damage to queue.
+// [unbound] FR-CIV-FOG-003: MIS-BOUND, IMPLEMENTED ELSEWHERE. The requirement is that scenario fog_vision_radius SHALL be respected per-civilisation and that the default baseline scenario set it to 4 hex for at least one side (civ-015 spec:54-56). ScenarioConfig.fog_vision_radius is parsed at crates/engine/src/scenario.rs:101 and wired into the war bridge via sim.configure_military_fog at scenario.rs:326, with round-trip tests at scenario.rs:545 and :579. The per-civilisation and default-baseline-4 halves of the requirement are not separately exercised, so this is partial coverage, but the field is not a FogOfWar field and the scenario does the work.
+// [unbound] FR-CIV-FOG-004: NOT IMPLEMENTED. The requirement is that the web dashboard SHALL provide a tactics panel with unit selection, an at-a-glance fog overlay, and a jump-to-engagement action, reading from sim.snapshot JSON-RPC only (civ-015 spec:57-60). The only tactics reference under web/dashboard/src is a formation POST at bottom_bar.tsx:806; there is no tactics panel, no unit selection, no fog overlay, and no jump-to-engagement action. A grid of visibility bits is not a UI.
+// [unbound] FR-CIV-FOG-005: NOT IMPLEMENTED. The requirement is fog-of-war observer mode applying server-side visibility filtering before transmission, with a stable per-nation filter (civ-015 spec:61-64). crates/server/src/session.rs records the opposite at lines 46-50: no observer flag exists, no observer RPCs exist, and there is no omniscient mode field. The session layer therefore cannot apply the filter the requirement describes, and there is no other observer-mode code.
 // FR-CIV-FOG-001
-// FR-CIV-FOG-002
-// FR-CIV-FOG-003
-// FR-CIV-FOG-004
-// FR-CIV-FOG-005
 pub struct FogOfWar {
     /// Number of grid cells on each axis.
     grid_size: u32,

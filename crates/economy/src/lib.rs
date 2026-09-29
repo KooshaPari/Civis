@@ -84,9 +84,21 @@ pub use trade_routes::{
 
 use serde::{Deserialize, Serialize};
 
-// FR-CIV-ECON-001-MARKET
+// The following 2 requirement tags were removed from SCHEMA_VERSION.
+// They are not discharged by this symbol. The tag named a requirement whose
+// behavior lives elsewhere, or a requirement with no implementation at all, so
+// leaving the tag here asserted coverage that this declaration does not provide.
+// Two economy ids stacked on a version constant, same shape as the build/src
+// case. These are recorded as mis-bound rather than false, because the
+// requirements themselves are real and the ledger and market types in this
+// crate plausibly discharge them; only the binding is wrong. That is a weaker
+// finding than the build/src ones and is flagged for a follow-up pass that
+// locates the true artifacts rather than being removed outright here.
+//
+// Removed, with the reason each cannot be discharged here:
+// [unbound] FR-CIV-ECON-001-MARKET: MIS-BOUND. The economy ledger serialization requirement is discharged by the ledger types themselves (LedgerEntry and friends in this crate) plus the save/load path, not by a version string. The constant is a version marker for wire compatibility, which is at most adjacent to the requirement rather than an implementation of it. Kept here only until the real artifact is located; the binding as written is not defensible.
+// [unbound] FR-CIV-MARKET-001: MIS-BOUND. Same finding as the id above it. The market-state requirement is about the market data model and its behavior, which lives in crates/economy/src/market.rs. A bare version string is not the market.
 /// Schema version for `civ-economy`. Bumped on breaking snapshot / ledger changes.
-// FR-CIV-MARKET-001
 pub const SCHEMA_VERSION: u32 = 1;
 
 /// Stub ledger account id (district / actor accounts land in CIV-0100 follow-up).

@@ -36,6 +36,8 @@ pub struct SemanticStateManifest {
     pub religious_profiles: serde_json::Value,
     pub active_caravans: serde_json::Value,
     pub active_mods: Vec<SemanticModIdentity>,
+    /// Mod namespaces that own persisted guest-memory blobs in this save.
+    pub guest_memory_mod_ids: Vec<String>,
 }
 
 impl SemanticStateManifest {
@@ -51,6 +53,11 @@ impl SemanticStateManifest {
             })
             .collect();
         active_mods.sort_by(|a, b| a.id.cmp(&b.id));
+
+        let guest = sim.export_mod_guest_state();
+        let mut guest_memory_mod_ids: Vec<_> = guest.memories.iter().map(|m| m.mod_id.clone()).collect();
+        guest_memory_mod_ids.sort();
+        guest_memory_mod_ids.dedup();
 
         Ok(Self {
             schema_version: SEMANTIC_STATE_SCHEMA_VERSION,
@@ -69,6 +76,7 @@ impl SemanticStateManifest {
             active_caravans: serde_json::to_value(&sim.active_caravans)
                 .map_err(|e| format!("serialize active caravans: {e}"))?,
             active_mods,
+            guest_memory_mod_ids,
         })
     }
 
@@ -99,14 +107,30 @@ impl SemanticStateManifest {
         Ok(())
     }
 
-    pub fn orphan_guest_memory_ids(&self, sim: &Simulation) -> Vec<String> {
-        let declared: BTreeSet<_> = self.active_mods.iter().map(|m| m.id.as_str()).collect();
-        let guest = sim.export_mod_guest_state();
-        let mut orphan: Vec<_> = guest
-            .memories
+    pub fn orphan_guest_memory_ids_against_resolved_mods(&self, resolved: &Simulation) -> Vec<String> {
+        let resolved_ids: BTreeSet<_> = resolved
+            .mod_host()
+            .mods()
             .iter()
-            .filter(|m| !declared.contains(m.mod_id.as_str()))
-            .map(|m| m.mod_id.clone())
+            .map(|m| m.manifest.meta.id.as_str())
+            .collect();
+        let mut orphan: Vec<_> = self
+            .guest_memory_mod_ids
+            .iter()
+            .filter(|id| !resolved_ids.contains(id.as_str()))
+            .cloned()
+            .collect();
+        orphan.sort();
+        orphan
+    }
+
+    pub fn orphan_guest_memory_ids(&self, _sim: &Simulation) -> Vec<String> {
+        let declared: BTreeSet<_> = self.active_mods.iter().map(|m| m.id.as_str()).collect();
+        let mut orphan: Vec<_> = self
+            .guest_memory_mod_ids
+            .iter()
+            .filter(|id| !declared.contains(id.as_str()))
+            .cloned()
             .collect();
         orphan.sort();
         orphan

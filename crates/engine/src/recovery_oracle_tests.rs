@@ -81,3 +81,22 @@ fn recovery_oracle_guest_memory_does_not_prove_loaded_mod_restoration() {
         "EXPECTED CURRENT FAILURE / CONTRACT QUESTION: guest memory exists without a corresponding loaded mod; a mature load must resolve, migrate, reject, or explicitly degrade this state rather than call bytes alone a restored active mod"
     );
 }
+
+
+#[test]
+fn recovery_oracle_save_roundtrip_preserves_control_policy_kind() {
+    let mut sim = Simulation::with_seed(0xC1A15);
+    sim.set_policy(crate::policy::policy_from_kind("capitalist"));
+    assert_eq!(sim.policy().name(), "capitalist");
+
+    let dir = tempdir().expect("tempdir");
+    let save = dir.path().join("control-policy.civsave");
+    CivSaveBundle::save_dir(&save, &sim).expect("save");
+
+    let loaded = CivSaveBundle::load_dir(&save).expect("load");
+    assert_eq!(
+        loaded.policy().name(),
+        "capitalist",
+        "the high-level control policy is distinct from PolicyInput and needs an explicit persistence/rebinding contract"
+    );
+}

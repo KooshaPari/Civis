@@ -106,3 +106,67 @@ impl SemanticBundleBridge {
         Ok(loaded)
     }
 }
+
+
+/// Testable staged-generation publisher for vNext save experiments.
+/// A generation is accepted only after all required components exist and the
+/// semantic component validates. CURRENT is changed last.
+pub struct SemanticGenerationPublisher {
+    root: PathBuf,
+}
+
+impl SemanticGenerationPublisher {
+    pub fn new(root: impl AsRef<Path>) -> Self {
+        Self { root: root.as_ref().to_path_buf() }
+    }
+
+    pub fn generation_dir(&self, generation: &str) -> PathBuf {
+        self.root.join("generations").join(generation)
+    }
+
+    pub fn current_path(&self) -> PathBuf {
+        self.root.join("CURRENT")
+    }
+
+    pub fn current(&self) -> Result<Option<String>, String> {
+        let path = self.current_path();
+        if !path.is_file() {
+            return Ok(None);
+        }
+        let value = fs::read_to_string(path).map_err(|e| format!("read CURRENT: {e}"))?;
+        Ok(Some(value.trim().to_string()))
+    }
+
+    pub fn stage(&self, generation: &str, sim: &Simulation) -> Result<PathBuf, String> {
+        let dir = self.generation_dir(generation);
+        if dir.exists() {
+            fs::remove_dir_all(&dir).map_err(|e| format!("clear staged generation: {e}"))?;
+        }
+        fs::create_dir_all(&dir).map_err(|e| format!("create generation: {e}"))?;
+        SemanticBundleBridge::save_opt_in(&dir, sim)?;
+        fs::write(dir.join("GENERATION"), generation.as_bytes())
+            .map_err(|e| format!("write generation identity: {e}"))?;
+        Ok(dir)
+    }
+
+    pub fn validate_staged(&self, generation: &str) -> Result<(), String> {
+        let dir = self.generation_dir(generation);
+        let identity = fs::read_to_string(dir.join("GENERATION"))
+            .map_err(|e| format!("missing generation identity: {e}"))?;
+        if identity.trim() != generation {
+            return Err("generation identity mismatch".to_string());
+        }
+        SemanticSaveAdapter::read_component(&dir)
+            .map_err(|e| format!("semantic component invalid: {e:?}"))?;
+        Ok(())
+    }
+
+    pub fn commit(&self, generation: &str) -> Result<(), String> {
+        self.validate_staged(generation)?;
+        fs::create_dir_all(&self.root).map_err(|e| format!("create publisher root: {e}"))?;
+        let next = self.root.join("CURRENT.next");
+        fs::write(&next, generation.as_bytes()).map_err(|e| format!("write CURRENT.next: {e}"))?;
+        fs::rename(&next, self.current_path()).map_err(|e| format!("publish CURRENT: {e}"))?;
+        Ok(())
+    }
+}

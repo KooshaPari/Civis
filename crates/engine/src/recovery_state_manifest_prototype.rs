@@ -28,6 +28,9 @@ struct RecoveryStateManifest {
     control_policy_kind: String,
     research: ResearchCache,
     market_prices: BTreeMap<String, i64>,
+    tutorial_progress: crate::tutorial::TutorialProgress,
+    religious_profiles: serde_json::Value,
+    active_caravans: serde_json::Value,
     active_mods: Vec<RecoveryModIdentity>,
 }
 
@@ -56,6 +59,11 @@ impl RecoveryStateManifest {
             control_policy_kind: sim.policy().name().to_string(),
             research: sim.research_cache().clone(),
             market_prices: sim.market_state.prices.clone(),
+            tutorial_progress: sim.tutorial_progress.clone(),
+            religious_profiles: serde_json::to_value(&sim.religious_profiles)
+                .expect("serialize religious profiles"),
+            active_caravans: serde_json::to_value(&sim.active_caravans)
+                .expect("serialize active caravans"),
             active_mods,
         }
     }
@@ -78,6 +86,11 @@ impl RecoveryStateManifest {
         *sim.research_cache_mut() = self.research.clone();
         sim.set_policy(policy_from_kind(&self.control_policy_kind));
         sim.market_state.prices = self.market_prices.clone();
+        sim.tutorial_progress = self.tutorial_progress.clone();
+        sim.religious_profiles = serde_json::from_value(self.religious_profiles.clone())
+            .expect("restore religious profiles");
+        sim.active_caravans = serde_json::from_value(self.active_caravans.clone())
+            .expect("restore active caravans");
     }
 
     fn incompatible_guest_memory_ids(&self, sim: &Simulation) -> Vec<String> {
@@ -105,6 +118,22 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     source.research_cache_mut().queued.push_back("writing".into());
     source.set_policy(policy_from_kind("capitalist"));
     source.market_state.prices.insert("grain".into(), 777);
+    source.tutorial_progress.current = crate::tutorial::TutorialMilestone::FirstReligion;
+    source.tutorial_progress.faction_exists = true;
+    let mut religion = crate::religion::ReligiousProfile::new(123, 42);
+    religion.settlement_id = 7;
+    source.religious_profiles.insert(7, religion);
+    let mut cargo = BTreeMap::new();
+    cargo.insert(1, 500);
+    source.active_caravans.push(crate::caravan::Caravan {
+        id: 77,
+        source: 1,
+        target: 2,
+        cargo,
+        ticks_remaining: 9,
+        travel_time: 12,
+        raided: false,
+    });
 
     let manifest = RecoveryStateManifest::capture(&source);
     let bytes = serde_json::to_vec(&manifest).expect("serialize prototype manifest");
@@ -127,6 +156,11 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     assert_eq!(restored.research_cache(), source.research_cache());
     assert_eq!(restored.policy().name(), "capitalist");
     assert_eq!(restored.market_state.prices, source.market_state.prices);
+    assert_eq!(restored.tutorial_progress, source.tutorial_progress);
+    assert_eq!(restored.religious_profiles, source.religious_profiles);
+    assert_eq!(restored.active_caravans.len(), source.active_caravans.len());
+    assert_eq!(restored.active_caravans[0].id, 77);
+    assert_eq!(restored.active_caravans[0].ticks_remaining, 9);
 }
 
 #[test]

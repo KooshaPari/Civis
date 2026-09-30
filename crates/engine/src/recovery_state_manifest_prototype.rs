@@ -1,6 +1,7 @@
 //! Architecture experiment for a semantic save-state manifest.
 //! Test-only: this does not alter CivSaveBundle or production save format.
 //! PASS-18 rerun marker: expanded durable-state and corrected atomicity fixtures require a fresh candidate-bound receipt.
+//! PASS-22 expanded-state qualification marker: tutorial/religion/caravan coverage requires an exact fresh run.
 
 use crate::{policy_from_kind, PolicyInput, Simulation};
 use crate::engine::ResearchCache;

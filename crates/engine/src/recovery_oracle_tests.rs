@@ -135,3 +135,78 @@ fn recovery_oracle_v5_metadata_removal_cannot_silently_downgrade() {
         "a freshly-written current-format bundle with metadata removed must not be silently reclassified as legacy and bypass current-format integrity policy"
     );
 }
+
+
+#[test]
+fn recovery_oracle_save_roundtrip_preserves_tutorial_progress() {
+    let mut sim = Simulation::with_seed(0xC1A15);
+    sim.tutorial_progress.current = crate::tutorial::TutorialMilestone::FirstReligion;
+    sim.tutorial_progress.faction_exists = true;
+    sim.tutorial_progress.tech_unlocked = true;
+    sim.tutorial_progress.war_declared = true;
+    sim.tutorial_progress.religion_emerged = true;
+
+    let dir = tempdir().expect("tempdir");
+    let save = dir.path().join("tutorial-progress.civsave");
+    CivSaveBundle::save_dir(&save, &sim).expect("save");
+
+    let loaded = CivSaveBundle::load_dir(&save).expect("load");
+    assert_eq!(
+        loaded.tutorial_progress,
+        sim.tutorial_progress,
+        "TutorialProgress is explicitly a persisted onboarding state surface; load must not silently restart onboarding"
+    );
+}
+
+#[test]
+fn recovery_oracle_save_roundtrip_preserves_religious_profiles() {
+    let mut sim = Simulation::with_seed(0xC1A15);
+    let mut profile = crate::religion::ReligiousProfile::new(123, 42);
+    profile.settlement_id = 7;
+    profile.monitoring = 0.25;
+    profile.mythic_coherence = 0.75;
+    profile.uncertainty_reduction = 0.5;
+    sim.religious_profiles.insert(7, profile);
+
+    let dir = tempdir().expect("tempdir");
+    let save = dir.path().join("religious-profiles.civsave");
+    CivSaveBundle::save_dir(&save, &sim).expect("save");
+
+    let loaded = CivSaveBundle::load_dir(&save).expect("load");
+    assert_eq!(
+        loaded.religious_profiles,
+        sim.religious_profiles,
+        "religious profiles are dashboard-visible and feed later emergence/tutorial behavior"
+    );
+}
+
+#[test]
+fn recovery_oracle_save_roundtrip_preserves_active_caravans_in_transit() {
+    let mut sim = Simulation::with_seed(0xC1A15);
+    let mut cargo = std::collections::BTreeMap::new();
+    cargo.insert(1, 500);
+    sim.active_caravans.push(crate::caravan::Caravan {
+        id: 77,
+        source: 1,
+        target: 2,
+        cargo,
+        ticks_remaining: 9,
+        travel_time: 12,
+        raided: false,
+    });
+
+    let dir = tempdir().expect("tempdir");
+    let save = dir.path().join("active-caravans.civsave");
+    CivSaveBundle::save_dir(&save, &sim).expect("save");
+
+    let loaded = CivSaveBundle::load_dir(&save).expect("load");
+    assert_eq!(
+        loaded.active_caravans.len(),
+        1,
+        "an in-flight caravan changes future stocks/trust and needs an explicit durable or reconstruction contract"
+    );
+    let caravan = &loaded.active_caravans[0];
+    assert_eq!(caravan.id, 77);
+    assert_eq!(caravan.ticks_remaining, 9);
+    assert_eq!(caravan.cargo.get(&1), Some(&500));
+}

@@ -68,3 +68,41 @@ impl SemanticSaveAdapter {
         manifest.apply_to(sim)
     }
 }
+
+
+/// Opt-in bridge for vNext experiments. This is intentionally separate from
+/// CivSaveBundle::save_dir/load_dir so the current production format remains a
+/// comparison baseline until migration/fault gates close.
+pub struct SemanticBundleBridge;
+
+impl SemanticBundleBridge {
+    pub fn save_opt_in(
+        dir: impl AsRef<Path>,
+        sim: &Simulation,
+    ) -> Result<(), String> {
+        let dir = dir.as_ref();
+        crate::save_bundle::CivSaveBundle::save_dir(dir, sim)?;
+        SemanticSaveAdapter::write_component(dir, sim)?;
+        Ok(())
+    }
+
+    /// Loads the legacy/current bundle, validates the required semantic
+    /// component, checks compatibility against the caller-provided resolved
+    /// mod environment, then applies semantic state. The caller must construct
+    /// resolved_mod_environment from the accepted scenario/profile before
+    /// invoking this bridge.
+    pub fn load_opt_in(
+        dir: impl AsRef<Path>,
+        resolved_mod_environment: &Simulation,
+    ) -> Result<Simulation, String> {
+        let dir = dir.as_ref();
+        let manifest = SemanticSaveAdapter::read_component(dir)
+            .map_err(|e| format!("semantic component rejected: {e:?}"))?;
+        SemanticSaveAdapter::validate_against_resolved_mods(&manifest, resolved_mod_environment)
+            .map_err(|e| format!("semantic compatibility rejected: {e:?}"))?;
+
+        let mut loaded = crate::save_bundle::CivSaveBundle::load_dir(dir)?;
+        SemanticSaveAdapter::apply_after_compatibility(&manifest, &mut loaded)?;
+        Ok(loaded)
+    }
+}

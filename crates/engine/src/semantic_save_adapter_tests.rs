@@ -232,3 +232,47 @@ fn semantic_bundle_bridge_rebinds_current_tick_to_restored_world_tick() {
         "live current_tick mirror must be rebound to authoritative restored WorldState before any post-load phase"
     );
 }
+
+
+#[test]
+fn semantic_bundle_bridge_resynchronizes_live_tick_mirror() {
+    let mut source = Simulation::with_seed(91);
+    source.advance_ticks(7);
+    assert_eq!(source.state.tick, 7);
+    assert_eq!(source.current_tick, 7);
+
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &source).expect("opt-in save");
+
+    // Current production loader restores WorldState.tick but does not explicitly
+    // resynchronize the live Simulation.current_tick mirror.
+    let production = crate::save_bundle::CivSaveBundle::load_dir(dir.path()).expect("production load");
+    assert_eq!(production.state.tick, 7);
+    assert_ne!(
+        production.current_tick, production.state.tick,
+        "control must stay red until the default loader owns mirror restoration"
+    );
+
+    let resolved = Simulation::with_seed(91);
+    let vnext = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).expect("vNext load");
+    assert_eq!(vnext.state.tick, 7);
+    assert_eq!(vnext.current_tick, vnext.state.tick);
+}
+
+#[test]
+fn semantic_bundle_bridge_rejects_cross_tick_semantic_component() {
+    let mut source = Simulation::with_seed(92);
+    source.advance_ticks(3);
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &source).expect("opt-in save");
+
+    let path = dir.path().join(SEMANTIC_STATE_FILE);
+    let mut json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read semantic")).expect("json");
+    json["tick"] = serde_json::json!(99);
+    std::fs::write(&path, serde_json::to_vec_pretty(&json).expect("encode")).expect("write");
+
+    let resolved = Simulation::with_seed(92);
+    let err = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).unwrap_err();
+    assert!(err.contains("semantic tick 99 does not match loaded world tick 3"));
+}

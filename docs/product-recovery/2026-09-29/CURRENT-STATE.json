@@ -8,7 +8,7 @@
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
   "specification_branch": "spec/mature-recovery-20260929",
-  "implementation_candidate": "eb74d0724163f9958e93c16c4deeb18344882246",
+  "implementation_candidate": "7e9a348c23f1b5559c19a3d71ecad21ef4f43e91",
   "dependency_snapshots": [
     {
       "repository": "KooshaPari/phenodocs",
@@ -65,7 +65,7 @@
     "journeys_represented": "PARTIAL",
     "stage_projections_justified": "PROVISIONAL",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_SUPPORTED_EXPANDED_AND_ATOMICITY_PROTOTYPES_PENDING",
+    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_AND_CLASSIFIER_SUPPORTED_EXPANDED_STATE_AND_ATOMICITY_RERUN_PENDING",
     "implementation_mapping_complete": "OPEN",
     "traceability_structurally_valid": "NOT_VALIDATED",
     "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
@@ -86,18 +86,18 @@
     "Synthetic 155-ID emergence range and namespace collisions must not participate in grading",
     "Authoritative-state inventory and mounted UI/server journey remain incomplete",
     "Independent fresh review remains open",
-    "Six candidate-bound semantic persistence/format-classification failures reproduced",
     "Expanded semantic manifest, outer classifier and atomic save-generation prototypes still awaiting executable qualification",
     "Complete authoritative-state denominator and mounted save/restart journey remain open",
     "Authority review remains open for unsuperseded Draft FR/design-catalogue families; new 205-ID audit cannot be imported wholesale",
-    "State denominator has unresolved UNKNOWN and EPHEMERAL_CANDIDATE fields; no completeness percentage is valid"
+    "State denominator has unresolved UNKNOWN and EPHEMERAL_CANDIDATE fields; no completeness percentage is valid",
+    "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion"
   ],
   "next_bounded_work": [
-    "Run semantic-state manifest prototype beside unchanged red controls",
-    "Design/experiment v6 semantic_state component for policy, research and mod-set identity without claiming full state completeness",
-    "Finish Simulation/ECS state-owner manifest and classify every future-affecting owner",
-    "Fault-inject archive/manifest/DB boundaries and define reconciliation authority",
-    "Resolve catalog authority through further archaeology or explicit user decision only if evidence remains genuinely ambiguous"
+    "Qualify expanded semantic-state manifest against policy/research/control-policy/market/tutorial/religion/caravan red controls",
+    "Qualify corrected staged-save atomicity fixture and outer missing-metadata classifier",
+    "Finish 125-field Simulation / 48-field WorldState state-owner classification and map every durable owner to component/restore/migration",
+    "Fault-inject archive/semantic-manifest/CURRENT-pointer/DB boundaries and define cross-platform commit/reconciliation authority",
+    "Run mounted local/server save-restart journey after component semantics are accepted"
   ],
   "no_third_product_program": true,
   "merge_authorized": false,
@@ -109,24 +109,26 @@
       "guest memory survives without corresponding loaded mod identity",
       "control policy kind resets capitalist to noop",
       "market state price is lost",
-      "metadata-deleted modern save silently downgrades through legacy classification"
+      "metadata-deleted modern save silently downgrades through legacy classification",
+      "tutorial progress resets across save/load",
+      "religious profiles are lost across save/load",
+      "active caravans in transit are lost across save/load"
     ],
     "production_control_run": {
-      "run_id": 36687813616,
-      "candidate": "ed8d8bbbffc4883ecbb7fa382c28aeb43ab60b14",
-      "result": "4 recovery tests passed; 6 production semantic/classifier controls failed",
-      "artifact_id": 11085881640,
-      "artifact_sha256": "6ccfa7439c3f75158a4fb68133500179c5365a2978d3271600979f4df335d84f"
+      "run_id": 36703825128,
+      "candidate": "7e9a348c23f1b5559c19a3d71ecad21ef4f43e91",
+      "result": "20 recovery tests: 10 passed, 9 production semantic/classifier controls failed, 1 prototype fault-assumption test failed",
+      "artifact_id": 11091337450,
+      "artifact_sha256": "0fa5ed6cc1b5bf8cec39ea61a0962274abf81a957c9fea759b01f8873c7d7b1f"
     },
     "validated_in_isolation": [
       "semantic manifest restores economy policy and research",
       "semantic manifest detects orphan guest memory"
     ],
     "prototypes_pending": [
-      "control policy and market-state expansion",
-      "fail-closed missing/future semantic schema",
-      "outer format classifier for missing metadata",
-      "immutable save generations plus CURRENT pointer failure isolation"
+      "expanded semantic manifest for tutorial/religion/caravan state",
+      "corrected required-semantic-component staged-save atomicity rerun",
+      "cross-platform CURRENT pointer publication/failure semantics"
     ],
     "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review"
   },

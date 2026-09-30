@@ -81,7 +81,8 @@ impl SemanticBundleBridge {
         sim: &Simulation,
     ) -> Result<(), String> {
         let dir = dir.as_ref();
-        crate::save_bundle::CivSaveBundle::save_dir(dir, sim)?;
+        crate::save_bundle::CivSaveBundle::save_dir(dir, sim)
+            .map_err(|e| format!("base bundle save failed: {e}"))?;
         SemanticSaveAdapter::write_component(dir, sim)?;
         Ok(())
     }
@@ -101,7 +102,8 @@ impl SemanticBundleBridge {
         SemanticSaveAdapter::validate_against_resolved_mods(&manifest, resolved_mod_environment)
             .map_err(|e| format!("semantic compatibility rejected: {e:?}"))?;
 
-        let mut loaded = crate::save_bundle::CivSaveBundle::load_dir(dir)?;
+        let mut loaded = crate::save_bundle::CivSaveBundle::load_dir(dir)
+            .map_err(|e| format!("base bundle load failed: {e}"))?;
         SemanticSaveAdapter::apply_after_compatibility(&manifest, &mut loaded)?;
         Ok(loaded)
     }

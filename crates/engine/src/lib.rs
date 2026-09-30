@@ -372,3 +372,7 @@ mod tests {
 // Non-grading until executed/reviewed against the bound candidate.
 #[cfg(test)]
 mod recovery_oracle_tests;
+
+// Mature-first recovery architecture experiment; never compiled into production.
+#[cfg(test)]
+mod recovery_state_manifest_prototype;

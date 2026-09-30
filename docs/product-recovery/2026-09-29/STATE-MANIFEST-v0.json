@@ -309,8 +309,8 @@
       "visibility": "pub",
       "type": "TutorialProgress",
       "attrs": [],
-      "status": "ORACLE_PENDING",
-      "evidence": "candidate-bound recovery oracle added 2026-09-30; execution result pending"
+      "status": "SOURCE_DERIVED_OMISSION_CANDIDATE_ORACLE_PENDING",
+      "evidence": "TutorialProgress is documented as persistence-facing; no active CivSaveBundle/replay restore path found; candidate-bound oracle pending."
     },
     {
       "name": "emergence_branching",
@@ -773,8 +773,8 @@
       "visibility": "pub",
       "type": "BTreeMap<u32, ReligiousProfile>",
       "attrs": [],
-      "status": "ORACLE_PENDING",
-      "evidence": "candidate-bound recovery oracle added 2026-09-30; execution result pending"
+      "status": "SOURCE_DERIVED_OMISSION_CANDIDATE_ORACLE_PENDING",
+      "evidence": "Used by dashboard/emergence/tutorial; persistence references found in orphan unmounted save.rs, not active CivSaveBundle; oracle pending."
     },
     {
       "name": "last_tick_religion_events",
@@ -989,8 +989,8 @@
       "visibility": "pub(crate)",
       "type": "Vec<crate::caravan::Caravan>",
       "attrs": [],
-      "status": "ORACLE_PENDING",
-      "evidence": "candidate-bound recovery oracle added 2026-09-30; execution result pending"
+      "status": "SOURCE_DERIVED_OMISSION_CANDIDATE_ORACLE_PENDING",
+      "evidence": "In-flight caravan state affects future trade/trust; no active save/replay path found; oracle pending."
     },
     {
       "name": "caravan_config",

@@ -127,3 +127,67 @@ fn recovery_prototype_manifest_detects_orphan_guest_memory() {
         vec!["orphan-mod".to_string()]
     );
 }
+
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RecoveryFormatClass {
+    Explicit(u32),
+    LegacyCandidate,
+    SuspiciousMissingMetadata,
+}
+
+fn classify_save_dir_for_recovery(dir: &std::path::Path) -> RecoveryFormatClass {
+    let metadata = dir.join("metadata.json");
+    if metadata.exists() {
+        let value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&metadata).expect("read metadata"))
+                .expect("parse metadata");
+        let version = value
+            .get("format_version")
+            .and_then(|v| v.as_u64())
+            .expect("metadata format_version") as u32;
+        return RecoveryFormatClass::Explicit(version);
+    }
+
+    // Presence of components introduced by modern componentized saves means
+    // this directory is not safely classifiable as legacy merely because
+    // metadata disappeared.
+    const MODERN_MARKERS: &[&str] = &[
+        "environment.json",
+        "cluster_stocks.json",
+        "institutions.json",
+        "integrity.json",
+    ];
+    if MODERN_MARKERS.iter().any(|name| dir.join(name).exists()) {
+        return RecoveryFormatClass::SuspiciousMissingMetadata;
+    }
+
+    RecoveryFormatClass::LegacyCandidate
+}
+
+#[test]
+fn recovery_prototype_classifier_rejects_metadata_deleted_modern_bundle() {
+    let sim = Simulation::with_seed(11);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let save = dir.path().join("modern.civsave");
+    crate::CivSaveBundle::save_dir(&save, &sim).expect("save");
+    let before = classify_save_dir_for_recovery(&save);
+    assert!(matches!(before, RecoveryFormatClass::Explicit(_)));
+
+    std::fs::remove_file(save.join("metadata.json")).expect("remove metadata");
+    assert_eq!(
+        classify_save_dir_for_recovery(&save),
+        RecoveryFormatClass::SuspiciousMissingMetadata
+    );
+}
+
+#[test]
+fn recovery_prototype_classifier_preserves_explicit_legacy_candidate_state() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("replay.civreplay"), b"legacy-placeholder")
+        .expect("legacy marker");
+    assert_eq!(
+        classify_save_dir_for_recovery(dir.path()),
+        RecoveryFormatClass::LegacyCandidate
+    );
+}

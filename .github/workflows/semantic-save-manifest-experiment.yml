@@ -32,7 +32,7 @@ jobs:
       - name: Execute integration candidate
         run: |
           set -o pipefail
-          cargo test -p civ-engine semantic_manifest_candidate_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
+          cargo test -p civ-engine --lib semantic_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
       - name: Upload raw evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -55,3 +55,5 @@ jobs:
 # PASS-35 error mapping marker: rerun semantic bridge after explicit SaveBundleError mapping.
 
 # PASS-36 lib-only marker: avoid unrelated integration-test linking/disk exhaustion; candidate tests live in lib test graph.
+
+# PASS-37 execution-scope marker: compile and execute both use --lib semantic_.

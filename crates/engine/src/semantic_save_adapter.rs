@@ -53,7 +53,7 @@ impl SemanticSaveAdapter {
         manifest: &SemanticStateManifest,
         sim_with_resolved_mods: &Simulation,
     ) -> Result<(), SemanticLoadDisposition> {
-        let orphan = manifest.orphan_guest_memory_ids(sim_with_resolved_mods);
+        let orphan = manifest.orphan_guest_memory_ids_against_resolved_mods(sim_with_resolved_mods);
         if orphan.is_empty() {
             Ok(())
         } else {

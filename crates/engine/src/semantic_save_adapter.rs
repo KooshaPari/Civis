@@ -169,4 +169,20 @@ impl SemanticGenerationPublisher {
         fs::rename(&next, self.current_path()).map_err(|e| format!("publish CURRENT: {e}"))?;
         Ok(())
     }
+
+    /// Reconciles only metadata left by an interrupted pre-publication attempt.
+    /// It never promotes CURRENT.next automatically because a durable write of
+    /// the intent file is not sufficient evidence that publication completed.
+    pub fn reconcile(&self) -> Result<Option<String>, String> {
+        let next = self.root.join("CURRENT.next");
+        if next.exists() {
+            fs::remove_file(&next).map_err(|e| format!("remove orphan CURRENT.next: {e}"))?;
+        }
+
+        let current = self.current()?;
+        if let Some(ref generation) = current {
+            self.validate_staged(generation)?;
+        }
+        Ok(current)
+    }
 }

@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'crates/engine/src/recovery_oracle_tests.rs'
+      - 'crates/engine/src/recovery_tests.rs'
       - 'crates/engine/src/lib.rs'
       - 'crates/engine/src/save_bundle.rs'
       - 'crates/engine/src/engine.rs'
@@ -27,13 +27,13 @@ jobs:
       - name: Candidate receipt
         run: |
           mkdir -p recovery-artifacts
-          printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","workflow_attempt":"${{ github.run_attempt }}","runner_os":"${{ runner.os }}","oracle_scope":"recovery_oracle_tests","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
+          printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","workflow_attempt":"${{ github.run_attempt }}","runner_os":"${{ runner.os }}","oracle_scope":"recovery_tests","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
       - name: Compile recovery oracles
-        run: cargo test -p civ-engine recovery_oracle_ --no-run
+        run: cargo test -p civ-engine recovery_ --no-run
       - name: Execute semantic persistence oracles
         run: |
           set -o pipefail
-          cargo test -p civ-engine recovery_oracle_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
+          cargo test -p civ-engine recovery_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
       - name: Upload raw recovery evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

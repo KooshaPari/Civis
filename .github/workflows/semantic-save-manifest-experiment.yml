@@ -28,7 +28,7 @@ jobs:
           mkdir -p recovery-artifacts
           printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","scope":"semantic_state_manifest_candidate","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
       - name: Compile integration candidate
-        run: cargo test -p civ-engine semantic_ --no-run
+        run: cargo test -p civ-engine --lib semantic_ --no-run
       - name: Execute integration candidate
         run: |
           set -o pipefail
@@ -53,3 +53,5 @@ jobs:
 # PASS-34 reconcile marker
 
 # PASS-35 error mapping marker: rerun semantic bridge after explicit SaveBundleError mapping.
+
+# PASS-36 lib-only marker: avoid unrelated integration-test linking/disk exhaustion; candidate tests live in lib test graph.

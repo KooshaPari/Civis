@@ -214,3 +214,21 @@ fn semantic_generation_reconcile_rejects_current_pointing_to_invalid_generation(
     assert!(publisher.reconcile().is_err(),
         "CURRENT pointing at an invalid generation must not be silently treated as healthy");
 }
+
+
+#[test]
+fn semantic_bundle_bridge_rebinds_current_tick_to_restored_world_tick() {
+    let root = tempdir().expect("tempdir");
+    let mut source = Simulation::with_seed(41);
+    source.advance_ticks(7);
+    SemanticBundleBridge::save_opt_in(root.path(), &source).expect("save opt-in");
+
+    let resolved = Simulation::with_seed(41);
+    let loaded = SemanticBundleBridge::load_opt_in(root.path(), &resolved).expect("load opt-in");
+
+    assert_eq!(loaded.state.tick, source.state.tick);
+    assert_eq!(
+        loaded.current_tick, loaded.state.tick,
+        "live current_tick mirror must be rebound to authoritative restored WorldState before any post-load phase"
+    );
+}

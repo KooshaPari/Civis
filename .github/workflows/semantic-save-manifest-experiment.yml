@@ -1,0 +1,41 @@
+name: Semantic Save Manifest Experiment
+
+on:
+  pull_request:
+    branches: ['spec/mature-recovery-20260929']
+    paths:
+      - 'crates/engine/src/semantic_state_manifest.rs'
+      - 'crates/engine/src/semantic_state_manifest_tests.rs'
+      - 'crates/engine/src/lib.rs'
+      - '.github/workflows/semantic-save-manifest-experiment.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-manifest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+      - name: Candidate receipt
+        run: |
+          mkdir -p recovery-artifacts
+          printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","scope":"semantic_state_manifest_candidate","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
+      - name: Compile integration candidate
+        run: cargo test -p civ-engine semantic_manifest_candidate_ --no-run
+      - name: Execute integration candidate
+        run: |
+          set -o pipefail
+          cargo test -p civ-engine semantic_manifest_candidate_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
+      - name: Upload raw evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: semantic-manifest-${{ github.event.pull_request.head.sha || github.sha }}
+          path: recovery-artifacts
+          if-no-files-found: warn
+          retention-days: 30

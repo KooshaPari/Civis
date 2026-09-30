@@ -58,3 +58,22 @@ save_dir writes multiple files sequentially to its destination; save_archive bui
 ## C-F04 — emergence and performance claims need different evidence
 
 The charter's inference that reality-like rules yield reality-like outcomes and its 'disk primary, not compute' scale assertion are hypotheses, not qualification evidence. Separate: model validity, statistical variation, current-state integrity, gameplay intelligibility, and performance on a named workload/hardware/configuration. No scientific or scaling conclusion is certified by this pass.
+
+
+## Pass 13-16 ledger continuation
+
+| ID | Source | Classification | Resolution / consequence | Status |
+|---|---|---|---|---|
+| C-S27 | Prior Feb19 conversation + later May charter/ADR | USER INTENT + accepted later correction | Broad coupled politics/economics/war + macro/detail simulation is user horizon; older assistant deterministic LOD proposal is superseded on global replay semantics | Partial conversation corpus recovered |
+| C-S28 | Recovery CI run36628556544 + artifact11062202963 | VERIFIED OBSERVATION on CivSaveBundle candidate | Economy policy resets, research lost, orphan guest memory survives without loaded mod identity | Resolved for exercised bundle subjects; mounted user journey open |
+| C-S29 | Current main590fad06 audit spec-only-triage | SUPPORTING AUDIT / contradictory catalog evidence | Finds scanner blind spots, dead substrate counted, synthetic155-ID emergence range, namespace collisions, and authority questions | File reviewed; authority decisions open |
+| C-S30 | recovery_state_manifest_prototype.rs | EXPERIMENT / architecture candidate | Test-only semantic manifest captures policy/research/active mod identity and orphan-memory compatibility; production save untouched | CI queued |
+| C-S31 | Current main drift54d57589 ->590fad06 | CURRENT SOURCE DRIFT | One docs-only audit commit; no production code change, so reproduced behavior remains relevant but candidate identity stays exact | Resolved drift extent |
+
+### Catalog quarantine
+
+The generated FR-CIV-EMERGENCE-100..254 range, reserved/report-only IDs, template-only rows, namespace collisions, and dead/unmounted symbol bindings are ineligible for mature-contract grading unless independently recovered as authored accepted obligations. Audit inventory counts are not the mature denominator.
+
+### Authority blockers
+
+Do not silently decide whether root FUNCTIONAL_REQUIREMENTS.md, docs/design per-ID catalogues, or historical civlab batch-analysis/run-management surfaces are normative. Continue archaeology; if explicit accepted/user evidence remains absent, request a user decision before final contract closure.

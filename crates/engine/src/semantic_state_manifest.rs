@@ -92,6 +92,16 @@ impl SemanticStateManifest {
 
     pub fn apply_to(&self, sim: &mut Simulation) -> Result<(), String> {
         self.validate_supported()?;
+        if sim.state.tick != self.tick {
+            return Err(format!(
+                "semantic tick {} does not match loaded world tick {}",
+                self.tick, sim.state.tick
+            ));
+        }
+        // current_tick is a live mirror consumed directly by phases such as
+        // belief/religion. CivSaveBundle restores state.tick but does not
+        // currently resynchronize this mirror.
+        sim.current_tick = self.tick;
         sim.economy_policy = PolicyInput {
             base_consumption_joules: self.economy_policy.base_consumption_joules,
             scarcity_multiplier: self.economy_policy.scarcity_multiplier,

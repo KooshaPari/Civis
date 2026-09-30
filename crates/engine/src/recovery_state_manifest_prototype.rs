@@ -56,6 +56,16 @@ impl RecoveryStateManifest {
         }
     }
 
+    fn validate_supported(&self) -> Result<(), String> {
+        if self.schema_version != 1 {
+            return Err(format!("unsupported recovery semantic schema {}", self.schema_version));
+        }
+        if self.control_policy_kind.is_empty() {
+            return Err("missing control policy kind".to_string());
+        }
+        Ok(())
+    }
+
     fn apply_semantic_state(&self, sim: &mut Simulation) {
         sim.economy_policy = PolicyInput {
             base_consumption_joules: self.economy_policy.base_consumption_joules,
@@ -97,6 +107,7 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     let decoded: RecoveryStateManifest =
         serde_json::from_slice(&bytes).expect("deserialize prototype manifest");
 
+    decoded.validate_supported().expect("supported prototype schema");
     let mut restored = Simulation::with_seed(7);
     decoded.apply_semantic_state(&mut restored);
 
@@ -190,4 +201,31 @@ fn recovery_prototype_classifier_preserves_explicit_legacy_candidate_state() {
         classify_save_dir_for_recovery(dir.path()),
         RecoveryFormatClass::LegacyCandidate
     );
+}
+
+
+#[test]
+fn recovery_prototype_manifest_rejects_missing_required_semantic_component() {
+    let sim = Simulation::with_seed(13);
+    let manifest = RecoveryStateManifest::capture(&sim);
+    let mut value = serde_json::to_value(&manifest).expect("manifest value");
+    value
+        .as_object_mut()
+        .expect("object")
+        .remove("research")
+        .expect("research field present");
+
+    let result = serde_json::from_value::<RecoveryStateManifest>(value);
+    assert!(
+        result.is_err(),
+        "required semantic components must not silently default when absent"
+    );
+}
+
+#[test]
+fn recovery_prototype_manifest_rejects_unknown_future_schema() {
+    let sim = Simulation::with_seed(13);
+    let mut manifest = RecoveryStateManifest::capture(&sim);
+    manifest.schema_version = 999;
+    assert!(manifest.validate_supported().is_err());
 }

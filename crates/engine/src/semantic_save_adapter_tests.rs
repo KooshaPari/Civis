@@ -1,5 +1,5 @@
 use crate::semantic_save_adapter::{
-    SemanticLoadDisposition, SemanticSaveAdapter, SEMANTIC_STATE_FILE,
+    SemanticBundleBridge, SemanticLoadDisposition, SemanticSaveAdapter, SEMANTIC_STATE_FILE,
 };
 use crate::{PolicyInput, Simulation};
 use tempfile::tempdir;
@@ -53,5 +53,45 @@ fn semantic_save_adapter_surfaces_orphan_guest_memory_before_apply() {
         Err(SemanticLoadDisposition::OrphanGuestMemory(vec![
             "missing-mod".to_string()
         ]))
+    );
+}
+
+
+#[test]
+fn semantic_bundle_bridge_turns_reproduced_policy_research_loss_green() {
+    let mut source = Simulation::with_seed(55);
+    source.economy_policy = PolicyInput {
+        base_consumption_joules: 123_456.0,
+        scarcity_multiplier: 2.75,
+    };
+    source.research_cache_mut().researched = vec!["pottery".into(), "masonry".into()];
+    source.research_cache_mut().queued.push_back("writing".into());
+
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &source).expect("opt-in save");
+
+    // No mods are required by this fixture, so an empty resolved environment is compatible.
+    let resolved = Simulation::with_seed(55);
+    let loaded = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).expect("opt-in load");
+
+    assert_eq!(loaded.economy_policy.base_consumption_joules, 123_456.0);
+    assert_eq!(loaded.economy_policy.scarcity_multiplier, 2.75);
+    assert_eq!(loaded.research_cache().researched, vec!["pottery", "masonry"]);
+    assert_eq!(loaded.research_cache().queued.front().map(String::as_str), Some("writing"));
+}
+
+#[test]
+fn semantic_bundle_bridge_missing_component_fails_without_changing_default_loader() {
+    let sim = Simulation::with_seed(55);
+    let dir = tempdir().expect("tempdir");
+    crate::save_bundle::CivSaveBundle::save_dir(dir.path(), &sim).expect("legacy/current save");
+
+    // Existing loader remains available as the comparison baseline.
+    crate::save_bundle::CivSaveBundle::load_dir(dir.path()).expect("default load remains valid");
+
+    let resolved = Simulation::with_seed(55);
+    assert!(
+        SemanticBundleBridge::load_opt_in(dir.path(), &resolved).is_err(),
+        "opt-in vNext bridge must require semantic-state.json rather than silently downgrade"
     );
 }

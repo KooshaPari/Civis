@@ -77,3 +77,18 @@ The generated FR-CIV-EMERGENCE-100..254 range, reserved/report-only IDs, templat
 ### Authority blockers
 
 Do not silently decide whether root FUNCTIONAL_REQUIREMENTS.md, docs/design per-ID catalogues, or historical civlab batch-analysis/run-management surfaces are normative. Continue archaeology; if explicit accepted/user evidence remains absent, request a user decision before final contract closure.
+
+
+## C-S27 — current main audit and authority
+
+Current `main` observed 2026-09-30: `590fad0643eb85cae89edd9e64ed6b991461de6e`. Compared with inspected code revision `54d5758970249c8d1f24688ea45920b530e77299`, it is exactly one commit ahead and adds only `docs/audits/spec-only-triage-2026-09-29.md` (+339 lines). No code changed, so `54d57589...` remains the effective current implementation snapshot for the mapped surfaces while `590fad06...` is the current repository/document snapshot.
+
+The new audit is classified **supporting audit / authority-contested catalogue analysis**:
+- useful evidence of scanner blind spots, dead-substrate false coverage, generated/range-manufactured IDs, namespace collisions and missing tests;
+- its 205-row verdict set is NOT imported as accepted product requirements;
+- its rule treating per-ID acceptance criteria in design documents as REAL-GAP requires independent intent/authority review;
+- FUNCTIONAL_REQUIREMENTS.md is Draft and predates explicit May determinism/multiplayer supersession.
+
+Detailed resolution: PASS-22-AUTHORITY-SUPERSESSION.md.
+
+Resolution state: PARTIAL. The audit file meaning is understood; its underlying 205 sources/authority decisions are not thereby resolved.

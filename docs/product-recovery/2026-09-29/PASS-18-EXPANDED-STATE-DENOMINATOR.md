@@ -15,8 +15,9 @@ Production semantic/classifier reds now include:
 - metadata-deletion downgrade bypass;
 - tutorial progress reset;
 - religious profiles loss;
-- active caravans in transit loss;
-- plus the remaining production red recorded in the run's failure set.
+- active caravans in transit loss.
+
+That is **9 production-path reds**. The tenth failure in the 20-test run was the prototype atomicity fixture described below; do not inflate the production-failure denominator by counting it as a product red.
 
 Prototype greens include:
 - semantic policy/research restoration;

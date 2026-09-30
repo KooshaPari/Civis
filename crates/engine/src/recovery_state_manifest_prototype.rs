@@ -3,7 +3,7 @@
 
 use crate::{PolicyInput, ResearchCache, Simulation};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct RecoveryEconomyPolicy {
@@ -24,6 +24,7 @@ struct RecoveryStateManifest {
     economy_policy: RecoveryEconomyPolicy,
     control_policy_kind: String,
     research: ResearchCache,
+    market_prices: BTreeMap<String, i64>,
     active_mods: Vec<RecoveryModIdentity>,
 }
 
@@ -49,6 +50,7 @@ impl RecoveryStateManifest {
             },
             control_policy_kind: sim.policy().name().to_string(),
             research: sim.research_cache().clone(),
+            market_prices: sim.market_state.prices.clone(),
             active_mods,
         }
     }
@@ -60,6 +62,7 @@ impl RecoveryStateManifest {
         };
         sim.set_policy(crate::policy::policy_from_kind(&self.control_policy_kind));
         *sim.research_cache_mut() = self.research.clone();
+        sim.market_state.prices = self.market_prices.clone();
     }
 
     fn incompatible_guest_memory_ids(&self, sim: &Simulation) -> Vec<String> {
@@ -86,6 +89,7 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     source.set_policy(crate::policy::policy_from_kind("capitalist"));
     source.research_cache_mut().researched = vec!["pottery".into(), "masonry".into()];
     source.research_cache_mut().queued.push_back("writing".into());
+    source.market_state.prices.insert("grain".into(), 777);
 
     let manifest = RecoveryStateManifest::capture(&source);
     let bytes = serde_json::to_vec(&manifest).expect("serialize prototype manifest");
@@ -105,6 +109,7 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     );
     assert_eq!(restored.policy().name(), source.policy().name());
     assert_eq!(restored.research_cache(), source.research_cache());
+    assert_eq!(restored.market_state.prices, source.market_state.prices);
 }
 
 #[test]

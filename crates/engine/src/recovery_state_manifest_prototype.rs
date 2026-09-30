@@ -1,7 +1,8 @@
 //! Architecture experiment for a semantic save-state manifest.
 //! Test-only: this does not alter CivSaveBundle or production save format.
 
-use crate::{PolicyInput, ResearchCache, Simulation};
+use crate::{PolicyInput, Simulation};
+use crate::engine::ResearchCache;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 

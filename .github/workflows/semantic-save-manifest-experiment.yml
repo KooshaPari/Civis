@@ -61,3 +61,5 @@ jobs:
 # PASS-39 guest ownership marker: semantic manifest now persists guest-memory owner IDs and validates them against resolved mods.
 
 # PASS-44 tick mirror marker: vNext explicitly rebinds current_tick to restored WorldState authority.
+
+# PASS-44 current-tick marker: production mirror-gap red + vNext resync/mixed-tick controls.

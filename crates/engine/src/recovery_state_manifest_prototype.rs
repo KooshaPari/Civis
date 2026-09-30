@@ -22,6 +22,8 @@ struct RecoveryModIdentity {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct RecoveryStateManifest {
     schema_version: u32,
+    tick: u64,
+    rng_seed: u64,
     economy_policy: RecoveryEconomyPolicy,
     control_policy_kind: String,
     research: ResearchCache,
@@ -45,6 +47,8 @@ impl RecoveryStateManifest {
 
         Self {
             schema_version: 1,
+            tick: sim.state.tick,
+            rng_seed: sim.state.rng_seed,
             economy_policy: RecoveryEconomyPolicy {
                 base_consumption_joules: sim.economy_policy.base_consumption_joules,
                 scarcity_multiplier: sim.economy_policy.scarcity_multiplier,
@@ -272,6 +276,16 @@ impl RecoverySaveGenerationPublisher {
         let semantic: RecoveryStateManifest =
             serde_json::from_slice(&semantic_bytes).map_err(|e| e.to_string())?;
         semantic.validate_supported()?;
+        let loaded = crate::CivSaveBundle::load_dir(&bundle).map_err(|e| e.to_string())?;
+        if loaded.state.tick != semantic.tick || loaded.state.rng_seed != semantic.rng_seed {
+            return Err(format!(
+                "semantic/bundle identity mismatch: semantic tick/seed={}/{}, bundle={}/{}",
+                semantic.tick,
+                semantic.rng_seed,
+                loaded.state.tick,
+                loaded.state.rng_seed
+            ));
+        }
         match classify_save_dir_for_recovery(&bundle) {
             RecoveryFormatClass::Explicit(_) => Ok(()),
             other => Err(format!("generation is not an explicit supported save: {other:?}")),
@@ -341,4 +355,30 @@ fn recovery_prototype_successful_commit_switches_pointer_without_destroying_prio
     assert_eq!(publisher.current().as_deref(), Some("g2"));
     assert!(publisher.generation_dir("g1").exists());
     assert!(publisher.generation_dir("g2").exists());
+}
+
+
+#[test]
+fn recovery_prototype_rejects_semantic_manifest_from_different_generation() {
+    let root = tempfile::tempdir().expect("root");
+    let publisher = RecoverySaveGenerationPublisher::new(root.path());
+
+    let mut g1 = Simulation::with_seed(41);
+    g1.state.tick = 10;
+    publisher.stage("g1", &g1).expect("stage g1");
+
+    let mut g2 = Simulation::with_seed(42);
+    g2.state.tick = 20;
+    publisher.stage("g2", &g2).expect("stage g2");
+
+    std::fs::copy(
+        publisher.generation_dir("g1").join("semantic-state.json"),
+        publisher.generation_dir("g2").join("semantic-state.json"),
+    )
+    .expect("cross-wire semantic manifest");
+
+    assert!(
+        publisher.validate("g2").is_err(),
+        "a valid semantic component from another save generation must not qualify this bundle"
+    );
 }

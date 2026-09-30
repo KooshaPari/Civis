@@ -105,6 +105,10 @@ impl SemanticBundleBridge {
         let mut loaded = crate::save_bundle::CivSaveBundle::load_dir(dir)
             .map_err(|e| format!("base bundle load failed: {e}"))?;
         SemanticSaveAdapter::apply_after_compatibility(&manifest, &mut loaded)?;
+        // current_tick is a live mirror used directly by some phases. The base
+        // loader replaces WorldState after replay reconstruction but does not
+        // explicitly rebind this mirror. vNext makes the authority explicit.
+        loaded.current_tick = loaded.state.tick;
         Ok(loaded)
     }
 }

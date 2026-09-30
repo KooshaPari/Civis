@@ -1,0 +1,1473 @@
+{
+  "schema_version": "0.1-recovery",
+  "observed_revision": "54d5758970249c8d1f24688ea45920b530e77299",
+  "source_blob": "b5fabb65b3f8982c7feb5fdf913d3e8ed32efa13",
+  "generated_date": "2026-09-30",
+  "authority": "RECOVERY_DRAFT_NOT_ACCEPTED",
+  "denominator": {
+    "simulation_fields": 125,
+    "world_state_fields": 48
+  },
+  "caveats": [
+    "Field presence/Serialize does not prove semantic durability.",
+    "UNKNOWN is not failure; it is an unresolved persistence disposition.",
+    "EPHEMERAL_CANDIDATE requires explicit acceptance before omission is considered safe.",
+    "Reproduced omissions are bound to recovery workflow candidates, not every future implementation."
+  ],
+  "simulation": [
+    {
+      "name": "state",
+      "visibility": "pub",
+      "type": "WorldState",
+      "attrs": [],
+      "status": "AGGREGATE_PROJECTION",
+      "evidence": "world_state.json after save-side mirror"
+    },
+    {
+      "name": "world",
+      "visibility": "pub",
+      "type": "World",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "rng",
+      "visibility": "pub(crate)",
+      "type": "SimRng",
+      "attrs": [],
+      "status": "SEMANTIC_DECISION",
+      "evidence": "replay seed exists; RNG draw events do not restore internal state"
+    },
+    {
+      "name": "planet",
+      "visibility": "pub(crate)",
+      "type": "PlanetConfig",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "environment.json"
+    },
+    {
+      "name": "moon",
+      "visibility": "pub(crate)",
+      "type": "MoonConfig",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "environment.json"
+    },
+    {
+      "name": "worldgen",
+      "visibility": "private",
+      "type": "WorldgenConfig",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "climate",
+      "visibility": "pub",
+      "type": "Climate",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "environment.json"
+    },
+    {
+      "name": "current_tick",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "pending_damage",
+      "visibility": "private",
+      "type": "Vec<DamageEvent>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "tick_modulo_compact",
+      "visibility": "private",
+      "type": "u64",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "building_graph",
+      "visibility": "private",
+      "type": "BuildingGraph",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "allocator",
+      "visibility": "private",
+      "type": "Allocator",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "diffusion_params",
+      "visibility": "private",
+      "type": "DiffusionParams",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "target_era",
+      "visibility": "private",
+      "type": "u16",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_cohort_stats",
+      "visibility": "private",
+      "type": "Option<CohortStats>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_births",
+      "visibility": "pub(crate)",
+      "type": "Vec<PopulationEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_deaths",
+      "visibility": "pub(crate)",
+      "type": "Vec<PopulationEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_life_deaths",
+      "visibility": "pub",
+      "type": "u32",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_lifecycle_metrics",
+      "visibility": "pub",
+      "type": "LifecycleCounters",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "diplomacy_events",
+      "visibility": "pub(crate)",
+      "type": "Vec<DiplomacyEvent>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "next_civilian_id",
+      "visibility": "pub(crate)",
+      "type": "u64",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_settlement_ids",
+      "visibility": "private",
+      "type": "Vec<u64>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "research_cache",
+      "visibility": "private",
+      "type": "ResearchCache",
+      "attrs": [],
+      "status": "REPRODUCED_OMISSION",
+      "evidence": "candidate-bound recovery oracle red"
+    },
+    {
+      "name": "last_audio_researched_len",
+      "visibility": "private",
+      "type": "usize",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "era_progression",
+      "visibility": "pub",
+      "type": "crate::era::EraProgressionState",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "faction_relations",
+      "visibility": "pub",
+      "type": "FactionRelations",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "grief_accumulator",
+      "visibility": "pub",
+      "type": "civ_agents::diplomacy::GriefAccumulator",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "scenario_taxation",
+      "visibility": "pub",
+      "type": "civ_economy::Taxation",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "belief",
+      "visibility": "private",
+      "type": "u64",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "cluster_cultures",
+      "visibility": "pub",
+      "type": "BTreeMap<u64, CultureProfile>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "faction_ideologies",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, FactionIdeologyState>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "cluster_stocks",
+      "visibility": "private",
+      "type": "BTreeMap<u64, ClusterStocks>",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "cluster_stocks.json"
+    },
+    {
+      "name": "last_tick_settlement_trade_flows",
+      "visibility": "pub(crate)",
+      "type": "Vec<SettlementTradeFlow>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_settlement_count",
+      "visibility": "pub",
+      "type": "u32",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "faction_aggression",
+      "visibility": "pub",
+      "type": "std::collections::BTreeMap<u32, f32>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "emergence",
+      "visibility": "pub",
+      "type": "crate::emergence::EmergenceState",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "tutorial_progress",
+      "visibility": "pub",
+      "type": "TutorialProgress",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "emergence_branching",
+      "visibility": "pub",
+      "type": "crate::emergence_metrics::EmergenceBranchingState",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "emergence_sample",
+      "visibility": "pub",
+      "type": "Option<crate::emergence_metrics::EmergenceSample>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "voxel",
+      "visibility": "pub",
+      "type": "VoxelWorld<MaterialId>",
+      "attrs": [],
+      "status": "REPLAY_DERIVED_CANDIDATE",
+      "evidence": "VoxelWrite events replay; completeness not established"
+    },
+    {
+      "name": "last_tick_voxel_events",
+      "visibility": "private",
+      "type": "Vec<DirtyChunkEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_voxel_damage_count",
+      "visibility": "private",
+      "type": "usize",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_combat_pulses",
+      "visibility": "private",
+      "type": "SmallVec<[CombatDamagePulse; 8]>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_disaster_pulses",
+      "visibility": "pub(crate)",
+      "type": "Vec<crate::disasters::DisasterPulse>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_engagements",
+      "visibility": "pub(crate)",
+      "type": "Vec<CombatEngagement>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_mod_lifecycle",
+      "visibility": "private",
+      "type": "Vec<String>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_audio_events",
+      "visibility": "private",
+      "type": "SmallVec<[civ_audio::triggers::SfxTrigger; 8]>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_daily_path",
+      "visibility": "pub",
+      "type": "Vec<DailyPathDecision>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_cluster_payoffs",
+      "visibility": "pub",
+      "type": "Vec<MembershipPayoffTotals>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_music_cues",
+      "visibility": "private",
+      "type": "BTreeMap<u64, MusicCue>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_disaster_events",
+      "visibility": "pub(crate)",
+      "type": "Vec<crate::disasters::DisasterTickEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_god_actions",
+      "visibility": "pub(crate)",
+      "type": "Vec<GodActionRecord>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_game_outcome",
+      "visibility": "pub",
+      "type": "GameOutcome",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "operational",
+      "visibility": "private",
+      "type": "NoopOperationalLayer",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "replay_log",
+      "visibility": "private",
+      "type": "ReplayLog",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "replay.civreplay audit/reconstruction; not exhaustive live-state restore"
+    },
+    {
+      "name": "economy_policy",
+      "visibility": "pub",
+      "type": "PolicyInput",
+      "attrs": [],
+      "status": "REPRODUCED_OMISSION",
+      "evidence": "candidate-bound recovery oracle red"
+    },
+    {
+      "name": "policy",
+      "visibility": "pub",
+      "type": "Box<dyn Policy>",
+      "attrs": [],
+      "status": "REPRODUCED_OMISSION",
+      "evidence": "candidate-bound recovery oracle red"
+    },
+    {
+      "name": "last_control_signals",
+      "visibility": "pub",
+      "type": "ControlSignals",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "economy_state",
+      "visibility": "pub",
+      "type": "EconomyState",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "market_state",
+      "visibility": "pub",
+      "type": "MarketState",
+      "attrs": [],
+      "status": "REPRODUCED_OMISSION",
+      "evidence": "candidate-bound recovery oracle red"
+    },
+    {
+      "name": "lod_policy",
+      "visibility": "pub",
+      "type": "LodPolicy",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "mod_host",
+      "visibility": "pub(crate)",
+      "type": "ModHost",
+      "attrs": [],
+      "status": "PARTIAL_COMPONENT",
+      "evidence": "guest memory only in mod_state.json; loaded mod identity omitted"
+    },
+    {
+      "name": "military_phase",
+      "visibility": "pub(crate)",
+      "type": "MilitaryPhaseConfig",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "faction_doctrines",
+      "visibility": "private",
+      "type": "Vec<DoctrineLibrary>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "coastal_columns",
+      "visibility": "pub(crate)",
+      "type": "BTreeMap<(i64, i64), CoastalColumn>",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "environment.json"
+    },
+    {
+      "name": "weather_grid",
+      "visibility": "pub",
+      "type": "Vec<WeatherCell>",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT",
+      "evidence": "environment.json"
+    },
+    {
+      "name": "build_sites",
+      "visibility": "pub",
+      "type": "Vec<BuildSite>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "last_tick_construction_events",
+      "visibility": "private",
+      "type": "SmallVec<[ProductionEvent; 8]>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "language_state",
+      "visibility": "pub(crate)",
+      "type": "LanguageState",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "faction_languages",
+      "visibility": "pub(crate)",
+      "type": "BTreeMap<u32, LanguageState>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "sentience_profile",
+      "visibility": "private",
+      "type": "CognitionTraitProfile",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "sentience_threshold",
+      "visibility": "private",
+      "type": "SentienceThreshold",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_tick_sentience_events",
+      "visibility": "private",
+      "type": "Vec<SentienceEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "settlements",
+      "visibility": "pub(crate)",
+      "type": "BTreeMap<u32, u32>",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT_OR_DUPLICATE",
+      "evidence": "institutions.json; some also mirrored into world_state.json"
+    },
+    {
+      "name": "institutions",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, Vec<civ_institutions::Institution>>",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT_OR_DUPLICATE",
+      "evidence": "institutions.json; some also mirrored into world_state.json"
+    },
+    {
+      "name": "last_tick_institution_events",
+      "visibility": "private",
+      "type": "Vec<InstitutionEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "institution_levels_emitted",
+      "visibility": "pub",
+      "type": "BTreeSet<(u32, u8, u8)>",
+      "attrs": [],
+      "status": "DIRECT_COMPONENT_OR_DUPLICATE",
+      "evidence": "institutions.json; some also mirrored into world_state.json"
+    },
+    {
+      "name": "settlement_food_stocked",
+      "visibility": "pub(crate)",
+      "type": "BTreeMap<u32, i64>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "settlement_housing_capacity",
+      "visibility": "private",
+      "type": "BTreeMap<u32, u32>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "settlement_crime_pressure",
+      "visibility": "private",
+      "type": "BTreeMap<u32, i32>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "mood_history",
+      "visibility": "private",
+      "type": "Vec<MoodSnapshot>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "mood_history_by_settlement",
+      "visibility": "private",
+      "type": "BTreeMap<u32, Vec<MoodSnapshot>>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_tick_mood",
+      "visibility": "private",
+      "type": "Vec<MoodSnapshot>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "households",
+      "visibility": "private",
+      "type": "BTreeMap<u64, ()>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "household_settlement",
+      "visibility": "private",
+      "type": "BTreeMap<u64, u32>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "settlement_households",
+      "visibility": "private",
+      "type": "BTreeMap<u32, BTreeSet<u64>>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "household_wealth",
+      "visibility": "private",
+      "type": "BTreeMap<u64, i64>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "household_power",
+      "visibility": "private",
+      "type": "BTreeMap<u64, i64>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "household_bands",
+      "visibility": "private",
+      "type": "BTreeMap<u64, StratBand>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "household_score",
+      "visibility": "private",
+      "type": "BTreeMap<u64, i64>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "household_band_set",
+      "visibility": "private",
+      "type": "BTreeSet<(u32, u64, StratBand)>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "stratification_bands_emitted",
+      "visibility": "private",
+      "type": "BTreeSet<(u32, u64, StratBand)>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_tick_stratification",
+      "visibility": "private",
+      "type": "Vec<StratificationEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_stratification_reports",
+      "visibility": "private",
+      "type": "BTreeMap<u32, StratificationReport>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "religious_profiles",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, ReligiousProfile>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_tick_religion_events",
+      "visibility": "pub",
+      "type": "Vec<crate::religion::ReligionEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "actor_settlement",
+      "visibility": "private",
+      "type": "BTreeMap<u64, u32>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "actor_hardship",
+      "visibility": "private",
+      "type": "BTreeMap<u64, i64>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "actor_institutions",
+      "visibility": "private",
+      "type": "BTreeMap<u64, (bool, bool)>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "kinship",
+      "visibility": "private",
+      "type": "BTreeMap<u64, Vec<KinshipEdge>>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "trust",
+      "visibility": "private",
+      "type": "BTreeMap<u64, BTreeMap<u64, i64>>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_actor_fabric",
+      "visibility": "private",
+      "type": "BTreeMap<u64, i64>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "settlement_actors",
+      "visibility": "private",
+      "type": "BTreeMap<u32, BTreeSet<u64>>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_tick_cohesion_events",
+      "visibility": "private",
+      "type": "Vec<CohesionEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_cohesion",
+      "visibility": "private",
+      "type": "BTreeMap<u32, CohesionSnapshot>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_cohesion_snapshots",
+      "visibility": "private",
+      "type": "BTreeMap<u32, CohesionSnapshot>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "unrest_settlement_gini",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, f64>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "last_tick_unrest",
+      "visibility": "pub",
+      "type": "Vec<UnrestEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_unrest_events",
+      "visibility": "private",
+      "type": "Vec<UnrestEvent>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_tick_unrest_levels",
+      "visibility": "private",
+      "type": "BTreeMap<u32, UnrestLevel>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "settlement_gini",
+      "visibility": "private",
+      "type": "BTreeMap<u32, i32>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "last_tick_unrest_snapshots",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, UnrestSnapshot>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_unrest_level",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, UnrestLevel>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "riot_accumulator",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, i64>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "migrant_accumulator",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, i64>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "econ_focus",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, EconomicFocus>",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "econ_focus_stability",
+      "visibility": "private",
+      "type": "Vec<EconomicFocusEvent>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "significance",
+      "visibility": "pub",
+      "type": "civ_legends::significance::SignificanceAccumulator",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "last_famine_stage",
+      "visibility": "pub(crate)",
+      "type": "crate::famine::FamineStage",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "last_famine_effects",
+      "visibility": "pub(crate)",
+      "type": "crate::famine::FamineEffects",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    },
+    {
+      "name": "stance_engine",
+      "visibility": "pub(crate)",
+      "type": "civ_diplomacy::stance::DiplomacyStanceEngine",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "active_caravans",
+      "visibility": "pub(crate)",
+      "type": "Vec<crate::caravan::Caravan>",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "caravan_config",
+      "visibility": "pub(crate)",
+      "type": "crate::caravan::CaravanConfig",
+      "attrs": [],
+      "status": "UNKNOWN",
+      "evidence": "no accepted persistence disposition mapped in this pass"
+    },
+    {
+      "name": "deep_diplomacy",
+      "visibility": "pub",
+      "type": "crate::diplomacy::DeepDiplomacyState",
+      "attrs": [],
+      "status": "MIRRORED_TO_WORLDSTATE",
+      "evidence": "save_state_mirror_to -> world_state.json"
+    },
+    {
+      "name": "last_tick_abiogenesis_sites",
+      "visibility": "private",
+      "type": "Vec<WorldCoord>",
+      "attrs": [],
+      "status": "EPHEMERAL_CANDIDATE",
+      "evidence": "must justify if loss affects accepted continuity"
+    }
+  ],
+  "world_state": [
+    {
+      "name": "tick",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "population",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "energy_budget_joules",
+      "visibility": "pub",
+      "type": "Fixed",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "rng_seed",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "last_tick_unrest_snapshots",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, UnrestSnapshot>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "last_tick_cohesion",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, CohesionSnapshot>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "last_tick_faction_unrest_response_intents",
+      "visibility": "pub",
+      "type": "BTreeSet<u32>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "last_tick_faction_hostility_intents",
+      "visibility": "pub",
+      "type": "BTreeSet<u32>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "last_tick_faction_trade_open_intents",
+      "visibility": "pub",
+      "type": "BTreeSet<u32>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "factions",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, String>",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "faction_treasury",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, Fixed>",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "faction_resources",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, Resources>",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "trade_routes",
+      "visibility": "pub",
+      "type": "Vec<TradeRoute>",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "belief",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "cohesion",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "unrest",
+      "visibility": "pub",
+      "type": "u64",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "emergent_trade_route_keys",
+      "visibility": "pub",
+      "type": "BTreeSet<(u32, u32, String)>",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "trade_route_idle_ticks",
+      "visibility": "pub",
+      "type": "BTreeMap<(u32, u32, String), u32>",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "resources",
+      "visibility": "pub",
+      "type": "Resources",
+      "attrs": [],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "faction_religions",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, crate::religion::Religion>",
+      "attrs": [
+        "#[serde(default, skip)]"
+      ],
+      "status": "EXCLUDED_FROM_WORLDSTATE_JSON",
+      "evidence": "serde(default, skip)"
+    },
+    {
+      "name": "faction_language_systems",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, crate::language::Language>",
+      "attrs": [
+        "#[serde(default, skip)]"
+      ],
+      "status": "EXCLUDED_FROM_WORLDSTATE_JSON",
+      "evidence": "serde(default, skip)"
+    },
+    {
+      "name": "civilian_psyches",
+      "visibility": "pub",
+      "type": "BTreeMap<u64, crate::psyche_behavior::PsycheState>",
+      "attrs": [
+        "#[serde(default, skip)]"
+      ],
+      "status": "EXCLUDED_FROM_WORLDSTATE_JSON",
+      "evidence": "serde(default, skip)"
+    },
+    {
+      "name": "settlement_building_layouts",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, Vec<crate::building_layouts::BuildingLayout>>",
+      "attrs": [
+        "#[serde(default, skip)]"
+      ],
+      "status": "EXCLUDED_FROM_WORLDSTATE_JSON",
+      "evidence": "serde(default, skip)"
+    },
+    {
+      "name": "historical_log",
+      "visibility": "pub",
+      "type": "crate::history::HistoryLog",
+      "attrs": [
+        "#[serde(default, skip)]"
+      ],
+      "status": "EXCLUDED_FROM_WORLDSTATE_JSON",
+      "evidence": "serde(default, skip)"
+    },
+    {
+      "name": "faction_writing_systems",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, crate::writing::WritingSystem>",
+      "attrs": [
+        "#[serde(default, skip)]"
+      ],
+      "status": "EXCLUDED_FROM_WORLDSTATE_JSON",
+      "evidence": "serde(default, skip)"
+    },
+    {
+      "name": "stance_engine",
+      "visibility": "pub",
+      "type": "civ_diplomacy::stance::DiplomacyStanceEngine",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "deep_diplomacy",
+      "visibility": "pub",
+      "type": "crate::diplomacy::DeepDiplomacyState",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "faction_relations",
+      "visibility": "pub",
+      "type": "crate::diplomacy::FactionRelations",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "grief_accumulator",
+      "visibility": "pub",
+      "type": "civ_agents::diplomacy::GriefAccumulator",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "language_state",
+      "visibility": "pub",
+      "type": "LanguageState",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "faction_languages",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, LanguageState>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "institutions",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, Vec<civ_institutions::Institution>>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "institution_levels_emitted",
+      "visibility": "pub",
+      "type": "BTreeSet<(u32, u8, u8)>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "build_sites",
+      "visibility": "pub",
+      "type": "Vec<civ_build::BuildSite>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "econ_focus",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, EconomicFocus>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "cluster_cultures",
+      "visibility": "pub",
+      "type": "BTreeMap<u64, civ_agents::culture::CultureProfile>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "faction_ideologies",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, FactionIdeologyState>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "faction_aggression",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, f32>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "unrest_settlement_gini",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, f64>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "riot_accumulator",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, i64>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "chronicle",
+      "visibility": "pub",
+      "type": "Vec<String>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "chronicle_age",
+      "visibility": "pub",
+      "type": "HashMap<String, u64>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "research_progress",
+      "visibility": "pub",
+      "type": "Vec<String>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_WORLDSTATE_FIELD",
+      "evidence": "world_state.json; canonical owner/reconstruction still may be unresolved"
+    },
+    {
+      "name": "migrant_accumulator",
+      "visibility": "pub",
+      "type": "BTreeMap<u32, i64>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "scenario_taxation",
+      "visibility": "pub",
+      "type": "civ_economy::Taxation",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "era_progression",
+      "visibility": "pub",
+      "type": "crate::era::EraProgressionState",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "emergence_sample",
+      "visibility": "pub",
+      "type": "Option<crate::emergence_metrics::EmergenceSample>",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    },
+    {
+      "name": "significance",
+      "visibility": "pub",
+      "type": "civ_legends::significance::SignificanceAccumulator",
+      "attrs": [
+        "#[serde(default)]"
+      ],
+      "status": "SERIALIZED_AFTER_SIMULATION_MIRROR",
+      "evidence": "save_state_mirror_to + world_state.json"
+    }
+  ]
+}

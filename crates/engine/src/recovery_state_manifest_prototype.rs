@@ -22,6 +22,7 @@ struct RecoveryModIdentity {
 struct RecoveryStateManifest {
     schema_version: u32,
     economy_policy: RecoveryEconomyPolicy,
+    control_policy_kind: String,
     research: ResearchCache,
     active_mods: Vec<RecoveryModIdentity>,
 }
@@ -46,6 +47,7 @@ impl RecoveryStateManifest {
                 base_consumption_joules: sim.economy_policy.base_consumption_joules,
                 scarcity_multiplier: sim.economy_policy.scarcity_multiplier,
             },
+            control_policy_kind: sim.policy().name().to_string(),
             research: sim.research_cache().clone(),
             active_mods,
         }
@@ -56,6 +58,7 @@ impl RecoveryStateManifest {
             base_consumption_joules: self.economy_policy.base_consumption_joules,
             scarcity_multiplier: self.economy_policy.scarcity_multiplier,
         };
+        sim.set_policy(crate::policy::policy_from_kind(&self.control_policy_kind));
         *sim.research_cache_mut() = self.research.clone();
     }
 
@@ -80,6 +83,7 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
         base_consumption_joules: 123_456.0,
         scarcity_multiplier: 2.75,
     };
+    source.set_policy(crate::policy::policy_from_kind("capitalist"));
     source.research_cache_mut().researched = vec!["pottery".into(), "masonry".into()];
     source.research_cache_mut().queued.push_back("writing".into());
 
@@ -99,6 +103,7 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
         restored.economy_policy.scarcity_multiplier,
         source.economy_policy.scarcity_multiplier
     );
+    assert_eq!(restored.policy().name(), source.policy().name());
     assert_eq!(restored.research_cache(), source.research_cache());
 }
 

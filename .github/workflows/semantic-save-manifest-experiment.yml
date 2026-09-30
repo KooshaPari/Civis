@@ -6,6 +6,8 @@ on:
     paths:
       - 'crates/engine/src/semantic_state_manifest.rs'
       - 'crates/engine/src/semantic_state_manifest_tests.rs'
+      - 'crates/engine/src/semantic_save_adapter.rs'
+      - 'crates/engine/src/semantic_save_adapter_tests.rs'
       - 'crates/engine/src/lib.rs'
       - '.github/workflows/semantic-save-manifest-experiment.yml'
   workflow_dispatch:
@@ -26,7 +28,7 @@ jobs:
           mkdir -p recovery-artifacts
           printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","scope":"semantic_state_manifest_candidate","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
       - name: Compile integration candidate
-        run: cargo test -p civ-engine semantic_manifest_candidate_ --no-run
+        run: cargo test -p civ-engine semantic_ --no-run
       - name: Execute integration candidate
         run: |
           set -o pipefail

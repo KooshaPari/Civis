@@ -12,7 +12,8 @@
     "Field presence/Serialize does not prove semantic durability.",
     "UNKNOWN is not failure; it is an unresolved persistence disposition.",
     "EPHEMERAL_CANDIDATE requires explicit acceptance before omission is considered safe.",
-    "Reproduced omissions are bound to recovery workflow candidates, not every future implementation."
+    "Reproduced omissions are bound to recovery workflow candidates, not every future implementation.",
+    "ORACLE_PENDING means the semantic obligation is plausible enough to test but no pass/fail is assigned until candidate-bound execution."
   ],
   "simulation": [
     {
@@ -308,8 +309,8 @@
       "visibility": "pub",
       "type": "TutorialProgress",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "ORACLE_PENDING",
+      "evidence": "candidate-bound recovery oracle added 2026-09-30; execution result pending"
     },
     {
       "name": "emergence_branching",
@@ -772,8 +773,8 @@
       "visibility": "pub",
       "type": "BTreeMap<u32, ReligiousProfile>",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "ORACLE_PENDING",
+      "evidence": "candidate-bound recovery oracle added 2026-09-30; execution result pending"
     },
     {
       "name": "last_tick_religion_events",
@@ -988,8 +989,8 @@
       "visibility": "pub(crate)",
       "type": "Vec<crate::caravan::Caravan>",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "ORACLE_PENDING",
+      "evidence": "candidate-bound recovery oracle added 2026-09-30; execution result pending"
     },
     {
       "name": "caravan_config",

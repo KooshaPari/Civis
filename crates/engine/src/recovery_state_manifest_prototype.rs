@@ -324,8 +324,8 @@ fn recovery_prototype_failed_staged_save_does_not_replace_current_generation() {
     let mut g2 = Simulation::with_seed(22);
     g2.economy_policy.base_consumption_joules = 222.0;
     publisher.stage("g2", &g2).expect("stage g2");
-    std::fs::remove_file(publisher.bundle_dir("g2").join("world_state.json"))
-        .expect("damage staged candidate");
+    std::fs::remove_file(publisher.generation_dir("g2").join("semantic-state.json"))
+        .expect("damage required staged semantic manifest");
 
     assert!(publisher.commit("g2").is_err());
     assert_eq!(

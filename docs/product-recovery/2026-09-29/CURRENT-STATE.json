@@ -88,7 +88,9 @@
     "Independent fresh review remains open",
     "Six candidate-bound semantic persistence/format-classification failures reproduced",
     "Expanded semantic manifest, outer classifier and atomic save-generation prototypes still awaiting executable qualification",
-    "Complete authoritative-state denominator and mounted save/restart journey remain open"
+    "Complete authoritative-state denominator and mounted save/restart journey remain open",
+    "Authority review remains open for unsuperseded Draft FR/design-catalogue families; new 205-ID audit cannot be imported wholesale",
+    "State denominator has unresolved UNKNOWN and EPHEMERAL_CANDIDATE fields; no completeness percentage is valid"
   ],
   "next_bounded_work": [
     "Run semantic-state manifest prototype beside unchanged red controls",
@@ -127,5 +129,22 @@
       "immutable save generations plus CURRENT pointer failure isolation"
     ],
     "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review"
+  },
+  "current_repository_state": {
+    "current_main": "590fad0643eb85cae89edd9e64ed6b991461de6e",
+    "effective_current_code_snapshot": "54d5758970249c8d1f24688ea45920b530e77299",
+    "delta_from_effective_code_snapshot": "one docs-only commit adding docs/audits/spec-only-triage-2026-09-29.md; no code changes",
+    "original_program_snapshot": "b3cd62a7394878cc64d024fbfcfd398b8bb88bf1"
+  },
+  "authority_state": {
+    "draft_functional_requirements": "candidate source only; predates explicit May determinism/multiplayer corrections",
+    "latest_spec_only_audit": "supporting catalogue audit; 205 verdicts are not accepted mature obligations",
+    "later_charter_corrections": "higher authority for direct determinism/multiplayer contradictions"
+  },
+  "state_denominator": {
+    "simulation_fields": 125,
+    "world_state_fields": 48,
+    "manifest": "docs/product-recovery/2026-09-29/STATE-MANIFEST-v0.json",
+    "percentage": null
   }
 }

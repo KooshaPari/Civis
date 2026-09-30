@@ -8,7 +8,7 @@
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
   "specification_branch": "spec/mature-recovery-20260929",
-  "implementation_candidate": "b8b99f9814fe8aa0401cf55c9735874829cf503d",
+  "implementation_candidate": "1d6a3182b44c013d4ea66191e9e0fd6540e4b881",
   "dependency_snapshots": [
     {
       "repository": "KooshaPari/phenodocs",
@@ -65,7 +65,7 @@
     "journeys_represented": "PARTIAL",
     "stage_projections_justified": "PROVISIONAL",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_AND_GENERATION_MODEL_SUPPORTED_OPT_IN_BRIDGE_COMPILE_REQUALIFICATION_PENDING",
+    "high_risk_architecture_experimentally_closed": "HOST_INDEPENDENT_SEMANTIC_MANIFEST_COMPATIBILITY_OPT_IN_BRIDGE_STAGED_PUBLICATION_AND_RECONCILIATION_SUPPORTED_FILESYSTEM_DURABILITY_AND_FULL_STATE_DENOMINATOR_OPEN",
     "implementation_mapping_complete": "OPEN",
     "traceability_structurally_valid": "NOT_VALIDATED",
     "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
@@ -93,11 +93,12 @@
     "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion"
   ],
   "next_bounded_work": [
-    "Requalify opt-in SemanticBundleBridge after explicit SaveBundleError mapping",
-    "Execute staged generation CURRENT-last and reconciliation controls on exact candidate",
-    "Add filesystem capability matrix for Linux ext4/overlay and Windows NTFS before crash-durability claims",
-    "Finish 125 Simulation /48 WorldState durable-owner classification and expand semantic components only from evidence",
-    "Keep default CivSaveBundle unchanged until opt-in bridge and migration/fault gates pass"
+    "Freeze host-independent PR1569 candidate; developer handoff is active under DEVELOPER-HANDOFF-SEMANTIC-SAVE.md",
+    "Run filesystem capability/fault matrix on target Linux and Windows before crash-durability claims",
+    "Define filesystem generation vs SQLite save-index authority and reconcile disagreement",
+    "Continue 125 Simulation /48 WorldState owner classification; expand components only from accepted durable obligations",
+    "Keep default CivSaveBundle unchanged until opt-in vNext migration/fault and mounted journey gates pass",
+    "Run mounted world-intervene-save-process-restart-load-continuation journey after persistence boundary is accepted"
   ],
   "no_third_product_program": true,
   "merge_authorized": false,
@@ -132,9 +133,10 @@
       "successful generation commit switches CURRENT while preserving prior generation"
     ],
     "prototypes_pending": [
-      "expanded semantic manifest for tutorial/religion/caravan state at newer candidate",
-      "cross-platform CURRENT pointer durability/atomic replacement semantics",
-      "complete durable-owner coverage against 125 Simulation /48 WorldState denominator"
+      "filesystem durability/atomic replacement on target Linux and Windows filesystems",
+      "SQLite save-index versus filesystem generation authority/reconciliation",
+      "complete durable-owner coverage against 125 Simulation / 48 WorldState denominator",
+      "mounted local/server save-restart journey"
     ],
     "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review",
     "latest_discrimination_run": {
@@ -151,6 +153,25 @@
       "classification": "bridge error-type mapping only; semantic tests did not execute",
       "artifact_id": 11106071480,
       "artifact_sha256": "5146ed4a8bbd2fb2a26233e039908316d90ba0b957f9962373aeb57f0bbbc2a4"
+    },
+    "latest_integration_candidate_run": {
+      "run_id": 36753187459,
+      "candidate": "1d6a3182b44c013d4ea66191e9e0fd6540e4b881",
+      "conclusion": "success",
+      "result": "17 semantic lib tests passed; 0 failed; 882 filtered out",
+      "artifact_id": 11115892072,
+      "artifact_sha256": "f2eb020817ef617bdfd6988cd714c0f74aa94b389eec49ff68309f1fae203a73",
+      "scope": [
+        "semantic manifest qualified domains",
+        "saved guest-memory owner compatibility against resolved active mods",
+        "opt-in bundle bridge vs unchanged default loader",
+        "v5/current byte preservation for world_state when semantic component added",
+        "future/missing semantic schema controls",
+        "staged generation identity and CURRENT-last publication",
+        "failed-stage prior-generation retention",
+        "orphan CURRENT.next reconciliation",
+        "invalid CURRENT detection"
+      ]
     }
   },
   "current_repository_state": {

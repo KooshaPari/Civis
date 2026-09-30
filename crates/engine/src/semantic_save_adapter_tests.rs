@@ -1,5 +1,5 @@
 use crate::semantic_save_adapter::{
-    SemanticBundleBridge, SemanticLoadDisposition, SemanticSaveAdapter, SEMANTIC_STATE_FILE,
+    SemanticBundleBridge, SemanticGenerationPublisher, SemanticLoadDisposition, SemanticSaveAdapter, SEMANTIC_STATE_FILE,
 };
 use crate::{PolicyInput, Simulation};
 use tempfile::tempdir;
@@ -127,4 +127,57 @@ fn semantic_bundle_bridge_future_schema_fails_before_default_load() {
     let resolved = Simulation::with_seed(77);
     let err = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).unwrap_err();
     assert!(err.contains("semantic component rejected"));
+}
+
+
+#[test]
+fn semantic_generation_failed_stage_does_not_replace_current() {
+    let root = tempdir().expect("tempdir");
+    let publisher = SemanticGenerationPublisher::new(root.path());
+
+    let g1 = Simulation::with_seed(1);
+    publisher.stage("g1", &g1).expect("stage g1");
+    publisher.commit("g1").expect("commit g1");
+    assert_eq!(publisher.current().unwrap().as_deref(), Some("g1"));
+
+    let g2 = Simulation::with_seed(2);
+    let g2_dir = publisher.stage("g2", &g2).expect("stage g2");
+    std::fs::remove_file(g2_dir.join(SEMANTIC_STATE_FILE)).expect("fault required semantic component");
+
+    assert!(publisher.commit("g2").is_err());
+    assert_eq!(
+        publisher.current().unwrap().as_deref(),
+        Some("g1"),
+        "failed staged generation must not replace accepted CURRENT"
+    );
+}
+
+#[test]
+fn semantic_generation_success_switches_current_and_preserves_prior_generation() {
+    let root = tempdir().expect("tempdir");
+    let publisher = SemanticGenerationPublisher::new(root.path());
+
+    publisher.stage("g1", &Simulation::with_seed(1)).expect("stage g1");
+    publisher.commit("g1").expect("commit g1");
+    publisher.stage("g2", &Simulation::with_seed(2)).expect("stage g2");
+    publisher.commit("g2").expect("commit g2");
+
+    assert_eq!(publisher.current().unwrap().as_deref(), Some("g2"));
+    assert!(publisher.generation_dir("g1").is_dir());
+    assert!(publisher.generation_dir("g2").is_dir());
+}
+
+#[test]
+fn semantic_generation_identity_mismatch_fails_before_pointer_switch() {
+    let root = tempdir().expect("tempdir");
+    let publisher = SemanticGenerationPublisher::new(root.path());
+
+    publisher.stage("g1", &Simulation::with_seed(1)).expect("stage g1");
+    publisher.commit("g1").expect("commit g1");
+
+    let g2_dir = publisher.stage("g2", &Simulation::with_seed(2)).expect("stage g2");
+    std::fs::write(g2_dir.join("GENERATION"), b"other").expect("corrupt identity");
+
+    assert!(publisher.commit("g2").is_err());
+    assert_eq!(publisher.current().unwrap().as_deref(), Some("g1"));
 }

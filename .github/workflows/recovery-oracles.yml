@@ -4,12 +4,17 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'crates/engine/src/recovery_tests.rs'
+      - 'crates/engine/src/recovery_oracle_tests.rs'
+      - 'crates/engine/src/recovery_state_manifest_prototype.rs'
       - 'crates/engine/src/lib.rs'
       - 'crates/engine/src/save_bundle.rs'
       - 'crates/engine/src/engine.rs'
       - '.github/workflows/recovery-oracles.yml'
   workflow_dispatch:
+
+concurrency:
+  group: recovery-oracles-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

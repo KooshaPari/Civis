@@ -8,7 +8,7 @@
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
   "specification_branch": "spec/mature-recovery-20260929",
-  "implementation_candidate": "e7295934c5b62847cb7242c54b3cdcb427896f27",
+  "implementation_candidate": "b8b99f9814fe8aa0401cf55c9735874829cf503d",
   "dependency_snapshots": [
     {
       "repository": "KooshaPari/phenodocs",
@@ -65,7 +65,7 @@
     "journeys_represented": "PARTIAL",
     "stage_projections_justified": "PROVISIONAL",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_OUTER_CLASSIFIER_AND_SAVE_GENERATION_ATOMICITY_SUPPORTED_EXPANDED_DURABLE_STATE_RERUN_PENDING",
+    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_AND_GENERATION_MODEL_SUPPORTED_OPT_IN_BRIDGE_COMPILE_REQUALIFICATION_PENDING",
     "implementation_mapping_complete": "OPEN",
     "traceability_structurally_valid": "NOT_VALIDATED",
     "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
@@ -93,11 +93,11 @@
     "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion"
   ],
   "next_bounded_work": [
-    "Qualify expanded semantic-state manifest against policy/research/control-policy/market/tutorial/religion/caravan red controls",
-    "Qualify corrected staged-save atomicity fixture and outer missing-metadata classifier",
-    "Finish 125-field Simulation / 48-field WorldState state-owner classification and map every durable owner to component/restore/migration",
-    "Fault-inject archive/semantic-manifest/CURRENT-pointer/DB boundaries and define cross-platform commit/reconciliation authority",
-    "Run mounted local/server save-restart journey after component semantics are accepted"
+    "Requalify opt-in SemanticBundleBridge after explicit SaveBundleError mapping",
+    "Execute staged generation CURRENT-last and reconciliation controls on exact candidate",
+    "Add filesystem capability matrix for Linux ext4/overlay and Windows NTFS before crash-durability claims",
+    "Finish 125 Simulation /48 WorldState durable-owner classification and expand semantic components only from evidence",
+    "Keep default CivSaveBundle unchanged until opt-in bridge and migration/fault gates pass"
   ],
   "no_third_product_program": true,
   "merge_authorized": false,
@@ -143,6 +143,14 @@
       "result": "20 recovery tests: 11 prototype/guard tests passed; 9 unchanged production semantic/classifier controls failed",
       "artifact_id": 11092510689,
       "artifact_sha256": "752cc7c8a84033eb8b7889e69b5912107fe5efa0c7e34b244bff3251d549de6f"
+    },
+    "latest_integration_candidate_attempt": {
+      "run_id": 36717765574,
+      "candidate": "b8b99f9814fe8aa0401cf55c9735874829cf503d",
+      "conclusion": "compile_failure",
+      "classification": "bridge error-type mapping only; semantic tests did not execute",
+      "artifact_id": 11106071480,
+      "artifact_sha256": "5146ed4a8bbd2fb2a26233e039908316d90ba0b957f9962373aeb57f0bbbc2a4"
     }
   },
   "current_repository_state": {

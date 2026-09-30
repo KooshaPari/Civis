@@ -119,3 +119,19 @@ fn recovery_oracle_save_roundtrip_preserves_market_state() {
         "market prices are exposed to clients and affect future economic behavior; reset/reconstruction requires an explicit contract"
     );
 }
+
+
+#[test]
+fn recovery_oracle_v5_metadata_removal_cannot_silently_downgrade() {
+    let sim = Simulation::with_seed(0xC1A15);
+    let dir = tempdir().expect("tempdir");
+    let save = dir.path().join("metadata-downgrade.civsave");
+    CivSaveBundle::save_dir(&save, &sim).expect("save v5 fixture");
+
+    std::fs::remove_file(save.join("metadata.json")).expect("remove metadata");
+    let result = CivSaveBundle::load_dir(&save);
+    assert!(
+        result.is_err(),
+        "a freshly-written current-format bundle with metadata removed must not be silently reclassified as legacy and bypass current-format integrity policy"
+    );
+}

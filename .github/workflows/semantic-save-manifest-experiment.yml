@@ -45,3 +45,5 @@ jobs:
 # PASS-28 queue refresh marker: compatibility-first semantic adapter requires a fresh execution slot.
 
 # PASS-30 opt-in bridge marker: compare vNext semantic bridge against unchanged default CivSaveBundle.
+
+# PASS-31 migration marker: qualify v5-byte preservation and future-schema fail-closed controls.

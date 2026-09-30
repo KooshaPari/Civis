@@ -38,7 +38,7 @@
   "dimensions": {
     "functional_realization": "PARTIALLY_MAPPED_NOT_MEASURED",
     "traceability": "PARTIAL_PROVENANCE_CONFLICTS",
-    "current_product_evidence": "RUST_RECOVERY_ORACLES_EXECUTED_3_CONFIRMED_SEMANTIC_PERSISTENCE_FAILURES_RENDERER_JOURNEY_NOT_RUN",
+    "current_product_evidence": "SEMANTIC_PERSISTENCE_REDS_REPRODUCED_MOUNTED_USER_JOURNEY_NOT_RUN",
     "journey_closure": "NOT_DEMONSTRATED_IN_THIS_PROGRAM",
     "performance": "UNQUALIFIED",
     "reliability": "UNQUALIFIED",
@@ -65,7 +65,7 @@
     "journeys_represented": "PARTIAL",
     "stage_projections_justified": "PROVISIONAL",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_architecture_experimentally_closed": "OPEN_SEMANTIC_STATE_MANIFEST_PROTOTYPE_QUEUED",
+    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_SUPPORTED_EXPANDED_AND_ATOMICITY_PROTOTYPES_PENDING",
     "implementation_mapping_complete": "OPEN",
     "traceability_structurally_valid": "NOT_VALIDATED",
     "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
@@ -85,7 +85,10 @@
     "Authority unresolved for root FUNCTIONAL_REQUIREMENTS.md, docs/design per-ID catalogs, and historical civlab batch-analysis surface",
     "Synthetic 155-ID emergence range and namespace collisions must not participate in grading",
     "Authoritative-state inventory and mounted UI/server journey remain incomplete",
-    "Independent fresh review remains open"
+    "Independent fresh review remains open",
+    "Six candidate-bound semantic persistence/format-classification failures reproduced",
+    "Expanded semantic manifest, outer classifier and atomic save-generation prototypes still awaiting executable qualification",
+    "Complete authoritative-state denominator and mounted save/restart journey remain open"
   ],
   "next_bounded_work": [
     "Run semantic-state manifest prototype beside unchanged red controls",
@@ -96,5 +99,33 @@
   ],
   "no_third_product_program": true,
   "merge_authorized": false,
-  "current_main_observed": "590fad0643eb85cae89edd9e64ed6b991461de6e"
+  "current_main_observed": "590fad0643eb85cae89edd9e64ed6b991461de6e",
+  "prototype_architecture_evidence": {
+    "production_reproduced_failures": [
+      "economy PolicyInput resets to default",
+      "research cache loses researched/queued state",
+      "guest memory survives without corresponding loaded mod identity",
+      "control policy kind resets capitalist to noop",
+      "market state price is lost",
+      "metadata-deleted modern save silently downgrades through legacy classification"
+    ],
+    "production_control_run": {
+      "run_id": 36687813616,
+      "candidate": "ed8d8bbbffc4883ecbb7fa382c28aeb43ab60b14",
+      "result": "4 recovery tests passed; 6 production semantic/classifier controls failed",
+      "artifact_id": 11085881640,
+      "artifact_sha256": "6ccfa7439c3f75158a4fb68133500179c5365a2978d3271600979f4df335d84f"
+    },
+    "validated_in_isolation": [
+      "semantic manifest restores economy policy and research",
+      "semantic manifest detects orphan guest memory"
+    ],
+    "prototypes_pending": [
+      "control policy and market-state expansion",
+      "fail-closed missing/future semantic schema",
+      "outer format classifier for missing metadata",
+      "immutable save generations plus CURRENT pointer failure isolation"
+    ],
+    "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review"
+  }
 }

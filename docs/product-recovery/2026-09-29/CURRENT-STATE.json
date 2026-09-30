@@ -8,7 +8,7 @@
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
   "specification_branch": "spec/mature-recovery-20260929",
-  "implementation_candidate": "7e9a348c23f1b5559c19a3d71ecad21ef4f43e91",
+  "implementation_candidate": "e7295934c5b62847cb7242c54b3cdcb427896f27",
   "dependency_snapshots": [
     {
       "repository": "KooshaPari/phenodocs",
@@ -65,7 +65,7 @@
     "journeys_represented": "PARTIAL",
     "stage_projections_justified": "PROVISIONAL",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_AND_CLASSIFIER_SUPPORTED_EXPANDED_STATE_AND_ATOMICITY_RERUN_PENDING",
+    "high_risk_architecture_experimentally_closed": "PARTIAL_SEMANTIC_MANIFEST_OUTER_CLASSIFIER_AND_SAVE_GENERATION_ATOMICITY_SUPPORTED_EXPANDED_DURABLE_STATE_RERUN_PENDING",
     "implementation_mapping_complete": "OPEN",
     "traceability_structurally_valid": "NOT_VALIDATED",
     "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
@@ -122,15 +122,28 @@
       "artifact_sha256": "0fa5ed6cc1b5bf8cec39ea61a0962274abf81a957c9fea759b01f8873c7d7b1f"
     },
     "validated_in_isolation": [
-      "semantic manifest restores economy policy and research",
-      "semantic manifest detects orphan guest memory"
+      "semantic manifest restores economy policy, control-policy kind, research and market prices",
+      "semantic manifest detects orphan guest memory",
+      "outer classifier detects metadata-deleted modern bundle while preserving explicit legacy-candidate classification",
+      "missing required semantic component fails closed",
+      "unknown future semantic schema fails closed",
+      "mixed-generation semantic manifest is rejected",
+      "failed staged generation with missing required semantic-state does not replace CURRENT",
+      "successful generation commit switches CURRENT while preserving prior generation"
     ],
     "prototypes_pending": [
-      "expanded semantic manifest for tutorial/religion/caravan state",
-      "corrected required-semantic-component staged-save atomicity rerun",
-      "cross-platform CURRENT pointer publication/failure semantics"
+      "expanded semantic manifest for tutorial/religion/caravan state at newer candidate",
+      "cross-platform CURRENT pointer durability/atomic replacement semantics",
+      "complete durable-owner coverage against 125 Simulation /48 WorldState denominator"
     ],
-    "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review"
+    "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review",
+    "latest_discrimination_run": {
+      "run_id": 36705777195,
+      "candidate": "e7295934c5b62847cb7242c54b3cdcb427896f27",
+      "result": "20 recovery tests: 11 prototype/guard tests passed; 9 unchanged production semantic/classifier controls failed",
+      "artifact_id": 11092510689,
+      "artifact_sha256": "752cc7c8a84033eb8b7889e69b5912107fe5efa0c7e34b244bff3251d549de6f"
+    }
   },
   "current_repository_state": {
     "current_main": "590fad0643eb85cae89edd9e64ed6b991461de6e",

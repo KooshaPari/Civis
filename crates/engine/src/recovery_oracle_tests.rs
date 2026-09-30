@@ -100,3 +100,22 @@ fn recovery_oracle_save_roundtrip_preserves_control_policy_kind() {
         "the high-level control policy is distinct from PolicyInput and needs an explicit persistence/rebinding contract"
     );
 }
+
+
+#[test]
+fn recovery_oracle_save_roundtrip_preserves_market_state() {
+    let mut sim = Simulation::with_seed(0xC1A15);
+    sim.market_state.prices.insert("grain".into(), 777);
+    assert_eq!(sim.market_state.prices.get("grain"), Some(&777));
+
+    let dir = tempdir().expect("tempdir");
+    let save = dir.path().join("market-state.civsave");
+    CivSaveBundle::save_dir(&save, &sim).expect("save");
+
+    let loaded = CivSaveBundle::load_dir(&save).expect("load");
+    assert_eq!(
+        loaded.market_state.prices.get("grain"),
+        Some(&777),
+        "market prices are exposed to clients and affect future economic behavior; reset/reconstruction requires an explicit contract"
+    );
+}

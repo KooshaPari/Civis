@@ -181,3 +181,36 @@ fn semantic_generation_identity_mismatch_fails_before_pointer_switch() {
     assert!(publisher.commit("g2").is_err());
     assert_eq!(publisher.current().unwrap().as_deref(), Some("g1"));
 }
+
+
+#[test]
+fn semantic_generation_reconcile_discards_orphan_next_without_promoting() {
+    let root = tempdir().expect("tempdir");
+    let publisher = SemanticGenerationPublisher::new(root.path());
+
+    publisher.stage("g1", &Simulation::with_seed(1)).expect("stage g1");
+    publisher.commit("g1").expect("commit g1");
+    publisher.stage("g2", &Simulation::with_seed(2)).expect("stage g2");
+
+    // Simulate interruption after writing publication intent but before the
+    // rename that would make g2 accepted.
+    std::fs::write(root.path().join("CURRENT.next"), b"g2").expect("write orphan intent");
+
+    assert_eq!(publisher.reconcile().unwrap().as_deref(), Some("g1"));
+    assert!(!root.path().join("CURRENT.next").exists());
+    assert_eq!(publisher.current().unwrap().as_deref(), Some("g1"));
+    assert!(publisher.generation_dir("g2").is_dir(), "staged candidate remains inspectable");
+}
+
+#[test]
+fn semantic_generation_reconcile_rejects_current_pointing_to_invalid_generation() {
+    let root = tempdir().expect("tempdir");
+    let publisher = SemanticGenerationPublisher::new(root.path());
+
+    let g1 = publisher.stage("g1", &Simulation::with_seed(1)).expect("stage g1");
+    publisher.commit("g1").expect("commit g1");
+    std::fs::remove_file(g1.join(SEMANTIC_STATE_FILE)).expect("damage accepted generation");
+
+    assert!(publisher.reconcile().is_err(),
+        "CURRENT pointing at an invalid generation must not be silently treated as healthy");
+}

@@ -59,3 +59,5 @@ jobs:
 # PASS-37 execution-scope marker: compile and execute both use --lib semantic_.
 
 # PASS-39 guest ownership marker: semantic manifest now persists guest-memory owner IDs and validates them against resolved mods.
+
+# PASS-44 tick mirror marker: vNext explicitly rebinds current_tick to restored WorldState authority.

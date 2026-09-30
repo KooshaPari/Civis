@@ -49,3 +49,5 @@ jobs:
 # PASS-31 migration marker: qualify v5-byte preservation and future-schema fail-closed controls.
 
 # PASS-33 staged generation marker: qualify CURRENT-last publication and pre-switch fault controls.
+
+# PASS-34 reconcile marker

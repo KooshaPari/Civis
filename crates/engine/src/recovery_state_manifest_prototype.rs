@@ -1,7 +1,8 @@
 //! Architecture experiment for a semantic save-state manifest.
 //! Test-only: this does not alter CivSaveBundle or production save format.
 
-use crate::{PolicyInput, Simulation};
+use crate::{policy_from_kind, PolicyInput, Simulation};
+use civ_economy::market::MarketState;
 use crate::engine::ResearchCache;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -63,6 +64,8 @@ impl RecoveryStateManifest {
         };
         sim.set_policy(crate::policy::policy_from_kind(&self.control_policy_kind));
         *sim.research_cache_mut() = self.research.clone();
+        sim.set_policy(policy_from_kind(&self.control_policy_kind));
+        *sim.market_state_mut() = self.market_state.clone();
         sim.market_state.prices = self.market_prices.clone();
     }
 
@@ -90,6 +93,8 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     source.set_policy(crate::policy::policy_from_kind("capitalist"));
     source.research_cache_mut().researched = vec!["pottery".into(), "masonry".into()];
     source.research_cache_mut().queued.push_back("writing".into());
+    source.set_policy(policy_from_kind("capitalist"));
+    source.market_state_mut().prices.insert("food".into(), 777);
     source.market_state.prices.insert("grain".into(), 777);
 
     let manifest = RecoveryStateManifest::capture(&source);
@@ -110,6 +115,8 @@ fn recovery_prototype_manifest_roundtrip_restores_policy_and_research() {
     );
     assert_eq!(restored.policy().name(), source.policy().name());
     assert_eq!(restored.research_cache(), source.research_cache());
+    assert_eq!(restored.policy().name(), "capitalist");
+    assert_eq!(restored.market_state().prices.get("food"), Some(&777));
     assert_eq!(restored.market_state.prices, source.market_state.prices);
 }
 

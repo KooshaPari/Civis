@@ -276,3 +276,47 @@ fn semantic_bundle_bridge_rejects_cross_tick_semantic_component() {
     let err = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).unwrap_err();
     assert!(err.contains("semantic tick 99 does not match loaded world tick 3"));
 }
+
+
+#[test]
+fn semantic_bundle_bridge_resynchronizes_current_tick_mirror() {
+    let mut source = Simulation::with_seed(91);
+    source.advance_ticks(7);
+    assert_eq!(source.state.tick, 7);
+    assert_eq!(source.current_tick, 7);
+
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &source).expect("opt-in save");
+
+    let default_loaded =
+        crate::save_bundle::CivSaveBundle::load_dir(dir.path()).expect("default load");
+    assert_eq!(default_loaded.state.tick, 7);
+    assert_ne!(
+        default_loaded.current_tick, default_loaded.state.tick,
+        "production/default loader currently demonstrates the mirror restore gap"
+    );
+
+    let resolved = Simulation::with_seed(91);
+    let semantic_loaded =
+        SemanticBundleBridge::load_opt_in(dir.path(), &resolved).expect("semantic load");
+    assert_eq!(semantic_loaded.state.tick, 7);
+    assert_eq!(semantic_loaded.current_tick, 7);
+}
+
+#[test]
+fn semantic_bundle_bridge_rejects_mixed_tick_component() {
+    let mut source = Simulation::with_seed(92);
+    source.advance_ticks(5);
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &source).expect("opt-in save");
+
+    let path = dir.path().join(SEMANTIC_STATE_FILE);
+    let mut json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read semantic")).expect("json");
+    json["tick"] = serde_json::json!(6);
+    std::fs::write(&path, serde_json::to_vec_pretty(&json).expect("encode")).expect("write");
+
+    let resolved = Simulation::with_seed(92);
+    let err = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).unwrap_err();
+    assert!(err.contains("does not match loaded world tick"));
+}

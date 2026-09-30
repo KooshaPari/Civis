@@ -95,3 +95,36 @@ fn semantic_bundle_bridge_missing_component_fails_without_changing_default_loade
         "opt-in vNext bridge must require semantic-state.json rather than silently downgrade"
     );
 }
+
+
+#[test]
+fn semantic_bundle_bridge_preserves_default_v5_bytes_when_opt_in_component_is_added() {
+    let sim = Simulation::with_seed(77);
+    let dir = tempdir().expect("tempdir");
+
+    crate::save_bundle::CivSaveBundle::save_dir(dir.path(), &sim).expect("baseline save");
+    let before = std::fs::read(dir.path().join("world_state.json")).expect("baseline world bytes");
+
+    SemanticSaveAdapter::write_component(dir.path(), &sim).expect("add semantic component");
+    let after = std::fs::read(dir.path().join("world_state.json")).expect("world bytes after semantic add");
+
+    assert_eq!(before, after, "adding the opt-in semantic component must not rewrite legacy/current world_state bytes");
+    assert!(dir.path().join(SEMANTIC_STATE_FILE).is_file());
+}
+
+#[test]
+fn semantic_bundle_bridge_future_schema_fails_before_default_load() {
+    let sim = Simulation::with_seed(77);
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &sim).expect("opt-in save");
+
+    let path = dir.path().join(SEMANTIC_STATE_FILE);
+    let mut json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).expect("read semantic")).expect("json");
+    json["schema_version"] = serde_json::json!(9999);
+    std::fs::write(&path, serde_json::to_vec_pretty(&json).expect("encode")).expect("write");
+
+    let resolved = Simulation::with_seed(77);
+    let err = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).unwrap_err();
+    assert!(err.contains("semantic component rejected"));
+}

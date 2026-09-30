@@ -77,16 +77,16 @@
       "visibility": "pub",
       "type": "u64",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "MIRROR_RESTORE_GAP_CANDIDATE",
+      "evidence": "tick() assigns current_tick = state.tick, and culture phase reads current_tick; no load-side assignment current_tick=state.tick was found in source search. Requires candidate-bound save/load oracle before terminal MIRROR classification."
     },
     {
       "name": "pending_damage",
       "visibility": "private",
       "type": "Vec<DamageEvent>",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "BOUNDARY_SENSITIVE_QUEUE_DECISION",
+      "evidence": "Military phase appends combat DamageEvent; tactics phase drains it into voxel damage. Replay combat can reconstruct pending_damage, but accepted save boundary relative to phases is not yet specified. Persist/replay/drain-before-save semantics require an oracle."
     },
     {
       "name": "tick_modulo_compact",
@@ -181,8 +181,8 @@
       "visibility": "pub(crate)",
       "type": "u64",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "DURABLE_CANONICAL_OR_REBUILD_DECISION",
+      "evidence": "Engine birth path consumes and increments this monotonic ID; source explicitly forbids ID reuse. No save/load restore mapping found. Bevy has a separate world-scan helper, but engine birth path uses this counter. Must persist or specify/review max-live-id+1 rebuild."
     },
     {
       "name": "last_settlement_ids",
@@ -485,8 +485,8 @@
       "visibility": "pub",
       "type": "EconomyState",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "PARTIALLY_DERIVED_STATEFUL_DECISION",
+      "evidence": "economy_state_from_world reconstructs energy budget + tick from WorldState, but EconomyState also advances a ledger. phase_economy syncs budget from WorldState then mutates/steps EconomyState. Need decision whether ledger/history is durable, audit-only, or rebuildable."
     },
     {
       "name": "market_state",
@@ -637,24 +637,24 @@
       "visibility": "pub(crate)",
       "type": "BTreeMap<u32, i64>",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "DURABLE_CANONICAL_CANDIDATE",
+      "evidence": "Live mutable input to settlement trade flows and social mood; apply_settlement_flow mutates it across ticks. No active save component mapping found. Loss changes future market/mood behavior."
     },
     {
       "name": "settlement_housing_capacity",
       "visibility": "private",
       "type": "BTreeMap<u32, u32>",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "DURABLE_OR_EXTERNAL_BINDING_DECISION",
+      "evidence": "Scenario/test setter feeds phase_social_mood housing score each tick; no active save mapping found. Must persist per world or bind/reapply exact scenario/profile input on load."
     },
     {
       "name": "settlement_crime_pressure",
       "visibility": "private",
       "type": "BTreeMap<u32, i32>",
       "attrs": [],
-      "status": "UNKNOWN",
-      "evidence": "no accepted persistence disposition mapped in this pass"
+      "status": "DURABLE_OR_EXTERNAL_BINDING_DECISION",
+      "evidence": "Scenario/test setter feeds phase_social_mood crime score and downstream emergence/unrest behavior; no active save mapping found. Must persist or explicitly rebind exact scenario/profile state."
     },
     {
       "name": "mood_history",

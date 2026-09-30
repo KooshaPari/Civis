@@ -3,13 +3,21 @@
   "program_id": "gaming-pair-20260929",
   "product": "Civis",
   "repository": "KooshaPari/Civis",
-  "observed_date": "2026-09-29",
+  "observed_date": "2026-09-30",
   "source_snapshot": "b3cd62a7394878cc64d024fbfcfd398b8bb88bf1",
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
   "specification_branch": "spec/mature-recovery-20260929",
-  "implementation_candidate": null,
-  "dependency_snapshots": [{"repository": "KooshaPari/phenodocs", "path": "vendor/phenodocs", "commit": "35e0e90a19dfd93ce4e1a81210ade92088b2bbbc", "extent": "gitlink_only", "contents_inspected": false}],
+  "implementation_candidate": "eb74d0724163f9958e93c16c4deeb18344882246",
+  "dependency_snapshots": [
+    {
+      "repository": "KooshaPari/phenodocs",
+      "path": "vendor/phenodocs",
+      "commit": "35e0e90a19dfd93ce4e1a81210ade92088b2bbbc",
+      "extent": "gitlink_only",
+      "contents_inspected": false
+    }
+  ],
   "contract_authority": "RECOVERY_DRAFT_NOT_ACCEPTED",
   "candidate_obligations_eligible_for_grading": false,
   "invalid_or_unreviewed_catalogs_eligible_for_grading": false,
@@ -22,11 +30,15 @@
   },
   "specification_design_complete": false,
   "overall_percent": null,
-  "source_denominator": {"family_ledger": "SOURCE-COVERAGE-LEDGER.md", "file_history_conversation_denominator_closed": false, "percentage": null},
+  "source_denominator": {
+    "family_ledger": "SOURCE-COVERAGE-LEDGER.md",
+    "file_history_conversation_denominator_closed": false,
+    "percentage": null
+  },
   "dimensions": {
     "functional_realization": "PARTIALLY_MAPPED_NOT_MEASURED",
     "traceability": "PARTIAL_PROVENANCE_CONFLICTS",
-    "current_product_evidence": "NATIVE_NOT_RUN",
+    "current_product_evidence": "RUST_RECOVERY_ORACLES_EXECUTED_3_CONFIRMED_SEMANTIC_PERSISTENCE_FAILURES_RENDERER_JOURNEY_NOT_RUN",
     "journey_closure": "NOT_DEMONSTRATED_IN_THIS_PROGRAM",
     "performance": "UNQUALIFIED",
     "reliability": "UNQUALIFIED",
@@ -35,7 +47,7 @@
     "usability": "UNQUALIFIED",
     "scientific_model_validity": "NOT_ESTABLISHED",
     "external_user_validation": "NOT_ASSESSED",
-    "regression": "NO_COMPARABLE_NATIVE_RUN",
+    "regression": "CANDIDATE_BOUND_PERSISTENCE_COUNTEREXAMPLES_REPRODUCED",
     "velocity": null,
     "uncertainty": "HIGH_AUTHORITY_MODEL_RUNTIME_GAPS",
     "transition_debt": "INVENTORY_STARTED_NOT_QUANTIFIED"
@@ -53,33 +65,36 @@
     "journeys_represented": "PARTIAL",
     "stage_projections_justified": "PROVISIONAL",
     "oracle_design_complete": "PARTIAL",
-    "high_risk_architecture_experimentally_closed": "BLOCKED_NATIVE_EXPERIMENTS_NOT_RUN",
+    "high_risk_architecture_experimentally_closed": "OPEN_SEMANTIC_STATE_MANIFEST_PROTOTYPE_QUEUED",
     "implementation_mapping_complete": "OPEN",
     "traceability_structurally_valid": "NOT_VALIDATED",
     "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
-    "invalid_generated_catalog_excluded": "DRAFT_POLICY_NOT_DEPLOYED",
+    "invalid_generated_catalog_excluded": "POLICY_REINFORCED_SYNTHETIC_155_ID_EMERGENCE_RANGE_QUARANTINED_ENFORCEMENT_NOT_PROTECTED",
     "no_unexplained_orphans": "NOT_ESTABLISHED",
     "no_unresolved_contradictions": "BLOCKED",
     "no_blocking_findings": "BLOCKED",
     "independent_fresh_incompleteness_attack": "NOT_PERFORMED"
   },
   "blockers": [
-    "C-F01: PRD/README/registry scope conflicts vs explicit nondeterministic single-player charter",
-    "C-F02: current-format versus legacy classification and cross-file state integrity unresolved",
-    "C-F03: atomic save/slot replacement and recovery wrappers unqualified",
-    "C-F04: emergence, scientific validity and scale claims untested",
-    "Authoritative-state inventory, actual mounted interfaces and full implementation traces incomplete",
-    "Source/history/conversation/registry binding recovery and existing research revalidation incomplete",
-    "Native Rust/runtime environment unavailable here; no fresh renderer/save/fault-injection run",
-    "Alternative/quality decisions, protected acceptance policy and independent review open"
+    "C-BEH-01 confirmed: mutable economy_policy resets to default across CivSaveBundle load",
+    "C-BEH-02 confirmed: ResearchCache progress is lost across CivSaveBundle load",
+    "C-BEH-03 confirmed: guest memory survives without corresponding loaded mod identity",
+    "C-F02 metadata-selected legacy/current classification and cross-file identity remain unresolved",
+    "C-F03 atomic save/DB/filesystem reconciliation remains unqualified",
+    "C-F04 emergence/scientific-validity/scale claims remain untested",
+    "Authority unresolved for root FUNCTIONAL_REQUIREMENTS.md, docs/design per-ID catalogs, and historical civlab batch-analysis surface",
+    "Synthetic 155-ID emergence range and namespace collisions must not participate in grading",
+    "Authoritative-state inventory and mounted UI/server journey remain incomplete",
+    "Independent fresh review remains open"
   ],
   "next_bounded_work": [
-    "Reconcile accepted charter/ADR scope with old requirement catalogs without reviving global determinism",
-    "Trace save slot/database/caller transaction boundaries and enumerate every authoritative state owner",
-    "Trace one real UI/machine intervention through the same standalone/server world",
-    "Qualify snapshot classification, crash recovery and causal/emergence controls on native runtime",
-    "Revalidate existing model/competitor/library research and resolve mature contract/quality acceptance"
+    "Run semantic-state manifest prototype beside unchanged red controls",
+    "Design/experiment v6 semantic_state component for policy, research and mod-set identity without claiming full state completeness",
+    "Finish Simulation/ECS state-owner manifest and classify every future-affecting owner",
+    "Fault-inject archive/manifest/DB boundaries and define reconciliation authority",
+    "Resolve catalog authority through further archaeology or explicit user decision only if evidence remains genuinely ambiguous"
   ],
   "no_third_product_program": true,
-  "merge_authorized": false
+  "merge_authorized": false,
+  "current_main_observed": "590fad0643eb85cae89edd9e64ed6b991461de6e"
 }

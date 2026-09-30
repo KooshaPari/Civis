@@ -377,3 +377,7 @@ mod recovery_oracle_tests;
 // Mature-first recovery architecture experiment; never compiled into production.
 #[cfg(test)]
 mod recovery_state_manifest_prototype;
+
+// Integration-candidate tests; not product acceptance.
+#[cfg(test)]
+mod semantic_state_manifest_tests;

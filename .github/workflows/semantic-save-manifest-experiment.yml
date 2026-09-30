@@ -51,3 +51,5 @@ jobs:
 # PASS-33 staged generation marker: qualify CURRENT-last publication and pre-switch fault controls.
 
 # PASS-34 reconcile marker
+
+# PASS-35 error mapping marker: rerun semantic bridge after explicit SaveBundleError mapping.

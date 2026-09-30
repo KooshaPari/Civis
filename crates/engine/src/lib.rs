@@ -75,6 +75,7 @@ pub mod policy;
 pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
+pub mod semantic_state_manifest;
 pub mod scenario;
 pub mod settlement_helpers;
 pub mod social_types;

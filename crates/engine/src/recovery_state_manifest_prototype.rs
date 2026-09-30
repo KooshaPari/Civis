@@ -244,13 +244,19 @@ impl RecoverySaveGenerationPublisher {
         self.root.join("generations").join(id)
     }
 
+    fn bundle_dir(&self, id: &str) -> std::path::PathBuf {
+        self.generation_dir(id).join("bundle")
+    }
+
     fn stage(&self, id: &str, sim: &Simulation) -> Result<(), String> {
-        let dir = self.generation_dir(id);
-        crate::CivSaveBundle::save_dir(&dir, sim).map_err(|e| e.to_string())?;
+        let generation = self.generation_dir(id);
+        let bundle = self.bundle_dir(id);
+        std::fs::create_dir_all(&generation).map_err(|e| e.to_string())?;
+        crate::CivSaveBundle::save_dir(&bundle, sim).map_err(|e| e.to_string())?;
         let semantic = RecoveryStateManifest::capture(sim);
         semantic.validate_supported()?;
         std::fs::write(
-            dir.join("semantic-state.json"),
+            generation.join("semantic-state.json"),
             serde_json::to_vec_pretty(&semantic).map_err(|e| e.to_string())?,
         )
         .map_err(|e| e.to_string())?;
@@ -258,14 +264,15 @@ impl RecoverySaveGenerationPublisher {
     }
 
     fn validate(&self, id: &str) -> Result<(), String> {
-        let dir = self.generation_dir(id);
-        crate::CivSaveBundle::load_dir(&dir).map_err(|e| e.to_string())?;
+        let generation = self.generation_dir(id);
+        let bundle = self.bundle_dir(id);
+        crate::CivSaveBundle::load_dir(&bundle).map_err(|e| e.to_string())?;
         let semantic_bytes =
-            std::fs::read(dir.join("semantic-state.json")).map_err(|e| e.to_string())?;
+            std::fs::read(generation.join("semantic-state.json")).map_err(|e| e.to_string())?;
         let semantic: RecoveryStateManifest =
             serde_json::from_slice(&semantic_bytes).map_err(|e| e.to_string())?;
         semantic.validate_supported()?;
-        match classify_save_dir_for_recovery(&dir) {
+        match classify_save_dir_for_recovery(&bundle) {
             RecoveryFormatClass::Explicit(_) => Ok(()),
             other => Err(format!("generation is not an explicit supported save: {other:?}")),
         }
@@ -303,7 +310,7 @@ fn recovery_prototype_failed_staged_save_does_not_replace_current_generation() {
     let mut g2 = Simulation::with_seed(22);
     g2.economy_policy.base_consumption_joules = 222.0;
     publisher.stage("g2", &g2).expect("stage g2");
-    std::fs::remove_file(publisher.generation_dir("g2").join("world_state.json"))
+    std::fs::remove_file(publisher.bundle_dir("g2").join("world_state.json"))
         .expect("damage staged candidate");
 
     assert!(publisher.commit("g2").is_err());
@@ -313,7 +320,7 @@ fn recovery_prototype_failed_staged_save_does_not_replace_current_generation() {
         "failed staged candidate must not replace the last accepted generation"
     );
     assert!(
-        crate::CivSaveBundle::load_dir(&publisher.generation_dir("g1")).is_ok(),
+        crate::CivSaveBundle::load_dir(&publisher.bundle_dir("g1")).is_ok(),
         "previous accepted save generation remains independently loadable"
     );
 }

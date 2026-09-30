@@ -57,3 +57,5 @@ jobs:
 # PASS-36 lib-only marker: avoid unrelated integration-test linking/disk exhaustion; candidate tests live in lib test graph.
 
 # PASS-37 execution-scope marker: compile and execute both use --lib semantic_.
+
+# PASS-39 guest ownership marker: semantic manifest now persists guest-memory owner IDs and validates them against resolved mods.

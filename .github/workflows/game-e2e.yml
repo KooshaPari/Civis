@@ -2,7 +2,7 @@ name: Game E2E (Visual)
 
 on:
   push:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
     paths:
       - 'clients/bevy-ref/**'
       - 'crates/engine/**'

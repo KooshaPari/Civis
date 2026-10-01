@@ -2,12 +2,12 @@ name: Fuzz
 
 on:
     push:
-        branches: [main]
+        branches: [main, spec/mature-recovery-20260929]
         paths:
             - "crates/**"
             - "fuzz/**"
     pull_request:
-        branches: [main]
+        branches: [main, spec/mature-recovery-20260929]
         paths:
             - "crates/**"
             - "fuzz/**"

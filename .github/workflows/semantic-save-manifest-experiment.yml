@@ -1,0 +1,69 @@
+name: Semantic Save Manifest Experiment
+
+on:
+  pull_request:
+    branches: ['spec/mature-recovery-20260929']
+    paths:
+      - 'crates/engine/src/semantic_state_manifest.rs'
+      - 'crates/engine/src/semantic_state_manifest_tests.rs'
+      - 'crates/engine/src/semantic_save_adapter.rs'
+      - 'crates/engine/src/semantic_save_adapter_tests.rs'
+      - 'crates/engine/src/lib.rs'
+      - '.github/workflows/semantic-save-manifest-experiment.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-manifest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+      - name: Candidate receipt
+        run: |
+          mkdir -p recovery-artifacts
+          printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","scope":"semantic_state_manifest_candidate","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
+      - name: Compile integration candidate
+        run: cargo test -p civ-engine --lib semantic_ --no-run
+      - name: Execute integration candidate
+        run: |
+          set -o pipefail
+          cargo test -p civ-engine --lib semantic_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
+      - name: Upload raw evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: semantic-manifest-${{ github.event.pull_request.head.sha || github.sha }}
+          path: recovery-artifacts
+          if-no-files-found: warn
+          retention-days: 30
+
+# PASS-28 queue refresh marker: compatibility-first semantic adapter requires a fresh execution slot.
+
+# PASS-30 opt-in bridge marker: compare vNext semantic bridge against unchanged default CivSaveBundle.
+
+# PASS-31 migration marker: qualify v5-byte preservation and future-schema fail-closed controls.
+
+# PASS-33 staged generation marker: qualify CURRENT-last publication and pre-switch fault controls.
+
+# PASS-34 reconcile marker
+
+# PASS-35 error mapping marker: rerun semantic bridge after explicit SaveBundleError mapping.
+
+# PASS-36 lib-only marker: avoid unrelated integration-test linking/disk exhaustion; candidate tests live in lib test graph.
+
+# PASS-37 execution-scope marker: compile and execute both use --lib semantic_.
+
+# PASS-39 guest ownership marker: semantic manifest now persists guest-memory owner IDs and validates them against resolved mods.
+
+# PASS-44 tick mirror marker: vNext explicitly rebinds current_tick to restored WorldState authority.
+
+# PASS-44 current-tick marker: production mirror-gap red + vNext resync/mixed-tick controls.
+
+# PASS-44 repair marker: vNext semantic apply resynchronizes current_tick from authoritative state.tick.
+
+# PASS-44B fresh-run marker: execute tick mirror repair candidate exactly.

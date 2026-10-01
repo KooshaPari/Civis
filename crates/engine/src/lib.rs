@@ -75,6 +75,8 @@ pub mod policy;
 pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
+pub mod semantic_state_manifest;
+pub mod semantic_save_adapter;
 pub mod scenario;
 pub mod settlement_helpers;
 pub mod social_types;
@@ -376,3 +378,10 @@ mod recovery_oracle_tests;
 // Mature-first recovery architecture experiment; never compiled into production.
 #[cfg(test)]
 mod recovery_state_manifest_prototype;
+
+// Integration-candidate tests; not product acceptance.
+#[cfg(test)]
+mod semantic_state_manifest_tests;
+
+#[cfg(test)]
+mod semantic_save_adapter_tests;

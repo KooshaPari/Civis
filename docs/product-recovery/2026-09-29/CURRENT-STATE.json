@@ -8,7 +8,7 @@
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
   "specification_branch": "spec/mature-recovery-20260929",
-  "implementation_candidate": "1d6a3182b44c013d4ea66191e9e0fd6540e4b881",
+  "implementation_candidate": "b5346457bd3162298da4d584248473ec282240ef",
   "dependency_snapshots": [
     {
       "repository": "KooshaPari/phenodocs",
@@ -93,12 +93,13 @@
     "Mounted local/server UI and process-restart journeys remain execution-dependent"
   ],
   "next_bounded_work": [
-    "Freeze host-independent PR1569 candidate; developer handoff is active under DEVELOPER-HANDOFF-SEMANTIC-SAVE.md",
-    "Run filesystem capability/fault matrix on target Linux and Windows before crash-durability claims",
-    "Define filesystem generation vs SQLite save-index authority and reconcile disagreement",
-    "Continue 125 Simulation /48 WorldState owner classification; expand components only from accepted durable obligations",
-    "Keep default CivSaveBundle unchanged until opt-in vNext migration/fault and mounted journey gates pass",
-    "Run mounted world-intervene-save-process-restart-load-continuation journey after persistence boundary is accepted"
+    "Treat non-code/spec/doc/oracle/trace layers as final to reasonable falsification standard; do not expand prose without new evidence",
+    "Resolve remaining durable-owner rows only where implementation experiment is required to distinguish durable/derived/boundary semantics",
+    "Run filesystem durability and atomic-replacement matrix on target Linux and Windows; define filesystem-vs-SQLite authority",
+    "Run mounted save -> process destruction -> load -> causal continuation journey",
+    "Run causal emergence and LOD transfer experiments on named workloads",
+    "Obtain owner decisions on historical generated-catalog authority, scientific claims, supported platform/client matrix, multiplayer horizon and compatibility promises",
+    "Run external product/research pilot against realistic alternative stacks"
   ],
   "no_third_product_program": true,
   "merge_authorized": false,
@@ -156,23 +157,13 @@
       "artifact_sha256": "5146ed4a8bbd2fb2a26233e039908316d90ba0b957f9962373aeb57f0bbbc2a4"
     },
     "latest_integration_candidate_run": {
-      "run_id": 36753187459,
-      "candidate": "1d6a3182b44c013d4ea66191e9e0fd6540e4b881",
+      "run_id": 36820662241,
+      "candidate": "b5346457bd3162298da4d584248473ec282240ef",
       "conclusion": "success",
-      "result": "17 semantic lib tests passed; 0 failed; 882 filtered out",
-      "artifact_id": 11115892072,
-      "artifact_sha256": "f2eb020817ef617bdfd6988cd714c0f74aa94b389eec49ff68309f1fae203a73",
-      "scope": [
-        "semantic manifest qualified domains",
-        "saved guest-memory owner compatibility against resolved active mods",
-        "opt-in bundle bridge vs unchanged default loader",
-        "v5/current byte preservation for world_state when semantic component added",
-        "future/missing semantic schema controls",
-        "staged generation identity and CURRENT-last publication",
-        "failed-stage prior-generation retention",
-        "orphan CURRENT.next reconciliation",
-        "invalid CURRENT detection"
-      ]
+      "result": "23 semantic lib tests passed; 0 failed; 882 filtered out",
+      "artifact_id": 11143995094,
+      "artifact_sha256": "072c646bd833ca430c5dfbf7b8befd6a3b7765bb971e8f777cc2e57cfc0e7299",
+      "scope": "vNext semantic bridge including tick-mirror resynchronization, semantic identity, migration, staged publication and reconciliation controls"
     }
   },
   "current_repository_state": {

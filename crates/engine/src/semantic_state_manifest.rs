@@ -114,6 +114,11 @@ impl SemanticStateManifest {
             .map_err(|e| format!("restore religious profiles: {e}"))?;
         sim.active_caravans = serde_json::from_value(self.active_caravans.clone())
             .map_err(|e| format!("restore active caravans: {e}"))?;
+        // current_tick is a runtime mirror consumed directly by phases such as
+        // belief/religion. CivSaveBundle restores state.tick but does not
+        // currently resynchronize this mirror, so vNext must do so before any
+        // post-load phase observes the Simulation.
+        sim.current_tick = sim.state.tick;
         Ok(())
     }
 

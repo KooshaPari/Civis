@@ -2,9 +2,9 @@ name: fr-coverage-gate
 
 on:
     push:
-        branches: [main]
+        branches: [main, spec/mature-recovery-20260929]
     pull_request:
-        branches: [main]
+        branches: [main, spec/mature-recovery-20260929]
 
 jobs:
     gate:

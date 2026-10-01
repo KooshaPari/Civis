@@ -2,7 +2,7 @@ name: compile-gate
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
 jobs:
   workspace-compile:
     name: cargo check --workspace (real compile gate)

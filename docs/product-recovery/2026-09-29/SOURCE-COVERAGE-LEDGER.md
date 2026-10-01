@@ -92,3 +92,17 @@ The new audit is classified **supporting audit / authority-contested catalogue a
 Detailed resolution: PASS-22-AUTHORITY-SUPERSESSION.md.
 
 Resolution state: PARTIAL. The audit file meaning is understood; its underlying 205 sources/authority decisions are not thereby resolved.
+
+
+## 2026-10-01 non-execution closure status
+
+Remaining unresolved source families are classified rather than left as an undifferentiated OPEN bucket:
+
+- **AUTHORITY-DECISION**: historical/generated FUNCTIONAL_REQUIREMENTS/per-ID catalogs and later scope claims without recovered acceptance.
+- **EXECUTION/EXPERIMENT-DEPENDENT**: state-owner semantics requiring mounted/fault/LOD/causal experiments.
+- **EMPIRICAL-PILOT**: scientific fitness, user value, performance/scale and alternative-stack comparison.
+- **POLICY-DECISION**: supported platform/client/multiplayer horizon and public scientific/support claims.
+
+The mature semantic projections, state disposition ontology, journeys, invariants and oracle families are consolidated in `NONEXEC-FINAL-CONTRACT-GATE.md`. SOTA/existence decisions are in `SOTA-EXISTENCE-GATE-FINAL.md`. Fresh semantic falsification review is `FRESH-ADVERSARIAL-REVIEW.md`. The 125/48 state manifest remains the machine denominator; non-terminal rows remain blockers rather than missing ontology.
+
+**Non-execution source-coverage claim:** resolved to a reasonable falsification standard for the current program except named authority/policy decisions. This does not award implementation/experimental greens or overall specification/design100%.

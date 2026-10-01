@@ -165,6 +165,46 @@ Each fix was confirmed to actually detect its defect: reverting the
 (`test_gather_excludes_the_audit_tooling_directory`,
 `test_is_self_ref_rejects_tooling_paths`). Suite is 38 passing, up from 34.
 
+### Hypothesis tested and rejected #2: symbol-level call-graph
+
+Since the crate signal failed, the remaining idea was symbol-level: resolve the
+`/// Covers <ID>` marker to the item it annotates, then require at least one
+reference to that symbol from outside its own file. Prototyped and measured.
+
+**It does not work, because the `/// Covers` convention cannot support it.**
+
+| Measurement | Count |
+|---|---|
+| `.rs` files mentioning ≥1 FR/NFR id | 1021 |
+| of those, using the `/// Covers` doc marker | 71 |
+| bare mention, no marker | 950 |
+| distinct ids carrying a `/// Covers` marker | 338 |
+| `/// Covers` markers located in `tests/` directories | 364 of 604 |
+| ids whose marker resolves to a non-test definition inside `src/` | 9 |
+
+Only 9 IDs resolve to a real item in `src/` with a usable name, and the
+accessibility family this work exists to catch is not among them: all four IDs
+are `ABSENT`. They are tagged by a prose coverage table in a module doc comment
+(`accessibility.rs:13-20`), not by a marker attached to an item.
+
+So the detector would flag 9 IDs, miss the 6 it was built for, and inherit the
+36-% test-directory noise of the convention. Adopting it would trade a known
+false negative for a larger set of likely false positives.
+
+The honest conclusion: **the remaining defect cannot be closed by pattern
+matching over the current tagging.** The inputs do not exist. Closing it needs
+either one of:
+
+1. **A consistent tagging convention.** Add `/// Covers: <ID>` to the item that
+   implements each requirement, then run the symbol check. This is a real code
+   change across an unknown number of sites, not an audit-tooling change.
+2. **A real call-graph tool.** `cargo-call-stack`, or the Rust Analyzer's
+   "find references" via LSP. Authoritative and needs no convention, but it is
+   new tooling with its own build cost.
+
+Until one of those lands, the `crates/hud` accessibility family stays reported
+`COVERED` and this document is the record that it should not be.
+
 ---
 
 ## Inventory-invisible IDs (recorded separately, NOT added to the ledger)

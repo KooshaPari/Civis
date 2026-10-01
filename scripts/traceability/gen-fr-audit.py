@@ -37,6 +37,7 @@ OUT_MD = ROOT / "docs" / "audits" / f"fr-coverage-audit-{date.today().isoformat(
 
 STATUS_ORDER = [
     "COVERED",
+    "SELF-TEST-ONLY",
     "STUB-TEST-ONLY",
     "TEST-NO-CODE-REF",
     "IMPL-NO-TEST",
@@ -45,6 +46,16 @@ STATUS_ORDER = [
 ]
 STATUS_LEGEND = {
     "COVERED": "spec/trace + code + real test all present",
+    "SELF-TEST-ONLY": (
+        "Every code reference for this ID sits inside a `#[cfg(test)]` "
+        "block, so the ID has no implementation reference outside test code. "
+        "Reported separately instead of COVERED, because a self-assertion is "
+        "not evidence that anything implements the requirement. Note this is "
+        "NOT the dead-substrate case: a symbol that is defined, re-exported "
+        "and self-tested still has a non-test ref and stays here-adjacent. "
+        "Detecting that needs call-graph analysis, which this scanner does "
+        "not attempt."
+    ),
     "STUB-TEST-ONLY": (
         "spec/trace + code present, but the only test reference is a "
         "placeholder (TDD-red stub or legacy 'Epic: auto-generated'). The "
@@ -82,7 +93,14 @@ def classify(row: dict) -> str:
     has_code = bool(row.get("in_code"))
     has_test = bool(row.get("in_tests"))
     has_stub = bool(row.get("in_stub_tests"))
+    # Every code reference came from a `#[cfg(test)]` block, so there is no
+    # implementation reference outside test code.
+    self_test_only = bool(row.get("self_test_only"))
 
+    if self_test_only and has_spec:
+        # Checked before COVERED: an ID whose only "code" evidence is its own
+        # test block must not be reported as covered.
+        return "SELF-TEST-ONLY"
     if has_spec and has_code and has_test:
         return "COVERED"
     # STUB-TEST-ONLY: an ID has a spec/code and a stub test, but no real test.

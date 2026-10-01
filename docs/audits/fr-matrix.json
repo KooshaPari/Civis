@@ -1,9 +1,10 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-09-29",
+  "generated_at": "2026-10-01",
   "source_inventory": "docs/audits/_id_inventory_v3.json",
   "status_legend": {
     "COVERED": "spec/trace + code + real test all present",
+    "SELF-TEST-ONLY": "Every code reference for this ID sits inside a `#[cfg(test)]` block, so the ID has no implementation reference outside test code. Reported separately instead of COVERED, because a self-assertion is not evidence that anything implements the requirement. Note this is NOT the dead-substrate case: a symbol that is defined, re-exported and self-tested still has a non-test ref and stays here-adjacent. Detecting that needs call-graph analysis, which this scanner does not attempt.",
     "STUB-TEST-ONLY": "spec/trace + code present, but the only test reference is a placeholder (TDD-red stub or legacy 'Epic: auto-generated'). The test file exists but does not exercise anything FR-specific, so treat coverage as unverified. Fan-out agents target this bucket.",
     "TEST-NO-CODE-REF": "spec/trace + real test present, but no ID-tagged code reference. A test exercises the requirement yet no source file carries the ID, so the implementation cannot be located from the ID alone.",
     "IMPL-NO-TEST": "spec/trace + code present, no test reference",
@@ -13,7 +14,8 @@
   "totals": {
     "rows": 1423,
     "by_status": {
-      "COVERED": 1057,
+      "COVERED": 837,
+      "SELF-TEST-ONLY": 220,
       "STUB-TEST-ONLY": 0,
       "TEST-NO-CODE-REF": 154,
       "IMPL-NO-TEST": 9,
@@ -256,6 +258,7 @@
     "by_epic_status": {
       "FR-AI": {
         "COVERED": 7,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -264,6 +267,7 @@
       },
       "FR-API": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -272,6 +276,7 @@
       },
       "FR-ASSET": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -280,6 +285,7 @@
       },
       "FR-ASSET-PIPELINE": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -288,6 +294,7 @@
       },
       "FR-AUD": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -295,7 +302,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV": {
-        "COVERED": 14,
+        "COVERED": 13,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -304,6 +312,7 @@
       },
       "FR-CIV-0001-TICK": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -312,6 +321,7 @@
       },
       "FR-CIV-3D": {
         "COVERED": 16,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -320,6 +330,7 @@
       },
       "FR-CIV-ACCESS": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -328,6 +339,7 @@
       },
       "FR-CIV-ACT": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -336,6 +348,7 @@
       },
       "FR-CIV-ACTOR": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -344,6 +357,7 @@
       },
       "FR-CIV-ACTOR-001-LIFECYCLE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -351,7 +365,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-AGENTS": {
-        "COVERED": 17,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 17,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -360,6 +375,7 @@
       },
       "FR-CIV-AGGRESSION": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -368,6 +384,7 @@
       },
       "FR-CIV-AI": {
         "COVERED": 15,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -375,7 +392,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH": {
-        "COVERED": 9,
+        "COVERED": 6,
+        "SELF-TEST-ONLY": 3,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -383,7 +401,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH-A": {
-        "COVERED": 3,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 3,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -391,7 +410,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH-B": {
-        "COVERED": 4,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 4,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -399,7 +419,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH-C": {
-        "COVERED": 4,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 4,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -407,7 +428,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ARCH-D": {
-        "COVERED": 4,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 4,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -416,6 +438,7 @@
       },
       "FR-CIV-ARCH-NOSVG": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -424,6 +447,7 @@
       },
       "FR-CIV-ASSET": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 9,
@@ -432,6 +456,7 @@
       },
       "FR-CIV-ASSET-MANI": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -440,6 +465,7 @@
       },
       "FR-CIV-ASSET-QUAL": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -448,6 +474,7 @@
       },
       "FR-CIV-AUDIO": {
         "COVERED": 8,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -456,6 +483,7 @@
       },
       "FR-CIV-BELIEF": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -463,7 +491,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-BEVY": {
-        "COVERED": 20,
+        "COVERED": 14,
+        "SELF-TEST-ONLY": 6,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -472,6 +501,7 @@
       },
       "FR-CIV-BIO": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -480,6 +510,7 @@
       },
       "FR-CIV-BRUSH": {
         "COVERED": 13,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -487,7 +518,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-BUILD": {
-        "COVERED": 14,
+        "COVERED": 3,
+        "SELF-TEST-ONLY": 11,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -495,7 +527,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-CA": {
-        "COVERED": 11,
+        "COVERED": 8,
+        "SELF-TEST-ONLY": 3,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -504,6 +537,7 @@
       },
       "FR-CIV-CARAVAN": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -512,6 +546,7 @@
       },
       "FR-CIV-CLIENT": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -520,6 +555,7 @@
       },
       "FR-CIV-CLIENT-GODOT": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -527,7 +563,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-CLIMATE": {
-        "COVERED": 7,
+        "COVERED": 3,
+        "SELF-TEST-ONLY": 4,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -536,6 +573,7 @@
       },
       "FR-CIV-COHESION": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -544,6 +582,7 @@
       },
       "FR-CIV-CONSTRUCTION": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -552,6 +591,7 @@
       },
       "FR-CIV-CONTENT": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -560,6 +600,7 @@
       },
       "FR-CIV-CORE": {
         "COVERED": 20,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -568,6 +609,7 @@
       },
       "FR-CIV-CORE-DET": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -576,6 +618,7 @@
       },
       "FR-CIV-CULT": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -584,6 +627,7 @@
       },
       "FR-CIV-CULTURE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -592,6 +636,7 @@
       },
       "FR-CIV-DET": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 6,
         "IMPL-NO-TEST": 0,
@@ -599,7 +644,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-DIFFUSION": {
-        "COVERED": 16,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 16,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -607,7 +653,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-DIPLO": {
-        "COVERED": 16,
+        "COVERED": 7,
+        "SELF-TEST-ONLY": 9,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -615,7 +662,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-DIPLO-001-RELATIONS": {
-        "COVERED": 1,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -624,6 +672,7 @@
       },
       "FR-CIV-DIPLO-002-SHADOW": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -632,6 +681,7 @@
       },
       "FR-CIV-DIPLOMACY": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -639,7 +689,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-ECON": {
-        "COVERED": 6,
+        "COVERED": 5,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -648,6 +699,7 @@
       },
       "FR-CIV-ECON-001-MARKET": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -656,6 +708,7 @@
       },
       "FR-CIV-ECON-002-JOULE": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -664,6 +717,7 @@
       },
       "FR-CIV-ECON-FOCUS": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -672,6 +726,7 @@
       },
       "FR-CIV-EMERG": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -680,6 +735,7 @@
       },
       "FR-CIV-EMERGE-DASH": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -688,6 +744,7 @@
       },
       "FR-CIV-EMERGENCE": {
         "COVERED": 10,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -696,6 +753,7 @@
       },
       "FR-CIV-EMERGENCE-N10": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -704,6 +762,7 @@
       },
       "FR-CIV-EMERGENCE-N11": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -712,6 +771,7 @@
       },
       "FR-CIV-EMERGENCE-N12": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -720,6 +780,7 @@
       },
       "FR-CIV-EMERGENCE-N13": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -728,6 +789,7 @@
       },
       "FR-CIV-EMERGENCE-RELIGION": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -736,6 +798,7 @@
       },
       "FR-CIV-EMERGENT-MIGRATION": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -744,6 +807,7 @@
       },
       "FR-CIV-ENGINE-INT": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 6,
         "IMPL-NO-TEST": 0,
@@ -752,6 +816,7 @@
       },
       "FR-CIV-ENGINE-REPLAY": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 4,
         "IMPL-NO-TEST": 0,
@@ -760,6 +825,7 @@
       },
       "FR-CIV-ERA": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -768,6 +834,7 @@
       },
       "FR-CIV-FAMINE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -776,6 +843,7 @@
       },
       "FR-CIV-FEST": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -784,6 +852,7 @@
       },
       "FR-CIV-FOG": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -792,6 +861,7 @@
       },
       "FR-CIV-GAME": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -799,7 +869,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GENETICS": {
-        "COVERED": 6,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 6,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -807,7 +878,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GENETICS-SEED": {
-        "COVERED": 2,
+        "COVERED": 1,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -816,6 +888,7 @@
       },
       "FR-CIV-GEO": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -824,6 +897,7 @@
       },
       "FR-CIV-GODOT-ATTACH": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -831,7 +905,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-GODOT-F3D0": {
-        "COVERED": 1,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -840,6 +915,7 @@
       },
       "FR-CIV-GODOT-UX": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -848,6 +924,7 @@
       },
       "FR-CIV-GODTOOL": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 3,
         "IMPL-NO-TEST": 0,
@@ -856,6 +933,7 @@
       },
       "FR-CIV-GOV": {
         "COVERED": 8,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -864,6 +942,7 @@
       },
       "FR-CIV-HUD": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -872,6 +951,7 @@
       },
       "FR-CIV-IDEOLOGY": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -880,6 +960,7 @@
       },
       "FR-CIV-INFOVIEW": {
         "COVERED": 20,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -887,7 +968,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-INFRA": {
-        "COVERED": 13,
+        "COVERED": 4,
+        "SELF-TEST-ONLY": 9,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -896,6 +978,7 @@
       },
       "FR-CIV-INSPECT": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -904,6 +987,7 @@
       },
       "FR-CIV-INSTITUTIONS": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -912,6 +996,7 @@
       },
       "FR-CIV-INT": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -919,7 +1004,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-L10N": {
-        "COVERED": 4,
+        "COVERED": 2,
+        "SELF-TEST-ONLY": 2,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -928,6 +1014,7 @@
       },
       "FR-CIV-L5": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -936,6 +1023,7 @@
       },
       "FR-CIV-LANG": {
         "COVERED": 10,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -943,7 +1031,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LAWS": {
-        "COVERED": 10,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 10,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -952,6 +1041,7 @@
       },
       "FR-CIV-LEGENDS": {
         "COVERED": 9,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -960,6 +1050,7 @@
       },
       "FR-CIV-LEGENDS-BROWSER": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -968,6 +1059,7 @@
       },
       "FR-CIV-LEGENDS-CAUSAL": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -976,6 +1068,7 @@
       },
       "FR-CIV-LEGENDS-GAP": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -984,6 +1077,7 @@
       },
       "FR-CIV-LEGENDS-GRAPH": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -992,6 +1086,7 @@
       },
       "FR-CIV-LEGENDS-INGEST": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1000,6 +1095,7 @@
       },
       "FR-CIV-LEGENDS-INSPECT": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1008,6 +1104,7 @@
       },
       "FR-CIV-LEGENDS-NARRATOR": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1016,6 +1113,7 @@
       },
       "FR-CIV-LEGENDS-PERSIST": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1024,6 +1122,7 @@
       },
       "FR-CIV-LEGENDS-PRESIM": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1032,6 +1131,7 @@
       },
       "FR-CIV-LEGENDS-PRODUCER": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1040,6 +1140,7 @@
       },
       "FR-CIV-LEGENDS-QUERY": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1048,6 +1149,7 @@
       },
       "FR-CIV-LEGENDS-RESOLVE": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1056,6 +1158,7 @@
       },
       "FR-CIV-LEGENDS-SIG": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1063,7 +1166,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-LIFE": {
-        "COVERED": 20,
+        "COVERED": 8,
+        "SELF-TEST-ONLY": 12,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1072,6 +1176,7 @@
       },
       "FR-CIV-LLM": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 6,
         "IMPL-NO-TEST": 0,
@@ -1080,6 +1185,7 @@
       },
       "FR-CIV-MARKET": {
         "COVERED": 8,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1088,6 +1194,7 @@
       },
       "FR-CIV-MCP": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1096,6 +1203,7 @@
       },
       "FR-CIV-METRICS": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1104,6 +1212,7 @@
       },
       "FR-CIV-METRICS-001-TIMESERIES": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1112,6 +1221,7 @@
       },
       "FR-CIV-MIGRATION": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1120,6 +1230,7 @@
       },
       "FR-CIV-MOD": {
         "COVERED": 21,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1128,6 +1239,7 @@
       },
       "FR-CIV-NEEDS-DECAY": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1136,6 +1248,7 @@
       },
       "FR-CIV-NOTIFY": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1144,6 +1257,7 @@
       },
       "FR-CIV-PBR": {
         "COVERED": 11,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1152,6 +1266,7 @@
       },
       "FR-CIV-PERF": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 17,
         "IMPL-NO-TEST": 0,
@@ -1160,6 +1275,7 @@
       },
       "FR-CIV-PERF-BUILD": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1168,6 +1284,7 @@
       },
       "FR-CIV-PERF-RT": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1176,6 +1293,7 @@
       },
       "FR-CIV-PERF-WEB": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1183,7 +1301,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-PLANET": {
-        "COVERED": 12,
+        "COVERED": 5,
+        "SELF-TEST-ONLY": 7,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1192,6 +1311,7 @@
       },
       "FR-CIV-POLITY": {
         "COVERED": 8,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1200,6 +1320,7 @@
       },
       "FR-CIV-PROTO": {
         "COVERED": 15,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1207,7 +1328,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-PROTO3D": {
-        "COVERED": 19,
+        "COVERED": 2,
+        "SELF-TEST-ONLY": 17,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1216,6 +1338,7 @@
       },
       "FR-CIV-PSYCHE": {
         "COVERED": 13,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1224,6 +1347,7 @@
       },
       "FR-CIV-PSYCHE-N11": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1232,6 +1356,7 @@
       },
       "FR-CIV-QOL": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 14,
         "IMPL-NO-TEST": 0,
@@ -1240,6 +1365,7 @@
       },
       "FR-CIV-REL": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1248,6 +1374,7 @@
       },
       "FR-CIV-RELIGION": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1256,6 +1383,7 @@
       },
       "FR-CIV-RENDER": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1264,6 +1392,7 @@
       },
       "FR-CIV-RES": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1271,7 +1400,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-RESEARCH": {
-        "COVERED": 13,
+        "COVERED": 1,
+        "SELF-TEST-ONLY": 12,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1280,6 +1410,7 @@
       },
       "FR-CIV-RESEARCH-001-SCENARIO": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1288,6 +1419,7 @@
       },
       "FR-CIV-RESEARCH-002-SNAPSHOT": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1296,6 +1428,7 @@
       },
       "FR-CIV-RESEARCH-003-EXPORT": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1304,6 +1437,7 @@
       },
       "FR-CIV-RESEARCH-004-REPLAY": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1312,6 +1446,7 @@
       },
       "FR-CIV-ROAD": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1320,6 +1455,7 @@
       },
       "FR-CIV-RTS": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 13,
         "IMPL-NO-TEST": 0,
@@ -1328,6 +1464,7 @@
       },
       "FR-CIV-RTS-NATION": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -1336,6 +1473,7 @@
       },
       "FR-CIV-RTS-RENDER": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1344,6 +1482,7 @@
       },
       "FR-CIV-RTS-ZOOM": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1352,6 +1491,7 @@
       },
       "FR-CIV-SAVE": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1360,6 +1500,7 @@
       },
       "FR-CIV-SCALE": {
         "COVERED": 8,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1368,6 +1509,7 @@
       },
       "FR-CIV-SERVER": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1376,6 +1518,7 @@
       },
       "FR-CIV-SERVER-001-WS": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1384,6 +1527,7 @@
       },
       "FR-CIV-SERVER-002-PROTO": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1392,6 +1536,7 @@
       },
       "FR-CIV-SOCIAL": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1400,6 +1545,7 @@
       },
       "FR-CIV-SOCIAL-001-INSTITUTIONS": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1408,6 +1554,7 @@
       },
       "FR-CIV-SOCIAL-002-IDEOLOGY": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1415,7 +1562,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-SPECIES": {
-        "COVERED": 13,
+        "COVERED": 1,
+        "SELF-TEST-ONLY": 12,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1423,7 +1571,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-TACTICS": {
-        "COVERED": 54,
+        "COVERED": 35,
+        "SELF-TEST-ONLY": 19,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 9,
         "IMPL-NO-TEST": 0,
@@ -1432,6 +1581,7 @@
       },
       "FR-CIV-TECH": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1440,6 +1590,7 @@
       },
       "FR-CIV-TERRAIN": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1448,6 +1599,7 @@
       },
       "FR-CIV-TEST": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 6,
         "IMPL-NO-TEST": 0,
@@ -1455,7 +1607,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-TRAFFIC-LANE": {
-        "COVERED": 4,
+        "COVERED": 3,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1464,6 +1617,7 @@
       },
       "FR-CIV-UI": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1472,6 +1626,7 @@
       },
       "FR-CIV-UNREST": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1480,6 +1635,7 @@
       },
       "FR-CIV-UX": {
         "COVERED": 7,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1488,6 +1644,7 @@
       },
       "FR-CIV-VEHICLE": {
         "COVERED": 26,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1496,6 +1653,7 @@
       },
       "FR-CIV-VERIFY": {
         "COVERED": 10,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1503,7 +1661,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-VOXEL": {
-        "COVERED": 16,
+        "COVERED": 9,
+        "SELF-TEST-ONLY": 7,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -1511,7 +1670,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-VOXEL-DIRTY": {
-        "COVERED": 2,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 2,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1519,7 +1679,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-WAR": {
-        "COVERED": 14,
+        "COVERED": 10,
+        "SELF-TEST-ONLY": 4,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1527,7 +1688,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-WAR-001-UNITS": {
-        "COVERED": 1,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1535,7 +1697,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-WAR-002-COMBAT": {
-        "COVERED": 1,
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1544,6 +1707,7 @@
       },
       "FR-CIV-WARFARE": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1552,6 +1716,7 @@
       },
       "FR-CIV-WEB": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1560,6 +1725,7 @@
       },
       "FR-CLIENT": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1568,6 +1734,7 @@
       },
       "FR-CLIM": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1575,7 +1742,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CORE": {
-        "COVERED": 8,
+        "COVERED": 7,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -1584,6 +1752,7 @@
       },
       "FR-DET": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 7,
         "IMPL-NO-TEST": 0,
@@ -1592,6 +1761,7 @@
       },
       "FR-DIP": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1600,6 +1770,7 @@
       },
       "FR-DIPL": {
         "COVERED": 7,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1608,6 +1779,7 @@
       },
       "FR-DOC": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1616,6 +1788,7 @@
       },
       "FR-ECO": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 10,
         "IMPL-NO-TEST": 0,
@@ -1624,6 +1797,7 @@
       },
       "FR-ECON": {
         "COVERED": 10,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1632,6 +1806,7 @@
       },
       "FR-ECON-EMERGE": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1640,6 +1815,7 @@
       },
       "FR-EMG": {
         "COVERED": 24,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1648,6 +1824,7 @@
       },
       "FR-FR-CORE": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1656,6 +1833,7 @@
       },
       "FR-GUARD": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1664,6 +1842,7 @@
       },
       "FR-INST": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1672,6 +1851,7 @@
       },
       "FR-INT": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1680,6 +1860,7 @@
       },
       "FR-LANGUAGE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1687,7 +1868,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-LOD": {
-        "COVERED": 4,
+        "COVERED": 3,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1696,6 +1878,7 @@
       },
       "FR-MET": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1704,6 +1887,7 @@
       },
       "FR-METRICS": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -1711,7 +1895,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-MOD": {
-        "COVERED": 5,
+        "COVERED": 1,
+        "SELF-TEST-ONLY": 4,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1720,6 +1905,7 @@
       },
       "FR-MUSIC": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1728,6 +1914,7 @@
       },
       "FR-NET": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1735,7 +1922,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-PERF": {
-        "COVERED": 5,
+        "COVERED": 4,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1743,7 +1931,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-PROT": {
-        "COVERED": 6,
+        "COVERED": 5,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1752,6 +1941,7 @@
       },
       "FR-PROTO": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 5,
         "IMPL-NO-TEST": 0,
@@ -1760,6 +1950,7 @@
       },
       "FR-REP": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1768,6 +1959,7 @@
       },
       "FR-REPLAY": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1775,7 +1967,8 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-SAVE": {
-        "COVERED": 17,
+        "COVERED": 16,
+        "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1784,6 +1977,7 @@
       },
       "FR-SESS": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1792,6 +1986,7 @@
       },
       "FR-SESSION": {
         "COVERED": 33,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1800,6 +1995,7 @@
       },
       "FR-SOC-CIV": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1808,6 +2004,7 @@
       },
       "FR-SOC-COH": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1816,6 +2013,7 @@
       },
       "FR-SOC-DET": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -1824,6 +2022,7 @@
       },
       "FR-SOC-FAC": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -1832,6 +2031,7 @@
       },
       "FR-SOC-HLT": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 5,
         "IMPL-NO-TEST": 0,
@@ -1840,6 +2040,7 @@
       },
       "FR-SOC-IDE": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 6,
         "IMPL-NO-TEST": 0,
@@ -1848,6 +2049,7 @@
       },
       "FR-SOC-INS": {
         "COVERED": 7,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1856,6 +2058,7 @@
       },
       "FR-SOC-INT": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1864,6 +2067,7 @@
       },
       "FR-SOC-INTG": {
         "COVERED": 7,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1872,6 +2076,7 @@
       },
       "FR-SOCI": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1880,6 +2085,7 @@
       },
       "FR-STOR": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1888,6 +2094,7 @@
       },
       "FR-TEST": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1896,6 +2103,7 @@
       },
       "FR-THRY": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 4,
         "IMPL-NO-TEST": 0,
@@ -1904,6 +2112,7 @@
       },
       "FR-UX": {
         "COVERED": 5,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1912,6 +2121,7 @@
       },
       "FR-VAL": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1920,6 +2130,7 @@
       },
       "FR-VIEWPORT": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1928,6 +2139,7 @@
       },
       "NFR-C": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1936,6 +2148,7 @@
       },
       "NFR-CIV": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1944,6 +2157,7 @@
       },
       "NFR-CIV-ACC": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1952,6 +2166,7 @@
       },
       "NFR-CIV-AI": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1960,6 +2175,7 @@
       },
       "NFR-CIV-DET": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1968,6 +2184,7 @@
       },
       "NFR-CIV-DEV-HYGIENE": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
@@ -1976,6 +2193,7 @@
       },
       "NFR-CIV-LEGENDS-CONFIG": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1984,6 +2202,7 @@
       },
       "NFR-CIV-LEGENDS-LOUD": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -1992,6 +2211,7 @@
       },
       "NFR-CIV-LEGENDS-PERF": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2000,6 +2220,7 @@
       },
       "NFR-CIV-LEGENDS-SCALE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2008,6 +2229,7 @@
       },
       "NFR-CIV-MAINT": {
         "COVERED": 4,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2016,6 +2238,7 @@
       },
       "NFR-CIV-PERF": {
         "COVERED": 2,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2024,6 +2247,7 @@
       },
       "NFR-CIV-PORT": {
         "COVERED": 3,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2032,6 +2256,7 @@
       },
       "NFR-CIV-REL": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2040,6 +2265,7 @@
       },
       "NFR-CIV-SCALE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
@@ -2048,6 +2274,7 @@
       },
       "NFR-CIV-SCALE-PERF": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2056,6 +2283,7 @@
       },
       "NFR-CIV-SEC": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2064,6 +2292,7 @@
       },
       "NFR-O": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2072,6 +2301,7 @@
       },
       "NFR-P": {
         "COVERED": 8,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2080,6 +2310,7 @@
       },
       "NFR-R": {
         "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2088,6 +2319,7 @@
       },
       "NFR-S": {
         "COVERED": 6,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2096,6 +2328,7 @@
       },
       "NFR-SCALE": {
         "COVERED": 1,
+        "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
@@ -2129,7 +2362,7 @@
         "crates/ai/src/goal_tree.rs:155",
         "crates/ai/src/goal_tree.rs:203",
         "crates/ai/src/utility.rs:1",
-        "scripts/traceability/gen-fr-audit.py:69"
+        "scripts/traceability/gen-fr-audit.py:80"
       ],
       "test_refs": [
         "crates/ai/tests/fr_fr_ai_001.rs:1",
@@ -3011,7 +3244,7 @@
     },
     {
       "id": "FR-CIV-014",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV",
       "spec_refs": [
         "docs/traceability/fr-civ-014/fr-civ-014-intent.md:1",
@@ -3454,7 +3687,8 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:428",
-        "crates/hud/src/accessibility.rs:430"
+        "crates/hud/src/accessibility.rs:430",
+        "scripts/traceability/test_fr_audit_classification.py:248"
       ],
       "stub_test_refs": []
     },
@@ -3474,7 +3708,8 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:503",
-        "crates/hud/src/accessibility.rs:505"
+        "crates/hud/src/accessibility.rs:505",
+        "scripts/traceability/test_fr_audit_classification.py:248"
       ],
       "stub_test_refs": []
     },
@@ -3684,7 +3919,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:56",
@@ -3709,7 +3944,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:80",
@@ -3740,7 +3975,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-002/fr-civ-agents-002-adr.md:1",
@@ -3762,7 +3997,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-003/fr-civ-agents-003-adr.md:1",
@@ -3784,7 +4019,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:58",
@@ -3811,7 +4046,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-011/fr-civ-agents-011-adr.md:1",
@@ -3833,7 +4068,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-020",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-020/fr-civ-agents-020-adr.md:1",
@@ -3855,7 +4090,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-021",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-021/fr-civ-agents-021-adr.md:1",
@@ -3877,7 +4112,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-022",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-022/fr-civ-agents-022-adr.md:1",
@@ -3899,7 +4134,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-023",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-023/fr-civ-agents-023-adr.md:1",
@@ -3921,7 +4156,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-024",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-024/fr-civ-agents-024-adr.md:1",
@@ -3943,7 +4178,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-025",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-025/fr-civ-agents-025-adr.md:1",
@@ -3965,7 +4200,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-030",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-030/fr-civ-agents-030-adr.md:1",
@@ -3987,7 +4222,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-031",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-031/fr-civ-agents-031-adr.md:1",
@@ -4009,7 +4244,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-032",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-032/fr-civ-agents-032-adr.md:1",
@@ -4031,7 +4266,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-033",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-033/fr-civ-agents-033-adr.md:1",
@@ -4053,7 +4288,7 @@
     },
     {
       "id": "FR-CIV-AGENTS-034",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-AGENTS",
       "spec_refs": [
         "docs/traceability/fr-civ-agents-034/fr-civ-agents-034-adr.md:1",
@@ -4638,7 +4873,7 @@
     },
     {
       "id": "FR-CIV-ARCH-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -4661,7 +4896,7 @@
     },
     {
       "id": "FR-CIV-ARCH-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -4716,7 +4951,7 @@
     },
     {
       "id": "FR-CIV-ARCH-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -4765,7 +5000,7 @@
     },
     {
       "id": "FR-CIV-ARCH-A-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-A",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-a-001/fr-civ-arch-a-001-intent.md:1",
@@ -4777,13 +5012,13 @@
       ],
       "test_refs": [
         "crates/build/src/tiers.rs:405",
-        "scripts/traceability/test_fr_audit_classification.py:103"
+        "scripts/traceability/test_fr_audit_classification.py:114"
       ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-ARCH-A-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-A",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-a-002/fr-civ-arch-a-002-intent.md:1",
@@ -4800,7 +5035,7 @@
     },
     {
       "id": "FR-CIV-ARCH-A-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-A",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-a-003/fr-civ-arch-a-003-intent.md:1",
@@ -4817,7 +5052,7 @@
     },
     {
       "id": "FR-CIV-ARCH-B-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-001/fr-civ-arch-b-001-intent.md:1",
@@ -4836,7 +5071,7 @@
     },
     {
       "id": "FR-CIV-ARCH-B-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-002/fr-civ-arch-b-002-intent.md:1",
@@ -4855,7 +5090,7 @@
     },
     {
       "id": "FR-CIV-ARCH-B-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-003/fr-civ-arch-b-003-intent.md:1",
@@ -4874,7 +5109,7 @@
     },
     {
       "id": "FR-CIV-ARCH-B-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-B",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-004/fr-civ-arch-b-004-intent.md:1",
@@ -4893,7 +5128,7 @@
     },
     {
       "id": "FR-CIV-ARCH-C-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-c-001/fr-civ-arch-c-001-intent.md:1",
@@ -4911,7 +5146,7 @@
     },
     {
       "id": "FR-CIV-ARCH-C-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-c-002/fr-civ-arch-c-002-intent.md:1",
@@ -4929,7 +5164,7 @@
     },
     {
       "id": "FR-CIV-ARCH-C-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-c-002/fr-civ-arch-c-002-intent.md:21",
@@ -4946,7 +5181,7 @@
     },
     {
       "id": "FR-CIV-ARCH-C-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-c-004/fr-civ-arch-c-004-intent.md:1",
@@ -4962,7 +5197,7 @@
     },
     {
       "id": "FR-CIV-ARCH-D-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-001/fr-civ-arch-d-001-intent.md:1",
@@ -4978,7 +5213,7 @@
     },
     {
       "id": "FR-CIV-ARCH-D-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-002/fr-civ-arch-d-002-intent.md:1",
@@ -4994,7 +5229,7 @@
     },
     {
       "id": "FR-CIV-ARCH-D-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-003/fr-civ-arch-d-003-intent.md:1",
@@ -5010,7 +5245,7 @@
     },
     {
       "id": "FR-CIV-ARCH-D-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-004/fr-civ-arch-d-004-intent.md:1",
@@ -5897,7 +6132,7 @@
     },
     {
       "id": "FR-CIV-BEVY-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:80",
@@ -5922,7 +6157,7 @@
     },
     {
       "id": "FR-CIV-BEVY-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:81",
@@ -5947,7 +6182,7 @@
     },
     {
       "id": "FR-CIV-BEVY-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/traceability/fr-3d-matrix.md:177",
@@ -6249,7 +6484,7 @@
     },
     {
       "id": "FR-CIV-BEVY-023",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:135",
@@ -6394,7 +6629,7 @@
     },
     {
       "id": "FR-CIV-BEVY-034",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/traceability/fr-civ-bevy-034/fr-civ-bevy-034-intent.md:1",
@@ -6412,7 +6647,7 @@
     },
     {
       "id": "FR-CIV-BEVY-035",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BEVY",
       "spec_refs": [
         "docs/traceability/fr-civ-bevy-035/fr-civ-bevy-035-intent.md:1",
@@ -6862,7 +7097,7 @@
     },
     {
       "id": "FR-CIV-BUILD-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:29",
@@ -7000,7 +7235,7 @@
     },
     {
       "id": "FR-CIV-BUILD-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-004/fr-civ-build-004-adr.md:1",
@@ -7022,7 +7257,7 @@
     },
     {
       "id": "FR-CIV-BUILD-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-005/fr-civ-build-005-adr.md:1",
@@ -7044,7 +7279,7 @@
     },
     {
       "id": "FR-CIV-BUILD-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/design/emergent-systems-spec.md:97",
@@ -7070,14 +7305,14 @@
         "crates/build/src/lib.rs:858",
         "crates/build/tests/fr_matrix_batch12.rs:549",
         "crates/build/tests/fr_matrix_batch12.rs:552",
-        "scripts/traceability/test_fr_audit_classification.py:99",
-        "scripts/traceability/test_fr_audit_classification.py:115"
+        "scripts/traceability/test_fr_audit_classification.py:110",
+        "scripts/traceability/test_fr_audit_classification.py:126"
       ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-BUILD-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-011/fr-civ-build-011-adr.md:1",
@@ -7099,7 +7334,7 @@
     },
     {
       "id": "FR-CIV-BUILD-012",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-012/fr-civ-build-012-adr.md:1",
@@ -7121,7 +7356,7 @@
     },
     {
       "id": "FR-CIV-BUILD-013",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-013/fr-civ-build-013-adr.md:1",
@@ -7143,7 +7378,7 @@
     },
     {
       "id": "FR-CIV-BUILD-014",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-014/fr-civ-build-014-adr.md:1",
@@ -7165,7 +7400,7 @@
     },
     {
       "id": "FR-CIV-BUILD-015",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/traceability/fr-civ-build-015/fr-civ-build-015-adr.md:1",
@@ -7187,7 +7422,7 @@
     },
     {
       "id": "FR-CIV-BUILD-020",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -7216,7 +7451,7 @@
     },
     {
       "id": "FR-CIV-BUILD-030",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-BUILD",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:36",
@@ -7421,7 +7656,7 @@
     },
     {
       "id": "FR-CIV-CA-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -7446,7 +7681,7 @@
     },
     {
       "id": "FR-CIV-CA-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -7538,7 +7773,7 @@
     },
     {
       "id": "FR-CIV-CA-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -7812,7 +8047,7 @@
     },
     {
       "id": "FR-CIV-CLIMATE-1",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-1/fr-civ-climate-1-intent.md:1",
@@ -7828,7 +8063,7 @@
     },
     {
       "id": "FR-CIV-CLIMATE-2",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-2/fr-civ-climate-2-intent.md:1",
@@ -7844,7 +8079,7 @@
     },
     {
       "id": "FR-CIV-CLIMATE-3",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:1",
@@ -7862,7 +8097,7 @@
     },
     {
       "id": "FR-CIV-CLIMATE-4",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:1",
@@ -8820,7 +9055,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:63",
@@ -8847,7 +9082,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:80",
@@ -8875,7 +9110,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-002/fr-civ-diffusion-002-adr.md:1",
@@ -8897,7 +9132,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/design/tech-engineering.md:149",
@@ -8920,7 +9155,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-004/fr-civ-diffusion-004-adr.md:1",
@@ -8942,7 +9177,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-005/fr-civ-diffusion-005-adr.md:1",
@@ -8964,7 +9199,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-006/fr-civ-diffusion-006-adr.md:1",
@@ -8986,7 +9221,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-007/fr-civ-diffusion-007-adr.md:1",
@@ -9008,7 +9243,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-008",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-008/fr-civ-diffusion-008-adr.md:1",
@@ -9030,7 +9265,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-009",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-009/fr-civ-diffusion-009-adr.md:1",
@@ -9052,7 +9287,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-010/fr-civ-diffusion-010-adr.md:1",
@@ -9074,7 +9309,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-011/fr-civ-diffusion-011-adr.md:1",
@@ -9096,7 +9331,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-012",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-012/fr-civ-diffusion-012-adr.md:1",
@@ -9118,7 +9353,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-013",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-013/fr-civ-diffusion-013-adr.md:1",
@@ -9140,7 +9375,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-014",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-014/fr-civ-diffusion-014-adr.md:1",
@@ -9162,7 +9397,7 @@
     },
     {
       "id": "FR-CIV-DIFFUSION-015",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIFFUSION",
       "spec_refs": [
         "docs/traceability/fr-civ-diffusion-015/fr-civ-diffusion-015-adr.md:1",
@@ -9227,7 +9462,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-001-RELATIONS",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO-001-RELATIONS",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/spec.md:214",
@@ -9355,7 +9590,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-006/fr-civ-diplo-003-006-intent.md:1",
@@ -9371,7 +9606,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-01",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:1",
@@ -9392,7 +9627,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-02",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-02/fr-civ-diplo-003-02-intent.md:1",
@@ -9413,7 +9648,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-03",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-03/fr-civ-diplo-003-03-intent.md:1",
@@ -9433,7 +9668,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-04",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:21",
@@ -9453,7 +9688,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-05",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:22",
@@ -9472,7 +9707,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-06",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-06/fr-civ-diplo-003-06-intent.md:1",
@@ -9489,7 +9724,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-003-07",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-07/fr-civ-diplo-003-07-intent.md:1",
@@ -9613,7 +9848,7 @@
     },
     {
       "id": "FR-CIV-DIPLO-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -9785,7 +10020,7 @@
     },
     {
       "id": "FR-CIV-ECON-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-ECON",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/plan.md:39",
@@ -10589,7 +10824,7 @@
         "crates/engine/src/engine/engine_tests.rs:2835",
         "crates/engine/src/engine/engine_tests.rs:2860",
         "crates/engine/src/engine/engine_tests.rs:2895",
-        "scripts/traceability/test_fr_audit_classification.py:102"
+        "scripts/traceability/test_fr_audit_classification.py:113"
       ],
       "stub_test_refs": []
     },
@@ -11268,7 +11503,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:41",
@@ -11293,7 +11528,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:78",
@@ -11320,7 +11555,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:43",
@@ -11345,7 +11580,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:45",
@@ -11370,7 +11605,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/traceability/fr-civ-genetics-011/fr-civ-genetics-011-adr.md:1",
@@ -11392,7 +11627,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-012",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS",
       "spec_refs": [
         "docs/traceability/fr-civ-genetics-012/fr-civ-genetics-012-adr.md:1",
@@ -11451,7 +11686,7 @@
     },
     {
       "id": "FR-CIV-GENETICS-SEED-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GENETICS-SEED",
       "spec_refs": [
         "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:1",
@@ -11802,7 +12037,7 @@
     },
     {
       "id": "FR-CIV-GODOT-F3D0",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-GODOT-F3D0",
       "spec_refs": [
         "docs/traceability/fr-civ-godot-f3d0/fr-civ-godot-f3d0-adr.md:1",
@@ -13093,7 +13328,7 @@
     },
     {
       "id": "FR-CIV-INFRA-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:25",
@@ -13115,7 +13350,7 @@
     },
     {
       "id": "FR-CIV-INFRA-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:26",
@@ -13137,7 +13372,7 @@
     },
     {
       "id": "FR-CIV-INFRA-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:27",
@@ -13159,7 +13394,7 @@
     },
     {
       "id": "FR-CIV-INFRA-020",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:28",
@@ -13181,7 +13416,7 @@
     },
     {
       "id": "FR-CIV-INFRA-021",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:29",
@@ -13203,7 +13438,7 @@
     },
     {
       "id": "FR-CIV-INFRA-022",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:30",
@@ -13249,7 +13484,7 @@
     },
     {
       "id": "FR-CIV-INFRA-040",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/design/vehicles-logistics.md:407",
@@ -13272,7 +13507,7 @@
     },
     {
       "id": "FR-CIV-INFRA-050",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:33",
@@ -13294,7 +13529,7 @@
     },
     {
       "id": "FR-CIV-INFRA-060",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-INFRA",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:34",
@@ -13678,7 +13913,7 @@
     },
     {
       "id": "FR-CIV-L10N-030",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-L10N",
       "spec_refs": [
         "docs/adr/ADR-021-accessibility-and-l10n-strategy.md:51"
@@ -13693,7 +13928,7 @@
     },
     {
       "id": "FR-CIV-L10N-040",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-L10N",
       "spec_refs": [
         "docs/adr/ADR-021-accessibility-and-l10n-strategy.md:52"
@@ -14030,7 +14265,7 @@
     },
     {
       "id": "FR-CIV-LAWS-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:69",
@@ -14057,7 +14292,7 @@
     },
     {
       "id": "FR-CIV-LAWS-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:70",
@@ -14084,7 +14319,7 @@
     },
     {
       "id": "FR-CIV-LAWS-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:71",
@@ -14111,7 +14346,7 @@
     },
     {
       "id": "FR-CIV-LAWS-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-civ-laws-003/fr-civ-laws-003-adr.md:1",
@@ -14133,7 +14368,7 @@
     },
     {
       "id": "FR-CIV-LAWS-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-civ-laws-004/fr-civ-laws-004-adr.md:1",
@@ -14155,7 +14390,7 @@
     },
     {
       "id": "FR-CIV-LAWS-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-civ-laws-005/fr-civ-laws-005-adr.md:1",
@@ -14177,7 +14412,7 @@
     },
     {
       "id": "FR-CIV-LAWS-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-3d-matrix.md:87"
@@ -14200,7 +14435,7 @@
     },
     {
       "id": "FR-CIV-LAWS-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:310"
@@ -14215,7 +14450,7 @@
     },
     {
       "id": "FR-CIV-LAWS-008",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:311"
@@ -14230,7 +14465,7 @@
     },
     {
       "id": "FR-CIV-LAWS-009",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LAWS",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:312"
@@ -14843,7 +15078,7 @@
     },
     {
       "id": "FR-CIV-LIFE-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:13",
@@ -15026,7 +15261,7 @@
     },
     {
       "id": "FR-CIV-LIFE-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-011/fr-civ-life-011-adr.md:1",
@@ -15048,7 +15283,7 @@
     },
     {
       "id": "FR-CIV-LIFE-012",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-012/fr-civ-life-012-adr.md:1",
@@ -15070,7 +15305,7 @@
     },
     {
       "id": "FR-CIV-LIFE-013",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-013/fr-civ-life-013-adr.md:1",
@@ -15092,7 +15327,7 @@
     },
     {
       "id": "FR-CIV-LIFE-014",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-014/fr-civ-life-014-adr.md:1",
@@ -15114,7 +15349,7 @@
     },
     {
       "id": "FR-CIV-LIFE-015",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-015/fr-civ-life-015-adr.md:1",
@@ -15136,7 +15371,7 @@
     },
     {
       "id": "FR-CIV-LIFE-016",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-016/fr-civ-life-016-adr.md:1",
@@ -15186,7 +15421,7 @@
     },
     {
       "id": "FR-CIV-LIFE-021",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-021/fr-civ-life-021-adr.md:1",
@@ -15208,7 +15443,7 @@
     },
     {
       "id": "FR-CIV-LIFE-022",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-022/fr-civ-life-022-adr.md:1",
@@ -15232,7 +15467,7 @@
     },
     {
       "id": "FR-CIV-LIFE-023",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-023/fr-civ-life-023-adr.md:1",
@@ -15254,7 +15489,7 @@
     },
     {
       "id": "FR-CIV-LIFE-024",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-024/fr-civ-life-024-adr.md:1",
@@ -15278,7 +15513,7 @@
     },
     {
       "id": "FR-CIV-LIFE-025",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-LIFE",
       "spec_refs": [
         "docs/traceability/fr-civ-life-025/fr-civ-life-025-adr.md:1",
@@ -17736,7 +17971,7 @@
     },
     {
       "id": "FR-CIV-PLANET-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:98",
@@ -17761,7 +17996,7 @@
     },
     {
       "id": "FR-CIV-PLANET-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/design/emergence-dashboard.md:8",
@@ -17787,7 +18022,7 @@
     },
     {
       "id": "FR-CIV-PLANET-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:100",
@@ -17812,7 +18047,7 @@
     },
     {
       "id": "FR-CIV-PLANET-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-003/fr-civ-planet-003-adr.md:1",
@@ -17834,7 +18069,7 @@
     },
     {
       "id": "FR-CIV-PLANET-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-004/fr-civ-planet-004-adr.md:1",
@@ -17856,7 +18091,7 @@
     },
     {
       "id": "FR-CIV-PLANET-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-005/fr-civ-planet-005-adr.md:1",
@@ -17996,7 +18231,7 @@
     },
     {
       "id": "FR-CIV-PLANET-050",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PLANET",
       "spec_refs": [
         "docs/traceability/fr-civ-planet-050/fr-civ-planet-050-intent.md:1",
@@ -18691,7 +18926,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:104",
@@ -18716,7 +18951,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:105",
@@ -18741,7 +18976,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:106",
@@ -18766,7 +19001,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-003/fr-civ-proto3d-003-adr.md:1",
@@ -18788,7 +19023,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-004/fr-civ-proto3d-004-adr.md:1",
@@ -18810,7 +19045,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-005/fr-civ-proto3d-005-adr.md:1",
@@ -18832,7 +19067,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-006/fr-civ-proto3d-006-adr.md:1",
@@ -18854,7 +19089,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-007/fr-civ-proto3d-007-adr.md:1",
@@ -18876,7 +19111,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-008",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-008/fr-civ-proto3d-008-adr.md:1",
@@ -18898,7 +19133,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-009",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:116",
@@ -18918,13 +19153,13 @@
       ],
       "test_refs": [
         "crates/protocol-3d/src/lib.rs:1140",
-        "scripts/traceability/test_fr_audit_classification.py:100"
+        "scripts/traceability/test_fr_audit_classification.py:111"
       ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-PROTO3D-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-010/fr-civ-proto3d-010-adr.md:1",
@@ -18948,7 +19183,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-011/fr-civ-proto3d-011-adr.md:1",
@@ -18972,7 +19207,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-012",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-012/fr-civ-proto3d-012-adr.md:1",
@@ -18996,7 +19231,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-013",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-013/fr-civ-proto3d-013-adr.md:1",
@@ -19049,7 +19284,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-015",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-015/fr-civ-proto3d-015-adr.md:1",
@@ -19073,7 +19308,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-016",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-016/fr-civ-proto3d-016-adr.md:1",
@@ -19097,7 +19332,7 @@
     },
     {
       "id": "FR-CIV-PROTO3D-017",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-PROTO3D",
       "spec_refs": [
         "docs/traceability/fr-civ-proto3d-017/fr-civ-proto3d-017-adr.md:1",
@@ -19819,7 +20054,7 @@
       ],
       "test_refs": [
         "crates/legends/src/chronicle.rs:248",
-        "scripts/traceability/test_fr_audit_classification.py:104"
+        "scripts/traceability/test_fr_audit_classification.py:115"
       ],
       "stub_test_refs": []
     },
@@ -20398,7 +20633,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:76",
@@ -20486,7 +20721,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:79",
@@ -20541,7 +20776,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:81",
@@ -20596,7 +20831,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:82",
@@ -20649,7 +20884,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-010/fr-civ-research-010-adr.md:1",
@@ -20671,7 +20906,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-011/fr-civ-research-011-adr.md:1",
@@ -20693,7 +20928,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-012",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-012/fr-civ-research-012-adr.md:1",
@@ -20715,7 +20950,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-020",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-020/fr-civ-research-020-adr.md:1",
@@ -20737,7 +20972,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-030",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-030/fr-civ-research-030-adr.md:1",
@@ -20759,7 +20994,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-031",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-031/fr-civ-research-031-adr.md:1",
@@ -20781,7 +21016,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-032",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-032/fr-civ-research-032-adr.md:1",
@@ -20803,7 +21038,7 @@
     },
     {
       "id": "FR-CIV-RESEARCH-033",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-research-033/fr-civ-research-033-adr.md:1",
@@ -22180,7 +22415,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:50",
@@ -22205,7 +22440,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:51",
@@ -22230,7 +22465,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-002/fr-civ-species-002-adr.md:1",
@@ -22252,7 +22487,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-003/fr-civ-species-003-adr.md:1",
@@ -22274,7 +22509,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-004/fr-civ-species-004-adr.md:1",
@@ -22296,7 +22531,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-005/fr-civ-species-005-adr.md:1",
@@ -22318,7 +22553,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-006/fr-civ-species-006-adr.md:1",
@@ -22340,7 +22575,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-007",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-007/fr-civ-species-007-adr.md:1",
@@ -22362,7 +22597,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-008",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-008/fr-civ-species-008-adr.md:1",
@@ -22384,7 +22619,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-009",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/traceability/fr-civ-species-009/fr-civ-species-009-adr.md:1",
@@ -22406,7 +22641,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -22429,7 +22664,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "FUNCTIONAL_REQUIREMENTS.md",
@@ -23148,7 +23383,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:83",
@@ -23181,7 +23416,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:88",
@@ -23216,7 +23451,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/traceability/fr-civ-tactics-002/fr-civ-tactics-002-adr.md:1",
@@ -23238,7 +23473,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/traceability/fr-civ-tactics-003/fr-civ-tactics-003-adr.md:1",
@@ -23295,7 +23530,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-011",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/traceability/fr-civ-tactics-011/fr-civ-tactics-011-adr.md:1",
@@ -23647,7 +23882,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-034",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:33",
@@ -23761,7 +23996,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-038",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:38",
@@ -23821,7 +24056,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-040",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:42",
@@ -23949,7 +24184,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-044",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:46",
@@ -24053,7 +24288,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-048",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:50",
@@ -24243,7 +24478,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-055",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:57",
@@ -24270,7 +24505,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-056",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:58",
@@ -24462,7 +24697,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-063",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:65",
@@ -24544,7 +24779,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-066",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:68",
@@ -24601,7 +24836,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-068",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:70",
@@ -24681,7 +24916,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-071",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:73",
@@ -24759,7 +24994,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-074",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:76",
@@ -24786,7 +25021,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-075",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:77",
@@ -24843,7 +25078,7 @@
     },
     {
       "id": "FR-CIV-TACTICS-077",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TACTICS",
       "spec_refs": [
         "docs/development-guide/p-w1-kickoff.md:79",
@@ -25695,7 +25930,7 @@
     },
     {
       "id": "FR-CIV-TRAFFIC-LANE-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-TRAFFIC-LANE",
       "spec_refs": [
         "docs/traceability/civis-tracelinks.md:43",
@@ -26957,7 +27192,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-000",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "docs/design/emergence-dashboard.md:7",
@@ -26989,7 +27224,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:66",
@@ -27059,7 +27294,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:20",
@@ -27086,7 +27321,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "docs/development-guide/fr-3d-additions.md:22",
@@ -27113,7 +27348,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72",
@@ -27178,7 +27413,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "docs/design/civ-terrain-seam-fix.md:8",
@@ -27279,7 +27514,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-022",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL",
       "spec_refs": [
         "docs/guides/voxel-emergent-vision-and-migration.md:94",
@@ -27493,7 +27728,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-DIRTY-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL-DIRTY",
       "spec_refs": [
         "docs/traceability/fr-civ-voxel-dirty-001/fr-civ-voxel-dirty-001-adr.md:1",
@@ -27515,7 +27750,7 @@
     },
     {
       "id": "FR-CIV-VOXEL-DIRTY-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-VOXEL-DIRTY",
       "spec_refs": [
         "docs/traceability/fr-civ-voxel-dirty-002/fr-civ-voxel-dirty-002-adr.md:1",
@@ -27537,7 +27772,7 @@
     },
     {
       "id": "FR-CIV-WAR-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-WAR",
       "spec_refs": [
         "agileplus-specs/civ-006-deep-combat/spec.md:24",
@@ -27567,7 +27802,7 @@
     },
     {
       "id": "FR-CIV-WAR-001-UNITS",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-WAR-001-UNITS",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/spec.md:227",
@@ -27592,7 +27827,7 @@
     },
     {
       "id": "FR-CIV-WAR-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-WAR",
       "spec_refs": [
         "agileplus-specs/civ-006-deep-combat/spec.md:25",
@@ -27621,7 +27856,7 @@
     },
     {
       "id": "FR-CIV-WAR-002-COMBAT",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-WAR-002-COMBAT",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/spec.md:228",
@@ -27681,7 +27916,7 @@
     },
     {
       "id": "FR-CIV-WAR-004",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-WAR",
       "spec_refs": [
         "agileplus-specs/civ-006-deep-combat/spec.md:27",
@@ -27706,7 +27941,7 @@
     },
     {
       "id": "FR-CIV-WAR-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CIV-WAR",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/spec.md:227",
@@ -28894,7 +29129,7 @@
     },
     {
       "id": "FR-CORE-010",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-CORE",
       "spec_refs": [
         "docs/adr/ADR-022-runtime-representation-deviations.md:21",
@@ -30795,7 +31030,7 @@
     },
     {
       "id": "FR-LOD-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-LOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:75",
@@ -31114,7 +31349,7 @@
     },
     {
       "id": "FR-MOD-001",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/development-guide/fr-modding-roadmap.md:78",
@@ -31151,7 +31386,7 @@
     },
     {
       "id": "FR-MOD-002",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:233",
@@ -31187,7 +31422,7 @@
     },
     {
       "id": "FR-MOD-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:234",
@@ -31257,7 +31492,7 @@
     },
     {
       "id": "FR-MOD-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-MOD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:236",
@@ -31502,7 +31737,7 @@
     },
     {
       "id": "FR-PERF-005",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PERF",
       "spec_refs": [
         "docs/IMPLEMENTATION_STATUS.md:125",
@@ -31662,7 +31897,7 @@
     },
     {
       "id": "FR-PROT-006",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PROT",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:183",
@@ -32011,7 +32246,7 @@
     },
     {
       "id": "FR-SAVE-003",
-      "status": "COVERED",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-SAVE",
       "spec_refs": [
         "docs/specs/CIV-1000-save-load-persistence-spec.md:2802",
@@ -35785,7 +36020,8 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:428",
-        "crates/hud/src/accessibility.rs:443"
+        "crates/hud/src/accessibility.rs:443",
+        "scripts/traceability/test_fr_audit_classification.py:249"
       ],
       "stub_test_refs": []
     },
@@ -35814,7 +36050,8 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:513",
-        "crates/hud/src/accessibility.rs:515"
+        "crates/hud/src/accessibility.rs:515",
+        "scripts/traceability/test_fr_audit_classification.py:249"
       ],
       "stub_test_refs": []
     },
@@ -36352,7 +36589,7 @@
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:321"
       ],
       "code_refs": [
-        "scripts/traceability/gen-fr-audit.py:71"
+        "scripts/traceability/gen-fr-audit.py:82"
       ],
       "test_refs": [
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:4",

@@ -302,6 +302,9 @@ def main():
         "in_code": [],
         "in_tests": [],
         "in_stub_tests": [],
+        # Code refs that came from a `#[cfg(test)]` block inside a src/*.rs
+        # file. Post-passed into the `self_test_only` flag below.
+        "_selftest_code": set(),
     })
 
     max_refs = 8  # cap per category
@@ -372,6 +375,21 @@ def main():
                 ):
                     if ref not in rec["in_code"] and len(rec["in_code"]) < max_refs:
                         rec["in_code"].append(ref)
+                    # Track code refs that originate inside a `#[cfg(test)]`
+                    # block. When these are the ONLY code refs an ID has, the
+                    # "implementation" evidence is really test evidence, and
+                    # `classify()` would otherwise report COVERED on the
+                    # strength of a self-assertion.
+                    #
+                    # The flag is advisory and deliberately narrow. It does NOT
+                    # detect the broader "dead substrate" case where a symbol is
+                    # defined, re-exported and self-tested but has no consumer:
+                    # those IDs also carry a ref on the definition line, so they
+                    # are not self_test_only. Catching that needs call-graph
+                    # analysis, which this scanner does not attempt. See
+                    # docs/audits/spec-only-triage-2026-09-29.md finding 2.
+                    if in_cfg_test[line_no]:
+                        rec["_selftest_code"].add(ref)
             elif kind == "meta":
                 if ref not in rec["in_meta"] and len(rec["in_meta"]) < max_refs:
                     rec["in_meta"].append(ref)
@@ -391,7 +409,14 @@ def main():
 
     ids_out = []
     for eid in sorted(by_id.keys()):
-        ids_out.append({"id": eid, **by_id[eid]})
+        rec = by_id[eid]
+        selftests = rec.pop("_selftest_code", set())
+        code_refs = rec["in_code"]
+        # True only when EVERY code reference came from a self-test block, i.e.
+        # the ID has no code reference outside test code. A single real
+        # implementation line flips this back to False.
+        rec["self_test_only"] = bool(code_refs) and selftests.issuperset(code_refs)
+        ids_out.append({"id": eid, **rec})
 
     OUT_JSON.write_text(
         json.dumps({"schema_version": 3, "generated_at": GENERATED_AT, "ids": ids_out}, indent=2) + "\n",

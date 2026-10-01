@@ -158,3 +158,60 @@ def test_classify_spec_only() -> None:
 
 def test_status_order_covers_every_legend_entry() -> None:
     assert set(audit.STATUS_ORDER) == set(audit.STATUS_LEGEND)
+
+
+# --- rule 4: a self-assertion is not an implementation ----------------------
+#
+# An ID whose only code reference is a `#[cfg(test)]` block inside its own
+# src/*.rs file was counted as code, so a self-assertion produced COVERED.
+# 220 IDs are in that state.
+#
+# Scope limit, stated so a future reader does not over-trust this rule: it
+# catches IDs whose code evidence is *entirely* self-test. It does NOT catch
+# the broader dead-substrate case, where a symbol is defined, re-exported and
+# self-tested but consumed by nothing, because those IDs also carry a
+# reference on their definition line. Separating "implemented but unconsumed"
+# from "implemented and wired up" needs call-graph analysis, which this
+# scanner does not attempt. Those IDs are still reported COVERED today; see
+# docs/audits/spec-only-triage-2026-09-29.md finding 2.
+
+
+def test_classify_self_test_only_is_not_covered() -> None:
+    """An ID whose only 'code' ref is its own unit test is not COVERED."""
+    row = {
+        "in_specs": ["docs/traceability/x.md:1"],
+        "in_code": ["crates/hud/src/accessibility.rs:428"],
+        "in_tests": ["crates/hud/src/accessibility.rs:428"],
+        "self_test_only": True,
+    }
+    assert audit.classify(row) == "SELF-TEST-ONLY"
+
+
+def test_classify_real_impl_ref_stays_covered() -> None:
+    """A genuine implementation line keeps COVERED even with a self-test."""
+    row = {
+        "in_specs": ["docs/traceability/x.md:1"],
+        "in_code": ["crates/render/src/palette.rs:12"],
+        "in_tests": ["crates/hud/src/accessibility.rs:428"],
+        "self_test_only": False,
+    }
+    assert audit.classify(row) == "COVERED"
+
+
+def test_gather_emits_a_bool_self_test_flag_on_every_row() -> None:
+    """The flag must never be a silently missing key."""
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    if not inventory.exists():
+        pytest.skip("id inventory not generated")
+    import json
+
+    data = json.loads(inventory.read_text(encoding="utf-8"))
+    rows = data.get("ids", [])
+    assert rows, "inventory has no ids"
+    for row in rows:
+        flagged = row.get("self_test_only")
+        assert isinstance(flagged, bool), f"{row['id']} missing self_test_only"
+        if flagged:
+            assert row.get("in_code"), (
+                f"{row['id']} flagged self_test_only but has no code refs"
+            )

@@ -85,6 +85,33 @@ All 12 `FR-CIV-ASSET-*` requirements name a concrete test. `git ls-files tests/`
 4. **7 namespace collisions** need a canonical owner each: `FR-CIV-SOCIAL-001` vs `-INSTITUTIONS`, `FR-CIV-SOCIAL-002` vs `-IDEOLOGY`, `FR-CIV-ECON-002-JOULE` vs `FR-CIV-ECON-002`, `FR-CIV-GODOT-UX-000` vs `FR-CIV-UX-000`, `FR-CIV-RESEARCH-004-REPLAY` vs `FR-CIV-RESEARCH-004`, `FR-CIV-0700` vs spec `CIV-0700`, `NFR-C-02` vs the `NFR-CIV-*` scheme.
 5. **Two source claims are factually stale and actively cause misclassification:** `civ-021-recovered-requirements/spec.md:225` asserts "crates/social does not exist" (it is a workspace member), and `docs/traceability/fr-web-matrix.md:27` marks `FR-CIV-WEB-004` implemented on `set_speed` alone while `sim.set_policy` and `sim.reset` are absent.
 
+## Detector fix applied 2026-10-01
+
+Finding 2 above (the detector counts dead substrate as coverage) was traced to a
+concrete line: `_gather_ids.py` promoted any ID reference found inside a
+`#[cfg(test)]` block in a `src/*.rs` file into `in_code`. `classify()` in
+`gen-fr-audit.py` then saw `has_code and has_test` and reported `COVERED`, so a
+self-assertion counted as an implementation.
+
+The gatherer now records a `self_test_only` flag, and a new `SELF-TEST-ONLY`
+status keeps those rows out of `COVERED`. **220 IDs moved**, so `COVERED` drops
+from 1057 to 837.
+
+**What this fix does NOT fix, stated plainly.** It only catches IDs whose code
+evidence is *entirely* self-test. The `crates/hud` accessibility case in
+finding 2 is still reported `COVERED`, because those IDs also carry a reference
+on their definition line (`accessibility.rs:15`, `:40`, `:225`) and the
+`lib.rs:11` re-export. Separating "implemented but unconsumed" from "implemented
+and wired up" requires call-graph analysis, which this scanner does not attempt.
+
+A regression test was written asserting those four accessibility IDs are not
+`COVERED`. **It fails**, because they genuinely are. It was reverted rather than
+weakened, and the defect is recorded here instead. Closing it needs either
+call-graph analysis or a manual consumer annotation on symbols like
+`PaletteMode`.
+
+---
+
 ## Inventory-invisible IDs (recorded separately, NOT added to the ledger)
 
 A source-vs-inventory scan found 156 source-tagged IDs absent from `docs/audits/_id_inventory_v3.json`. Two leaf-shaped examples were verified by the coordinator and are real work that the ledger cannot currently see:

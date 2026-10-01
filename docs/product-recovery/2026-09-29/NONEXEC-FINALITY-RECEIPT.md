@@ -81,3 +81,23 @@ Production `CivSaveBundle::load_dir` replaces `sim.state` and explicitly resynch
 A vNext control `semantic_bundle_bridge_resynchronizes_runtime_tick_mirror` has been added on the implementation experiment branch. Its execution result is deliberately not inferred here. Until candidate-bound execution proves the mirror synchronized before dependent post-load phases, this remains an EXECUTION blocker and does not reopen the semantic/non-execution contract.
 
 No new prose requirement is needed: this finding is already explained by the existing MIRROR ontology, C-SI09 invariant, C-J02 continuity journey, and durable-domain consequence oracle.
+
+
+## Pass 45 tick-mirror execution closure
+
+Exact vNext candidate `b5346457bd3162298da4d584248473ec282240ef` executed in run `36820662241`:
+- 23 semantic lib tests passed;
+- 0 failed;
+- 882 filtered out;
+- artifact `11143995094`;
+- artifact sha256 `072c646bd833ca430c5dfbf7b8befd6a3b7765bb971e8f777cc2e57cfc0e7299`.
+
+The run includes:
+- `semantic_bundle_bridge_rebinds_current_tick_to_restored_world_tick`;
+- `semantic_bundle_bridge_resynchronizes_current_tick_mirror`;
+- `semantic_bundle_bridge_resynchronizes_live_tick_mirror`;
+- `semantic_bundle_bridge_resynchronizes_runtime_tick_mirror`.
+
+Therefore C-SI09 is experimentally supported for the opt-in vNext semantic bridge. The default/production CivSaveBundle remains a comparison path and is not silently credited with this behavior.
+
+This closes the named tick-mirror candidate blocker. It does not close target-filesystem durability, FS-vs-SQLite authority, unresolved durable-owner experiments, mounted process-restart continuation, causal emergence/LOD experiments, or product pilots.

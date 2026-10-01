@@ -2,7 +2,7 @@ name: Recovery Oracles
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
     paths:
       - 'crates/engine/src/recovery_oracle_tests.rs'
       - 'crates/engine/src/recovery_state_manifest_prototype.rs'

@@ -10,7 +10,7 @@ on:
             - "docs/guides/civis-dump-regression.md"
             - ".github/workflows/civis-dump-regression.yml"
     push:
-        branches: [main]
+        branches: [main, spec/mature-recovery-20260929]
         paths:
             - "crates/civis-cli/**"
     workflow_dispatch:

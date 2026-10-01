@@ -2,7 +2,7 @@ name: E2E Sandbox
 
 on:
   push:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
   workflow_dispatch:
   pull_request:
     paths:

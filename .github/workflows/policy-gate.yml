@@ -5,7 +5,7 @@ name: Policy Gate
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
 permissions:
   contents: read
   pull-requests: read

@@ -320,3 +320,27 @@ fn semantic_bundle_bridge_rejects_mixed_tick_component() {
     let err = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).unwrap_err();
     assert!(err.contains("does not match loaded world tick"));
 }
+
+
+#[test]
+fn semantic_bundle_bridge_resynchronizes_runtime_tick_mirror() {
+    let mut source = Simulation::with_seed(91);
+    for _ in 0..7 {
+        source.tick();
+    }
+    assert_eq!(source.current_tick, source.state.tick);
+    assert!(source.state.tick > 0);
+
+    let dir = tempdir().expect("tempdir");
+    SemanticBundleBridge::save_opt_in(dir.path(), &source).expect("opt-in save");
+
+    let resolved = Simulation::with_seed(91);
+    let loaded = SemanticBundleBridge::load_opt_in(dir.path(), &resolved).expect("opt-in load");
+
+    assert_eq!(loaded.state.tick, source.state.tick);
+    assert_eq!(
+        loaded.current_tick,
+        loaded.state.tick,
+        "runtime tick mirror must be synchronized before any post-load phase observes it"
+    );
+}

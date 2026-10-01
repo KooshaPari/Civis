@@ -6,7 +6,7 @@ name: Pages Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'

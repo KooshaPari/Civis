@@ -190,5 +190,27 @@
     "world_state_fields": 48,
     "manifest": "docs/product-recovery/2026-09-29/STATE-MANIFEST-v0.json",
     "percentage": null
+  },
+  "non_execution_closure": {
+    "as_of": "2026-10-01",
+    "status": "STRUCTURALLY_CLOSED_WITH_NAMED_AUTHORITY_POLICY_AND_EXECUTION_BLOCKERS",
+    "contract": "NONEXEC-FINAL-CONTRACT-GATE.md",
+    "sota": "SOTA-EXISTENCE-GATE-FINAL.md",
+    "fresh_review": "FRESH-ADVERSARIAL-REVIEW.md",
+    "source_ledger": "SOURCE-COVERAGE-LEDGER.md",
+    "overall_spec_design_100": false,
+    "reason": "Original completion gate requires experimental closure, implementation mapping/runtime evidence, contradiction closure and independent proof across mounted behavior; named blockers remain and are not paper-completable.",
+    "remaining_authority_policy": [
+      "normative authority of contested historical/generated requirement catalogs",
+      "public scientific/model-validity claim boundary",
+      "final platform/client matrix and post-v1 multiplayer horizon",
+      "stable support/compatibility commitments"
+    ],
+    "execution_empirical": [
+      "terminal resolution of state rows needing owner/boundary experiments",
+      "target-filesystem durability and filesystem-vs-SQLite reconciliation",
+      "mounted save/restart/load and local/server journeys",
+      "emergence ablations, LOD experiments, scale benchmarks and external pilot"
+    ]
   }
 }

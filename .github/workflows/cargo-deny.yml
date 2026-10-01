@@ -12,9 +12,9 @@ name: cargo-deny
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
   push:
-    branches: [main]
+    branches: [main, spec/mature-recovery-20260929]
   workflow_dispatch:
 
 permissions:

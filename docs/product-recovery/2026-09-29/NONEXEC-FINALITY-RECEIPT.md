@@ -70,3 +70,14 @@ An unresolved state row is not coverage.
 ## Next work
 
 Only experiments, implementation-owner resolution, owner authority decisions and external pilots can materially advance the original overall gate. Further generic specification expansion without new evidence is churn.
+
+
+## Pass 44 tick-mirror amendment
+
+Subsequent source tracing did not invalidate this non-execution verdict; it sharpened one named execution blocker.
+
+Production `CivSaveBundle::load_dir` replaces `sim.state` and explicitly resynchronizes many WorldState mirrors, but source inspection found no corresponding `sim.current_tick = sim.state.tick` assignment. The engine tick path does assign that mirror, and dependent phases read `current_tick` directly. Therefore the contract's C-SI09 mirror-resynchronization invariant is now backed by a concrete production defect candidate rather than only a generic rule.
+
+A vNext control `semantic_bundle_bridge_resynchronizes_runtime_tick_mirror` has been added on the implementation experiment branch. Its execution result is deliberately not inferred here. Until candidate-bound execution proves the mirror synchronized before dependent post-load phases, this remains an EXECUTION blocker and does not reopen the semantic/non-execution contract.
+
+No new prose requirement is needed: this finding is already explained by the existing MIRROR ontology, C-SI09 invariant, C-J02 continuity journey, and durable-domain consequence oracle.

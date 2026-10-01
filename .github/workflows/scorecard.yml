@@ -12,7 +12,7 @@ on:
     schedule:
         - cron: "25 4 * * 1" # Weekly Monday 4:25 UTC
     push:
-        branches: [main]
+        branches: [main, spec/mature-recovery-20260929]
 
 permissions:
     contents: read

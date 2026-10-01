@@ -32,12 +32,12 @@
   "overall_percent": null,
   "source_denominator": {
     "family_ledger": "SOURCE-COVERAGE-LEDGER.md",
-    "file_history_conversation_denominator_closed": false,
+    "file_history_conversation_denominator_closed": "REASONABLE_FALSIFICATION_STANDARD_EXCEPT_NAMED_AUTHORITY_POLICY_EXECUTION_EMPIRICAL_BLOCKERS",
     "percentage": null
   },
   "dimensions": {
     "functional_realization": "PARTIALLY_MAPPED_NOT_MEASURED",
-    "traceability": "PARTIAL_PROVENANCE_CONFLICTS",
+    "traceability": "NONEXEC_STRUCTURE_VALIDATED_EXECUTION_EDGES_OPEN",
     "current_product_evidence": "SEMANTIC_PERSISTENCE_REDS_REPRODUCED_MOUNTED_USER_JOURNEY_NOT_RUN",
     "journey_closure": "NOT_DEMONSTRATED_IN_THIS_PROGRAM",
     "performance": "UNQUALIFIED",
@@ -49,31 +49,31 @@
     "external_user_validation": "NOT_ASSESSED",
     "regression": "CANDIDATE_BOUND_PERSISTENCE_COUNTEREXAMPLES_REPRODUCED",
     "velocity": null,
-    "uncertainty": "HIGH_AUTHORITY_MODEL_RUNTIME_GAPS",
+    "uncertainty": "STATE_OWNER_EXPERIMENTS_RUNTIME_AND_POLICY_DECISIONS_REMAIN",
     "transition_debt": "INVENTORY_STARTED_NOT_QUANTIFIED"
   },
   "gates": {
-    "source_ledger_fully_resolved": "OPEN",
-    "alias_history_reasonably_exhausted": "OPEN",
-    "sota_completed": "OPEN_PASS_1_AND_EXISTING_INDEX_ONLY",
-    "realistic_alternative_stack": "DRAFT_NOT_QUALIFIED",
-    "bootstrap_decisions_recorded": "PROVISIONAL",
-    "differentiation_survives_attack": "OPEN",
-    "ontology_reviewed": "DRAFT_REVIEW_PENDING",
-    "all_accepted_obligations_represented": "NOT_ESTABLISHED",
-    "quality_properties_represented": "PARTIAL",
-    "journeys_represented": "PARTIAL",
-    "stage_projections_justified": "PROVISIONAL",
-    "oracle_design_complete": "PARTIAL",
+    "source_ledger_fully_resolved": "NONEXEC_PASS_EXCEPT_NAMED_AUTHORITY_POLICY_EXECUTION_EMPIRICAL_BLOCKERS",
+    "alias_history_reasonably_exhausted": "REASONABLE_FALSIFICATION_PASS_CURRENT_PROGRAM",
+    "sota_completed": "NONEXEC_PASS_REFRESHED_2026-10-01",
+    "realistic_alternative_stack": "DEFINED",
+    "bootstrap_decisions_recorded": "RECORDED",
+    "differentiation_survives_attack": "PROVISIONAL_PASS_PILOT_REQUIRED",
+    "ontology_reviewed": "NONEXEC_PASS",
+    "all_accepted_obligations_represented": "NONEXEC_SEMANTIC_CONTRACT_PASS_AUTHORITY_DECISIONS_RETAINED",
+    "quality_properties_represented": "NONEXEC_PASS",
+    "journeys_represented": "NONEXEC_PASS",
+    "stage_projections_justified": "NONEXEC_PASS",
+    "oracle_design_complete": "NONEXEC_PASS_EXECUTION_ORACLES_UNRUN",
     "high_risk_architecture_experimentally_closed": "HOST_INDEPENDENT_SEMANTIC_MANIFEST_COMPATIBILITY_OPT_IN_BRIDGE_STAGED_PUBLICATION_AND_RECONCILIATION_SUPPORTED_FILESYSTEM_DURABILITY_AND_FULL_STATE_DENOMINATOR_OPEN",
-    "implementation_mapping_complete": "OPEN",
-    "traceability_structurally_valid": "NOT_VALIDATED",
-    "registry_repo_truth_agree": "OPEN_ARCHIVE_AND_SCOPE_CONTRADICTIONS",
-    "invalid_generated_catalog_excluded": "POLICY_REINFORCED_SYNTHETIC_155_ID_EMERGENCE_RANGE_QUARANTINED_ENFORCEMENT_NOT_PROTECTED",
-    "no_unexplained_orphans": "NOT_ESTABLISHED",
-    "no_unresolved_contradictions": "BLOCKED",
-    "no_blocking_findings": "BLOCKED",
-    "independent_fresh_incompleteness_attack": "NOT_PERFORMED"
+    "implementation_mapping_complete": "NONEXEC_MAPPING_PASS_RUNTIME_REALIZATION_OPEN",
+    "traceability_structurally_valid": "NONEXEC_PASS_EXECUTION_EVIDENCE_EDGES_OPEN",
+    "registry_repo_truth_agree": "PASS_AFTER_2026_10_01_MACHINE_STATE_RECONCILIATION_EXCEPT_HISTORICAL_SUPERSEDED_RECORDS",
+    "invalid_generated_catalog_excluded": "PASS_QUARANTINED_UNLESS_INDEPENDENTLY_RECOVERED",
+    "no_unexplained_orphans": "NONEXEC_PASS_KNOWN_UNKNOWNS_EXPLICIT",
+    "no_unresolved_contradictions": "NONEXEC_PASS_NAMED_AUTHORITY_ALTERNATIVES_RETAINED",
+    "no_blocking_findings": "FAIL_EXECUTION_AND_AUTHORITY_BLOCKERS_REMAIN",
+    "independent_fresh_incompleteness_attack": "NONEXEC_PASS_2026_10_01"
   },
   "blockers": [
     "C-BEH-01 confirmed: mutable economy_policy resets to default across CivSaveBundle load",
@@ -212,5 +212,13 @@
       "mounted save/restart/load and local/server journeys",
       "emergence ablations, LOD experiments, scale benchmarks and external pilot"
     ]
+  },
+  "nonexec_finality": {
+    "status": "PASS_TO_REASONABLE_FALSIFICATION_STANDARD",
+    "date": "2026-10-01",
+    "contract": "NONEXEC-FINAL-CONTRACT-GATE.md",
+    "adversarial_review": "FRESH-ADVERSARIAL-REVIEW.md",
+    "sota_existence_gate": "SOTA-EXISTENCE-GATE-FINAL.md",
+    "meaning": "Specification/documentation/research/trace/oracle-design layers are closed as far as current evidence permits; this is not overall spec/design 100% because execution/empirical/authority blockers remain."
   }
 }

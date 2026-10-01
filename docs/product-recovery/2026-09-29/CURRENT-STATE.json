@@ -84,13 +84,13 @@
     "C-F04 emergence/scientific-validity/scale claims remain untested",
     "Authority unresolved for root FUNCTIONAL_REQUIREMENTS.md, docs/design per-ID catalogs, and historical civlab batch-analysis surface",
     "Synthetic 155-ID emergence range and namespace collisions must not participate in grading",
-    "Authoritative-state inventory and mounted UI/server journey remain incomplete",
-    "Independent fresh review remains open",
-    "Expanded semantic manifest, outer classifier and atomic save-generation prototypes still awaiting executable qualification",
     "Complete authoritative-state denominator and mounted save/restart journey remain open",
     "Authority review remains open for unsuperseded Draft FR/design-catalogue families; new 205-ID audit cannot be imported wholesale",
     "State denominator has unresolved UNKNOWN and EPHEMERAL_CANDIDATE fields; no completeness percentage is valid",
-    "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion"
+    "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion",
+    "C-BEH-10 source-proven candidate: CivSaveBundle load restores state.tick but does not explicitly resynchronize Simulation.current_tick before dependent phases; exact vNext control added, execution result pending",
+    "125 Simulation / 48 WorldState denominator remains intentionally non-terminal for rows requiring owner/boundary experiments; semantic ontology and closure rules are final",
+    "Mounted local/server UI and process-restart journeys remain execution-dependent"
   ],
   "next_bounded_work": [
     "Freeze host-independent PR1569 candidate; developer handoff is active under DEVELOPER-HANDOFF-SEMANTIC-SAVE.md",
@@ -133,9 +133,10 @@
       "successful generation commit switches CURRENT while preserving prior generation"
     ],
     "prototypes_pending": [
+      "current_tick mirror-resynchronization control on exact candidate",
       "filesystem durability/atomic replacement on target Linux and Windows filesystems",
       "SQLite save-index versus filesystem generation authority/reconciliation",
-      "complete durable-owner coverage against 125 Simulation / 48 WorldState denominator",
+      "terminal durable-owner decisions requiring execution against 125 Simulation / 48 WorldState denominator",
       "mounted local/server save-restart journey"
     ],
     "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review",
@@ -192,7 +193,7 @@
     "percentage": null
   },
   "non_execution_closure": {
-    "as_of": "2026-10-01",
+    "as_of": "2026-10-01-pass44",
     "status": "STRUCTURALLY_CLOSED_WITH_NAMED_AUTHORITY_POLICY_AND_EXECUTION_BLOCKERS",
     "contract": "NONEXEC-FINAL-CONTRACT-GATE.md",
     "sota": "SOTA-EXISTENCE-GATE-FINAL.md",
@@ -219,6 +220,7 @@
     "contract": "NONEXEC-FINAL-CONTRACT-GATE.md",
     "adversarial_review": "FRESH-ADVERSARIAL-REVIEW.md",
     "sota_existence_gate": "SOTA-EXISTENCE-GATE-FINAL.md",
-    "meaning": "Specification/documentation/research/trace/oracle-design layers are closed as far as current evidence permits; this is not overall spec/design 100% because execution/empirical/authority blockers remain."
+    "meaning": "Specification/documentation/research/trace/oracle-design layers are closed as far as current evidence permits; this is not overall spec/design 100% because execution/empirical/authority blockers remain.",
+    "amendment": "Pass44 source tracing sharpened current_tick mirror execution blocker without reopening semantic contract."
   }
 }

@@ -110,6 +110,61 @@ weakened, and the defect is recorded here instead. Closing it needs either
 call-graph analysis or a manual consumer annotation on symbols like
 `PaletteMode`.
 
+### Fix 2: the audit was citing itself as evidence
+
+A second, separate defect surfaced while chasing fix 1. `scripts/traceability/**`
+holds the audit tooling itself, and it was **not** in `SELF_REF_DIRS`. A literal
+`FR-CIV-ACCESS-010` inside a test fixture or a docstring there was recorded as a
+`code`/`test` reference, so the tooling counted as proof that the requirement was
+implemented. **24 IDs** carried such a reference.
+
+Two had tooling references as their *only* evidence and moved
+`COVERED -> TEST-NO-CODE-REF`:
+
+| ID | Real evidence after the fix |
+|---|---|
+| `FR-CIV-3D` | tests only (`crates/engine/tests/fr_fr_civ_3d_00*.rs`), no source file carries the ID |
+| `NFR-CIV-PERF-001` | tests only (`crates/engine/tests/fr_engine_hash_lod_perf_tests.rs`) |
+
+Net: `COVERED` 837 → 835, `TEST-NO-CODE-REF` 154 → 156. Nothing else moved.
+
+The exclusion loses no real evidence: that directory is Python and shell only, no
+product code.
+
+### Hypothesis tested and rejected: "no in-workspace consumer"
+
+The obvious way to catch the `crates/hud` dead substrate is a dependency signal:
+`civ-hud` is a workspace member that **no** crate declares as a dependency. That
+looked like a clean 115-ID signal, and it is wrong.
+
+An earlier hand-rolled Cargo parser was also wrong in the opposite direction (it
+reported 50 of 51 packages as unconsumed, because this workspace has no
+`[workspace.dependencies]` table, so deps are declared per-crate). The ground
+truth came from `cargo metadata`.
+
+Checked against `cargo metadata`, 16 packages have no in-workspace consumer. But a
+single-pass text scan shows most of them are consumed from outside the crate graph:
+`civ-social` 29 hits, `civ-watch` 85, `emergence-oracle` 102, `civ-traffic` 239,
+`asset-pipeline` 270, `civis-mcp` 83, `civlab-sdk` 37. Flagging all 115 IDs on
+this basis would have produced mass false positives.
+
+`civ-hud` is the one case with genuinely no consumer anywhere: its only external
+mentions are 7 files, all documentation or audit scripts
+(`docs/traceability/fr-civ-hud-00*/`), and `civ_hud` appears in code only inside
+`crates/hud` itself. So the `crates/hud` accessibility family is real dead
+substrate, confirmed by hand, but **not** by a generalizable detector. Treating
+`civ-social` or `civ-watch` the same way would be wrong.
+
+Closing the general case needs call-graph analysis at symbol level, which this
+scanner does not attempt.
+
+### Test verification
+
+Each fix was confirmed to actually detect its defect: reverting the
+`SELF_REF_DIRS` entry makes 2 of the new tests fail
+(`test_gather_excludes_the_audit_tooling_directory`,
+`test_is_self_ref_rejects_tooling_paths`). Suite is 38 passing, up from 34.
+
 ---
 
 ## Inventory-invisible IDs (recorded separately, NOT added to the ledger)

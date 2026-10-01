@@ -20,10 +20,10 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 837 | 58.8 |
+| `COVERED` | 835 | 58.7 |
 | `SELF-TEST-ONLY` | 220 | 15.5 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 154 | 10.8 |
+| `TEST-NO-CODE-REF` | 156 | 11.0 |
 | `IMPL-NO-TEST` | 9 | 0.6 |
 | `SPEC-ONLY` | 202 | 14.2 |
 | `CODE-ONLY-no-spec` | 1 | 0.1 |
@@ -40,7 +40,7 @@
 | FR-AUD | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV | 15 | 13 | 1 | 0 | 0 | 0 | 1 | 0 |
 | FR-CIV-0001-TICK | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-3D | 16 | 16 | 0 | 0 | 0 | 0 | 0 | 0 |
+| FR-CIV-3D | 16 | 15 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-CIV-ACCESS | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ACT | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-ACTOR | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -253,7 +253,7 @@
 | NFR-CIV-LEGENDS-PERF | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-LEGENDS-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-MAINT | 6 | 4 | 0 | 0 | 0 | 0 | 2 | 0 |
-| NFR-CIV-PERF | 11 | 2 | 0 | 0 | 0 | 0 | 9 | 0 |
+| NFR-CIV-PERF | 11 | 1 | 0 | 0 | 1 | 0 | 9 | 0 |
 | NFR-CIV-PORT | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | NFR-CIV-REL | 4 | 1 | 0 | 0 | 0 | 0 | 3 | 0 |
 | NFR-CIV-SCALE | 9 | 1 | 0 | 0 | 2 | 0 | 6 | 0 |
@@ -672,8 +672,11 @@
 - `NFR-R-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:1230, docs/traceability/nfr-r-06/nfr-r-06-intent.md:1
 
-## Tested IDs with no ID-tagged code (add a code reference) (154)
+## Tested IDs with no ID-tagged code (add a code reference) (156)
 
+- `FR-CIV-3D`
+  - spec: docs/design/civ-actor-assets-fix.md:251
+  - tests: crates/engine/tests/fr_fr_civ_3d_001.rs:3, crates/engine/tests/fr_fr_civ_3d_002.rs:3, crates/engine/tests/fr_fr_civ_3d_003.rs:3
 - `FR-CIV-CORE-021`
   - spec: docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:1, docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4
   - tests: crates/build/tests/fr_matrix_batch12.rs:765
@@ -1130,6 +1133,9 @@
 - `NFR-CIV-DEV-HYGIENE-001`
   - spec: docs/ops/history-purge-plan.md:4, docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:1, docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:4
   - tests: crates/engine/tests/fr_nfr_civ_dev_hygiene_001.rs:1, crates/engine/tests/fr_nfr_civ_dev_hygiene_001.rs:5, crates/engine/tests/fr_nfr_civ_dev_hygiene_001.rs:14
+- `NFR-CIV-PERF-001`
+  - spec: docs/guides/voxel-emergent-vision-and-migration.md:96, docs/guides/voxel-emergent-vision-and-migration.md:99, docs/reference/non-functional-requirements.md:27
+  - tests: crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:4, crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:92, crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:118
 - `NFR-CIV-SCALE-001`
   - spec: docs/reference/non-functional-requirements.md:82, docs/reference/non-functional-requirements.md:188, docs/reference/non-functional-requirements.md:562
   - tests: crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:85

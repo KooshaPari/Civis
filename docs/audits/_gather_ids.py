@@ -82,6 +82,19 @@ TEXT_NAMES = {n for n in SCAN_FILES}
 # or pull in third-party project docs as if they were ours.
 SELF_REF_DIRS = {
     "docs/audits",                  # our own intermediate files
+    # The audit tooling itself. It is Python/shell that *reports on* FR IDs, so
+    # a literal `FR-CIV-ACCESS-010` inside a test fixture or a docstring is the
+    # audit citing itself, not evidence that anything implements the
+    # requirement. Measured: 24 IDs carried a `scripts/traceability/**`
+    # reference in `in_code` or `in_tests`, and for the crates/hud
+    # accessibility family that tooling reference was the *only* reference
+    # outside the module's own definition lines.
+    #
+    # This directory holds no product code (Python and shell only), so nothing
+    # real is lost by excluding it. See
+    # docs/audits/spec-only-triage-2026-09-29.md, "Detector fix applied
+    # 2026-10-01".
+    "scripts/traceability",
     "docs/fragemented",             # root fragmented dump
     "docs/architecture/fragemented",
     "docs/models/civ-sim/fragemented",

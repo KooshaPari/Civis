@@ -215,3 +215,50 @@ def test_gather_emits_a_bool_self_test_flag_on_every_row() -> None:
             assert row.get("in_code"), (
                 f"{row['id']} flagged self_test_only but has no code refs"
             )
+
+
+# --- rule 5: the audit must not cite itself as evidence ---------------------
+#
+# `scripts/traceability/**` holds the audit tooling itself. Before it was added
+# to SELF_REF_DIRS, a literal FR-ID inside a test fixture or a docstring there
+# was recorded as a code or test reference, so the tooling counted as evidence
+# that the requirement was implemented. Measured: 24 IDs carried such a
+# reference. Two of them (FR-CIV-3D and NFR-CIV-PERF-001) had tooling
+# references as their ONLY evidence and moved COVERED -> TEST-NO-CODE-REF.
+
+
+def test_gather_excludes_the_audit_tooling_directory() -> None:
+    """`scripts/traceability` must be self-referential, like `docs/audits`."""
+    assert "scripts/traceability" in gather.SELF_REF_DIRS
+    assert "docs/audits" in gather.SELF_REF_DIRS
+
+
+def test_is_self_ref_rejects_tooling_paths() -> None:
+    assert gather.is_self_ref("scripts/traceability/gen-fr-audit.py")
+    assert gather.is_self_ref("scripts/traceability/test_fr_audit_classification.py")
+    assert gather.is_self_ref("docs/audits/fr-matrix.json")
+
+
+def test_is_self_ref_keeps_real_product_code() -> None:
+    """The exclusion must not leak into crates/, clients/ or scripts/ generally."""
+    assert not gather.is_self_ref("crates/hud/src/accessibility.rs")
+    assert not gather.is_self_ref("crates/engine/src/lib.rs")
+    assert not gather.is_self_ref("scripts/traceability-tests/helper.py")
+
+
+def test_no_inventory_row_cites_audit_tooling() -> None:
+    """No ID may carry a reference into the audit tooling as evidence."""
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    if not inventory.exists():
+        pytest.skip("id inventory not generated")
+    import json
+
+    data = json.loads(inventory.read_text(encoding="utf-8"))
+    offenders = []
+    for row in data.get("ids", []):
+        for bucket in ("in_code", "in_tests", "in_stub_tests"):
+            for ref in row.get(bucket, []):
+                path = ref.split(":", 1)[0]
+                if path.startswith(("scripts/traceability/", "docs/audits/")):
+                    offenders.append(f"{row['id']} {bucket} -> {ref}")
+    assert not offenders, "audit tooling cited as evidence:\n" + "\n".join(offenders)

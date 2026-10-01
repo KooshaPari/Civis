@@ -27,8 +27,7 @@
         "crates/ai/src/goal_tree.rs:3",
         "crates/ai/src/goal_tree.rs:155",
         "crates/ai/src/goal_tree.rs:203",
-        "crates/ai/src/utility.rs:1",
-        "scripts/traceability/gen-fr-audit.py:80"
+        "crates/ai/src/utility.rs:1"
       ],
       "in_tests": [
         "crates/ai/tests/fr_fr_ai_001.rs:1",
@@ -1054,9 +1053,7 @@
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
-      "in_code": [
-        "scripts/traceability/split-stub-plan.py:61"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/engine/tests/fr_fr_civ_3d_001.rs:3",
         "crates/engine/tests/fr_fr_civ_3d_002.rs:3",
@@ -1505,8 +1502,7 @@
       ],
       "in_tests": [
         "crates/hud/src/accessibility.rs:428",
-        "crates/hud/src/accessibility.rs:430",
-        "scripts/traceability/test_fr_audit_classification.py:248"
+        "crates/hud/src/accessibility.rs:430"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -1528,8 +1524,7 @@
       ],
       "in_tests": [
         "crates/hud/src/accessibility.rs:503",
-        "crates/hud/src/accessibility.rs:505",
-        "scripts/traceability/test_fr_audit_classification.py:248"
+        "crates/hud/src/accessibility.rs:505"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -2954,8 +2949,7 @@
         "crates/build/src/tiers.rs:405"
       ],
       "in_tests": [
-        "crates/build/src/tiers.rs:405",
-        "scripts/traceability/test_fr_audit_classification.py:114"
+        "crates/build/src/tiers.rs:405"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -5521,9 +5515,7 @@
         "crates/build/src/lib.rs:719",
         "crates/build/src/lib.rs:858",
         "crates/build/tests/fr_matrix_batch12.rs:549",
-        "crates/build/tests/fr_matrix_batch12.rs:552",
-        "scripts/traceability/test_fr_audit_classification.py:110",
-        "scripts/traceability/test_fr_audit_classification.py:126"
+        "crates/build/tests/fr_matrix_batch12.rs:552"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -9432,8 +9424,7 @@
         "crates/engine/src/engine/engine_tests.rs:2826",
         "crates/engine/src/engine/engine_tests.rs:2835",
         "crates/engine/src/engine/engine_tests.rs:2860",
-        "crates/engine/src/engine/engine_tests.rs:2895",
-        "scripts/traceability/test_fr_audit_classification.py:113"
+        "crates/engine/src/engine/engine_tests.rs:2895"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -18608,8 +18599,7 @@
         "crates/protocol-3d/src/lib.rs:1140"
       ],
       "in_tests": [
-        "crates/protocol-3d/src/lib.rs:1140",
-        "scripts/traceability/test_fr_audit_classification.py:111"
+        "crates/protocol-3d/src/lib.rs:1140"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -19599,8 +19589,7 @@
         "crates/legends/src/chronicle.rs:248"
       ],
       "in_tests": [
-        "crates/legends/src/chronicle.rs:248",
-        "scripts/traceability/test_fr_audit_classification.py:115"
+        "crates/legends/src/chronicle.rs:248"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -37418,8 +37407,7 @@
       ],
       "in_tests": [
         "crates/hud/src/accessibility.rs:428",
-        "crates/hud/src/accessibility.rs:443",
-        "scripts/traceability/test_fr_audit_classification.py:249"
+        "crates/hud/src/accessibility.rs:443"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -37451,8 +37439,7 @@
       ],
       "in_tests": [
         "crates/hud/src/accessibility.rs:513",
-        "crates/hud/src/accessibility.rs:515",
-        "scripts/traceability/test_fr_audit_classification.py:249"
+        "crates/hud/src/accessibility.rs:515"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -38052,9 +38039,7 @@
         "docs/traceability/nfr-civ-perf-001/nfr-civ-perf-001-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:321"
       ],
-      "in_code": [
-        "scripts/traceability/gen-fr-audit.py:82"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:4",
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:92",

@@ -14,10 +14,10 @@
   "totals": {
     "rows": 1423,
     "by_status": {
-      "COVERED": 837,
+      "COVERED": 835,
       "SELF-TEST-ONLY": 220,
       "STUB-TEST-ONLY": 0,
-      "TEST-NO-CODE-REF": 154,
+      "TEST-NO-CODE-REF": 156,
       "IMPL-NO-TEST": 9,
       "SPEC-ONLY": 202,
       "CODE-ONLY-no-spec": 1
@@ -320,10 +320,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-3D": {
-        "COVERED": 16,
+        "COVERED": 15,
         "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
+        "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -2237,10 +2237,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "NFR-CIV-PERF": {
-        "COVERED": 2,
+        "COVERED": 1,
         "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
+        "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 9,
         "CODE-ONLY-no-spec": 0
@@ -2361,8 +2361,7 @@
         "crates/ai/src/goal_tree.rs:3",
         "crates/ai/src/goal_tree.rs:155",
         "crates/ai/src/goal_tree.rs:203",
-        "crates/ai/src/utility.rs:1",
-        "scripts/traceability/gen-fr-audit.py:80"
+        "crates/ai/src/utility.rs:1"
       ],
       "test_refs": [
         "crates/ai/tests/fr_fr_ai_001.rs:1",
@@ -3278,14 +3277,12 @@
     },
     {
       "id": "FR-CIV-3D",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-CIV-3D",
       "spec_refs": [
         "docs/design/civ-actor-assets-fix.md:251"
       ],
-      "code_refs": [
-        "scripts/traceability/split-stub-plan.py:61"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/engine/tests/fr_fr_civ_3d_001.rs:3",
         "crates/engine/tests/fr_fr_civ_3d_002.rs:3",
@@ -3687,8 +3684,7 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:428",
-        "crates/hud/src/accessibility.rs:430",
-        "scripts/traceability/test_fr_audit_classification.py:248"
+        "crates/hud/src/accessibility.rs:430"
       ],
       "stub_test_refs": []
     },
@@ -3708,8 +3704,7 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:503",
-        "crates/hud/src/accessibility.rs:505",
-        "scripts/traceability/test_fr_audit_classification.py:248"
+        "crates/hud/src/accessibility.rs:505"
       ],
       "stub_test_refs": []
     },
@@ -5011,8 +5006,7 @@
         "crates/build/src/tiers.rs:405"
       ],
       "test_refs": [
-        "crates/build/src/tiers.rs:405",
-        "scripts/traceability/test_fr_audit_classification.py:114"
+        "crates/build/src/tiers.rs:405"
       ],
       "stub_test_refs": []
     },
@@ -7304,9 +7298,7 @@
         "crates/build/src/lib.rs:719",
         "crates/build/src/lib.rs:858",
         "crates/build/tests/fr_matrix_batch12.rs:549",
-        "crates/build/tests/fr_matrix_batch12.rs:552",
-        "scripts/traceability/test_fr_audit_classification.py:110",
-        "scripts/traceability/test_fr_audit_classification.py:126"
+        "crates/build/tests/fr_matrix_batch12.rs:552"
       ],
       "stub_test_refs": []
     },
@@ -10823,8 +10815,7 @@
         "crates/engine/src/engine/engine_tests.rs:2826",
         "crates/engine/src/engine/engine_tests.rs:2835",
         "crates/engine/src/engine/engine_tests.rs:2860",
-        "crates/engine/src/engine/engine_tests.rs:2895",
-        "scripts/traceability/test_fr_audit_classification.py:113"
+        "crates/engine/src/engine/engine_tests.rs:2895"
       ],
       "stub_test_refs": []
     },
@@ -19152,8 +19143,7 @@
         "crates/protocol-3d/src/lib.rs:1140"
       ],
       "test_refs": [
-        "crates/protocol-3d/src/lib.rs:1140",
-        "scripts/traceability/test_fr_audit_classification.py:111"
+        "crates/protocol-3d/src/lib.rs:1140"
       ],
       "stub_test_refs": []
     },
@@ -20053,8 +20043,7 @@
         "crates/legends/src/chronicle.rs:248"
       ],
       "test_refs": [
-        "crates/legends/src/chronicle.rs:248",
-        "scripts/traceability/test_fr_audit_classification.py:115"
+        "crates/legends/src/chronicle.rs:248"
       ],
       "stub_test_refs": []
     },
@@ -36020,8 +36009,7 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:428",
-        "crates/hud/src/accessibility.rs:443",
-        "scripts/traceability/test_fr_audit_classification.py:249"
+        "crates/hud/src/accessibility.rs:443"
       ],
       "stub_test_refs": []
     },
@@ -36050,8 +36038,7 @@
       ],
       "test_refs": [
         "crates/hud/src/accessibility.rs:513",
-        "crates/hud/src/accessibility.rs:515",
-        "scripts/traceability/test_fr_audit_classification.py:249"
+        "crates/hud/src/accessibility.rs:515"
       ],
       "stub_test_refs": []
     },
@@ -36568,7 +36555,7 @@
     },
     {
       "id": "NFR-CIV-PERF-001",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "NFR-CIV-PERF",
       "spec_refs": [
         "docs/guides/voxel-emergent-vision-and-migration.md:96",
@@ -36588,9 +36575,7 @@
         "docs/traceability/nfr-civ-perf-001/nfr-civ-perf-001-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:321"
       ],
-      "code_refs": [
-        "scripts/traceability/gen-fr-audit.py:82"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:4",
         "crates/engine/tests/fr_engine_hash_lod_perf_tests.rs:92",

@@ -168,12 +168,22 @@ DOC_DIR_PREFIXES = (
 #    `[-A-Z]+` form consumed the `-` in prose like `FR-CIV-TACTICS-025-int`
 #    or `FR-CIV-0100-int1..int4`, minting phantom rows such as
 #    `FR-CIV-TACTICS-025-` that duplicated the real `FR-CIV-TACTICS-025`.
+#  * `[A-Za-z]+` in the *leading* segments admits lowercase namespaces. The
+#    physics substrate ships a real, separately-numbered namespace written
+#    `FR-PHYS-substrate-000..007`, documented item-by-item in
+#    `crates/physics-substrate/src/lib.rs:780-1023`. An `[A-Z]+`-only pattern
+#    rejected every one of them, so an entire namespace of implemented,
+#    self-tagged requirements was invisible to the audit.
+#
+# Lowercase is allowed only BEFORE the final numeric group. The trailing
+# `-int` / `-9xx` / `-live` forms stay rejected, because those are prose
+# fragments of an already-numbered ID rather than IDs of their own.
 #
 # A match therefore always ends in a letter or digit, never a hyphen.
 ID_RE = re.compile(
-    r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*\b"
+    r"\b(FR|NFR)-(?:[A-Za-z]+-)?[A-Za-z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*\b"
 )
-COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*)")
+COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Za-z]+-)?[A-Za-z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*)")
 
 
 def is_self_ref(rel: str) -> bool:

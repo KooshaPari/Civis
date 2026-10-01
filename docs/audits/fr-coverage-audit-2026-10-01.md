@@ -2,7 +2,7 @@
 
 **Generated:** 2026-10-01  
 **Source inventory:** `docs/audits/_id_inventory_v3.json`  
-**Total IDs scanned:** 1423
+**Total IDs scanned:** 1431
 
 ## Status legend
 
@@ -20,14 +20,14 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 835 | 58.7 |
-| `SELF-TEST-ONLY` | 220 | 15.5 |
+| `COVERED` | 835 | 58.4 |
+| `SELF-TEST-ONLY` | 220 | 15.4 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 156 | 11.0 |
+| `TEST-NO-CODE-REF` | 156 | 10.9 |
 | `IMPL-NO-TEST` | 9 | 0.6 |
-| `SPEC-ONLY` | 202 | 14.2 |
-| `CODE-ONLY-no-spec` | 1 | 0.1 |
-| **Total** | **1423** | **100.0** |
+| `SPEC-ONLY` | 202 | 14.1 |
+| `CODE-ONLY-no-spec` | 9 | 0.6 |
+| **Total** | **1431** | **100.0** |
 
 ## Coverage by epic
 
@@ -219,6 +219,7 @@
 | FR-MUSIC | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-NET | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-PERF | 5 | 4 | 1 | 0 | 0 | 0 | 0 | 0 |
+| FR-PHYS-substrate | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 8 |
 | FR-PROT | 6 | 5 | 1 | 0 | 0 | 0 | 0 | 0 |
 | FR-PROTO | 5 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
 | FR-REP | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -1177,10 +1178,34 @@ _None._
   - spec: docs/specs/CIV-0600-2d-asset-pipeline-spec.md:2599, docs/specs/CIV-0600-2d-asset-pipeline-spec.md:3222, docs/traceability/fr-civ-asset-018/fr-civ-asset-018-adr.md:1
   - code: crates/engine/src/rts_types.rs:208
 
-## Code-only IDs (missing spec/traceability) (1)
+## Code-only IDs (missing spec/traceability) (9)
 
 - `FR-CIV-MOD-00`
   - code: crates/mod-host/src/lib.rs:82
+- `FR-PHYS-substrate-000`
+  - code: crates/physics-substrate/src/lib.rs:780
+  - tests: crates/physics-substrate/src/lib.rs:780
+- `FR-PHYS-substrate-001`
+  - code: crates/physics-substrate/src/lib.rs:792
+  - tests: crates/physics-substrate/src/lib.rs:792
+- `FR-PHYS-substrate-002`
+  - code: crates/physics-substrate/src/lib.rs:821
+  - tests: crates/physics-substrate/src/lib.rs:821
+- `FR-PHYS-substrate-003`
+  - code: crates/physics-substrate/src/lib.rs:862
+  - tests: crates/physics-substrate/src/lib.rs:862
+- `FR-PHYS-substrate-004`
+  - code: crates/physics-substrate/src/lib.rs:889
+  - tests: crates/physics-substrate/src/lib.rs:889
+- `FR-PHYS-substrate-005`
+  - code: crates/physics-substrate/src/lib.rs:940
+  - tests: crates/physics-substrate/src/lib.rs:940
+- `FR-PHYS-substrate-006`
+  - code: crates/physics-substrate/src/lib.rs:987
+  - tests: crates/physics-substrate/src/lib.rs:987
+- `FR-PHYS-substrate-007`
+  - code: crates/physics-substrate/src/lib.rs:1023
+  - tests: crates/physics-substrate/src/lib.rs:1023
 
 ## Placeholder-only coverage (weakest evidence) (59)
 

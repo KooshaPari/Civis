@@ -32627,6 +32627,126 @@
       "self_test_only": true
     },
     {
+      "id": "FR-PHYS-substrate-000",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:780"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:780"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-001",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:792"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:792"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-002",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:821"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:821"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-003",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:862"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:862"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-004",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:889"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:889"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-005",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:940"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:940"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-006",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:987"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:987"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
+      "id": "FR-PHYS-substrate-007",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/physics-substrate/src/lib.rs:1023"
+      ],
+      "in_tests": [
+        "crates/physics-substrate/src/lib.rs:1023"
+      ],
+      "in_stub_tests": [],
+      "self_test_only": true
+    },
+    {
       "id": "FR-PROT-001",
       "in_specs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:178"

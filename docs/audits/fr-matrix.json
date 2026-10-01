@@ -12,7 +12,7 @@
     "CODE-ONLY-no-spec": "code present, no spec/traceability reference"
   },
   "totals": {
-    "rows": 1423,
+    "rows": 1431,
     "by_status": {
       "COVERED": 835,
       "SELF-TEST-ONLY": 220,
@@ -20,7 +20,7 @@
       "TEST-NO-CODE-REF": 156,
       "IMPL-NO-TEST": 9,
       "SPEC-ONLY": 202,
-      "CODE-ONLY-no-spec": 1
+      "CODE-ONLY-no-spec": 9
     },
     "by_epic": {
       "FR-AI": 7,
@@ -209,6 +209,7 @@
       "FR-MUSIC": 1,
       "FR-NET": 3,
       "FR-PERF": 5,
+      "FR-PHYS-substrate": 8,
       "FR-PROT": 6,
       "FR-PROTO": 5,
       "FR-REP": 1,
@@ -1929,6 +1930,15 @@
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
+      },
+      "FR-PHYS-substrate": {
+        "COVERED": 0,
+        "SELF-TEST-ONLY": 0,
+        "STUB-TEST-ONLY": 0,
+        "TEST-NO-CODE-REF": 0,
+        "IMPL-NO-TEST": 0,
+        "SPEC-ONLY": 0,
+        "CODE-ONLY-no-spec": 8
       },
       "FR-PROT": {
         "COVERED": 5,
@@ -31754,6 +31764,110 @@
         "crates/engine/tests/fr_fr_perf_005.rs:9",
         "crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:1",
         "crates/protocol-3d/tests/fr_perf_005_frame3d_timing.rs:64"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-000",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:780"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:780"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-001",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:792"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:792"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-002",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:821"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:821"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-003",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:862"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:862"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-004",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:889"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:889"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-005",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:940"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:940"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-006",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:987"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:987"
+      ],
+      "stub_test_refs": []
+    },
+    {
+      "id": "FR-PHYS-substrate-007",
+      "status": "CODE-ONLY-no-spec",
+      "epic": "FR-PHYS-substrate",
+      "spec_refs": [],
+      "code_refs": [
+        "crates/physics-substrate/src/lib.rs:1023"
+      ],
+      "test_refs": [
+        "crates/physics-substrate/src/lib.rs:1023"
       ],
       "stub_test_refs": []
     },

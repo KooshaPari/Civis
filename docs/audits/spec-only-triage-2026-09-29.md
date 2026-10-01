@@ -45,9 +45,16 @@ The converse also holds and was verified: the GEO family stays demoted because i
 
 ## Findings that change how the audit must be read
 
-### 1. `FUNCTIONAL_REQUIREMENTS.md` is invisible to the coverage scanner
+### 1. `FUNCTIONAL_REQUIREMENTS.md` — claim WITHDRAWN 2026-10-01
 
-This file sits at the **repo root**, outside `docs/`, and carries **177** `SHALL` statements including `FR-CIV-SPECIES-012..017` and `FR-CIV-PSYCHE-004/007/008`. Two agents independently reported that their batches' "synthetic" and "design-only" labels were wrong for this reason. Any scanner that walks only `docs/` will keep misclassifying this family.
+**The invisibility claim is false.** `_gather_ids.py` lists `FUNCTIONAL_REQUIREMENTS.md`
+in both `SCAN_FILES` and `SPEC_FILES_EXACT`, and records hits in a dedicated
+`in_func_req` field that `gen-fr-audit.py` counts as a spec reference. Two agents
+reported otherwise during triage; both were wrong, and the coordinator checked the
+source rather than the report.
+
+The file sits at the **repo root** and carries **177** `SHALL` statements
+including `FR-CIV-SPECIES-012..017` and `FR-CIV-PSYCHE-004/007/008`.
 
 Its status line reads **Draft**, tracing to `PRD.md` v1.0 which is **APPROVED** — while `PRD.md` itself contains **0** `SHALL`/`MUST`. Authority order is therefore not self-evident and needs a human ruling.
 
@@ -65,9 +72,17 @@ All 12 `FR-CIV-ASSET-*` requirements name a concrete test. `git ls-files tests/`
 
 `tracelinks.md:167` claims the 11-systems × 30-couplings matrix "promotes each of these 158 dormant IDs to covered". That claim is **false in this tree** — and it is the recorded reason these IDs were deferred rather than triaged, so it is likely load-bearing for other deferrals too.
 
-### 5. Requirements scan only Rust, so YAML/YAML-adjacent work reads as absent
+### 5. Requirements scan only Rust, so YAML/YAML-adjacent work reads as absent — PARTLY WITHDRAWN
 
-`FR-CIV-BEVY-021` is implemented and **self-tagged** in `.github/workflows/civis-3d-live-smoke.yml:10`. The scanner missed it because it is not Rust. The doc is stale in the other direction: it says *path-filtered CI*, but the workflow trigger is `workflow_dispatch:` only, with an explicit comment that it "never triggers automatically".
+`FR-CIV-BEVY-021` is implemented and **self-tagged** in `.github/workflows/civis-3d-live-smoke.yml:10`. That path is confirmed real.
+
+However it is **not** a new defect. `FR-CIV-BEVY-021` is already in the inventory
+via `agileplus-specs/`, which *is* scanned; `.github/` being unscanned costs
+nothing here. `SCAN_DIRS` does omit `.github/`, so a requirement tagged **only** in
+a workflow would be missed, but no such ID was found. The workflow's own doc
+comment is separately stale: it claims *path-filtered CI*, while the trigger is
+`workflow_dispatch:` only, with an explicit comment that it "never triggers
+automatically".
 
 ### 6. `era.rs` actively contradicts `tech-engineering.md`
 
@@ -163,7 +178,30 @@ scanner does not attempt.
 Each fix was confirmed to actually detect its defect: reverting the
 `SELF_REF_DIRS` entry makes 2 of the new tests fail
 (`test_gather_excludes_the_audit_tooling_directory`,
-`test_is_self_ref_rejects_tooling_paths`). Suite is 38 passing, up from 34.
+`test_is_self_ref_rejects_tooling_paths`). Suite is 52 passing, up from 34.
+
+### Fix 3: an uppercase-only ID pattern hid a whole namespace
+
+`crates/physics-substrate` ships a separately-numbered namespace written
+`FR-PHYS-substrate-000..007` and documents each one against a specific behaviour
+(`crates/physics-substrate/src/lib.rs:780-1023`, e.g. `FR-PHYS-substrate-002` on
+`PhysicsFields::set` being the only mutator). The gatherer's leading segments were
+`[A-Z]+`, so all eight were rejected and the namespace was invisible to the audit.
+
+Leading segments now accept `[A-Za-z]+`. Lowercase is permitted **only before the
+final numeric group**, which keeps the earlier phantom-row bug fixed: prose
+fragments still collapse to their parent ID rather than becoming new ones.
+
+| Input | Extracts | |
+|---|---|---|
+| `FR-PHYS-substrate-003` | `FR-PHYS-substrate-003` | new, correct |
+| `FR-CIV-TACTICS-025-int` | `FR-CIV-TACTICS-025` | unchanged, no phantom |
+| `FR-CIV-0100-int1..int4` | `FR-CIV-0100` | unchanged |
+| `FR-CIV-INSPECT-9xx` | *(no match)* | unchanged |
+| `FR-CIV-LIFE-014a` | *(no match)* | unchanged |
+
+Inventory 1423 → 1431. The 8 added rows are the substrate IDs, all
+`CODE-ONLY-no-spec`: implemented and self-tagged, with no requirement document to
 
 ### Hypothesis tested and rejected #2: symbol-level call-graph
 
@@ -207,14 +245,40 @@ Until one of those lands, the `crates/hud` accessibility family stays reported
 
 ---
 
-## Inventory-invisible IDs (recorded separately, NOT added to the ledger)
+## Inventory-invisible IDs (CORRECTED 2026-10-01)
 
-A source-vs-inventory scan found 156 source-tagged IDs absent from `docs/audits/_id_inventory_v3.json`. Two leaf-shaped examples were verified by the coordinator and are real work that the ledger cannot currently see:
+An earlier revision of this document claimed "156 source-tagged IDs absent from
+`docs/audits/_id_inventory_v3.json`". **That number does not reproduce** and the
+claim is withdrawn. Re-measured with the gatherer's own `ID_RE`:
 
-- `FR-PHYS-substrate-000..007` — real code and tests
-- `FR-CIV-SPECIATION` — real code and two passing tests at `crates/species/src/speciation.rs:126-209`
+| Measure | Count |
+|---|---|
+| IDs in the inventory | 1423 |
+| Tokens with digits present in the repo that the strict regex rejected | 28 |
+| of those, real separately-numbered requirements | 8 (`FR-PHYS-substrate-000..007`) |
+| of those, prose fragments of an existing ID (`-int`, `-live`, `-9xx`, `014a`) | 11 |
+| of those, un-namespaced local shorthand (`FR-001`, `FR-910`) | 9 |
 
-These are **not** counted in the 205 above. They are a separate reconciliation task: either the inventory generator must scan the repo root and non-`docs/` sources, or these IDs must be registered.
+The real invisible work was **8 IDs in one namespace**, not 156. Two further
+claims in the previous revision are corrected:
+
+- `FR-CIV-SPECIATION` is real (`crates/species/src/speciation.rs:126-209`, two
+  passing tests) but carries **no trailing digits**, so a digit-requiring ID
+  pattern cannot represent it. It is a genuine requirement the scheme cannot
+  express. Deliberately not "fixed": admitting digitless IDs would collide with
+  the bare project words `FR` and `NFR` and every prose occurrence of them.
+- `FR-PHYS-substrate-000..007` *were* invisible and are now visible. See
+  "Detector fix applied 2026-10-01", fix 3.
+
+The remaining unseen IDs are **documentation-only**: 111 IDs appearing solely
+under `docs/`, mostly matrix stubs such as `FR-CIV-3D-AGENTS` that never reached
+an implementation. Only 2 unseen IDs appear outside `docs/`, and both are noise
+(`FR-AUTH-001` inside vendored `.js` bundles under `assets/`, `FR-CIV-0200`
+inside `FR_TRACE_SNAPSHOT_2.md`).
+
+`FR-001`..`FR-011` in `crates/voxel/src/pbr/mod.rs:8-12` are local shorthand for
+a single crate's internal doc list, not a global namespace. Correctly untracked,
+though the shorthand is itself a traceability hazard.
 
 ---
 

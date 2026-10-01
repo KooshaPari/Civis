@@ -262,3 +262,65 @@ def test_no_inventory_row_cites_audit_tooling() -> None:
                 if path.startswith(("scripts/traceability/", "docs/audits/")):
                     offenders.append(f"{row['id']} {bucket} -> {ref}")
     assert not offenders, "audit tooling cited as evidence:\n" + "\n".join(offenders)
+
+
+# --- rule 6: an uppercase-only pattern hid a whole namespace ---------------
+#
+# `crates/physics-substrate` ships a separately-numbered namespace written
+# `FR-PHYS-substrate-000..007`, documented item-by-item in src/lib.rs:780-1023.
+# The `[A-Z]+` leading-segment pattern rejected all eight, so real implemented
+# requirements were invisible to the audit entirely.
+
+
+@pytest.mark.parametrize(
+    "eid",
+    ["FR-PHYS-substrate-000", "FR-PHYS-substrate-007"],
+)
+def test_lowercase_namespace_ids_are_recognised(eid: str) -> None:
+    assert gather.ID_RE.fullmatch(eid), f"{eid} should be a valid ID"
+
+
+@pytest.mark.parametrize(
+    "eid",
+    ["FR-CIV-3D", "FR-CIV-PROTO3D", "NFR-CIV-ACC-001", "FR-CIV-TACTICS-025"],
+)
+def test_uppercase_ids_still_recognised(eid: str) -> None:
+    assert gather.ID_RE.fullmatch(eid), f"{eid} should still be a valid ID"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        # Prose fragments of an already-numbered ID must NOT become IDs.
+        ("FR-CIV-TACTICS-025-int", "FR-CIV-TACTICS-025"),
+        ("FR-CIV-0100-int1..int4", "FR-CIV-0100"),
+        ("FR-CIV-BUILD-010-live", "FR-CIV-BUILD-010"),
+        # Placeholder-style wildcards are not IDs.
+        ("FR-CIV-INSPECT-9xx", None),
+        ("FR-CIV-NOTIFY-9xx", None),
+        ("FR-CIV-LIFE-014a", None),
+    ],
+)
+def test_lowercase_change_does_not_admit_prose_fragments(text: str, expected) -> None:
+    """Lowercase leading segments must not resurrect the phantom-row bug."""
+    m = gather.ID_RE.search(text)
+    got = m.group(0) if m else None
+    assert got == expected, f"{text!r} extracted {got!r}, expected {expected!r}"
+
+
+def test_physics_substrate_ids_are_in_the_inventory() -> None:
+    """The eight substrate IDs must be visible after the regex fix."""
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    if not inventory.exists():
+        pytest.skip("id inventory not generated")
+    import json
+
+    data = json.loads(inventory.read_text(encoding="utf-8"))
+    ids = {r["id"] for r in data.get("ids", [])}
+    for n in range(8):
+        eid = f"FR-PHYS-substrate-{n:03d}"
+        assert eid in ids, f"{eid} missing from the inventory"
+
+
+def test_covers_marker_recognises_lowercase_ids() -> None:
+    assert gather.COVERS_RE.match("    /// Covers FR-PHYS-substrate-004 — ok")

@@ -1,7 +1,7 @@
 {
-  "COVERED": 835,
+  "COVERED": 840,
   "IMPL-NO-TEST": 9,
   "SELF-TEST-ONLY": 228,
-  "SPEC-ONLY": 202,
+  "SPEC-ONLY": 197,
   "TEST-NO-CODE-REF": 156
 }

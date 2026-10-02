@@ -652,3 +652,219 @@ def test_matrix_declares_its_source_inventory() -> None:
 
     data = json.loads(matrix.read_text(encoding="utf-8"))
     assert data.get("source_inventory") == "docs/audits/_id_inventory_v3.json"
+
+
+# --- rule 9: the gate fails OPEN, and guards nothing on 1068 rows -----------
+#
+# Two more holes in the same gate, both reachable without any change to the
+# classifier. Found by probing the real gate rather than reading it.
+#
+# 9a. Fail-open. `regenerate_matrix()` printed a warning when
+# `_gather_ids.py` was absent and then carried on to build the matrix from the
+# stale inventory anyway. Measured: exit code 0, warning emitted, gate green.
+# That is the original SPECIES-300..304 defect with a rename away. A gate whose
+# own diagnostic says the evidence is stale must not report success.
+#
+# 9b. Unguarded statuses. `REGRESSION_BUDGET` and `ABSOLUTE_CEILINGS` cover
+# only the four gap statuses. `COVERED` (840 rows) and `SELF-TEST-ONLY` (228)
+# appear in no budget and no ceiling, so 1068 of 1430 rows could fall out of the
+# matrix and every count would still sit inside its budget. Losing coverage is
+# the failure this gate exists to catch.
+
+
+def _load_gate():
+    gate = ROOT / "scripts" / "traceability" / "check-fr-coverage.py"
+    if not gate.exists():
+        pytest.skip("gate script not present")
+    spec = importlib.util.spec_from_file_location("fr_gate_r9", gate)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["fr_gate_r9"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_gate_refuses_to_run_on_a_missing_inventory_generator() -> None:
+    """A missing `_gather_ids.py` must be fatal, not a warning.
+
+    Proved against the real gate: with the generator renamed aside it printed
+    "matrix may be built on a stale inventory" and exited 0. The diagnostic was
+    correct, so the response to it has to be an error.
+    """
+    module = _load_gate()
+    root = Path(module.ROOT)
+    gather = root / "docs" / "audits" / "_gather_ids.py"
+    if not gather.exists():
+        pytest.skip("inventory generator not present")
+
+    import subprocess
+
+    hidden = gather.with_suffix(".hidden-by-test")
+    gather.rename(hidden)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(root / "scripts" / "traceability" / "check-fr-coverage.py"),
+             "--no-write"],
+            cwd=root, capture_output=True, text=True,
+        )
+    finally:
+        hidden.rename(gather)
+
+    output = proc.stdout + proc.stderr
+    assert proc.returncode != 0, (
+        "gate exited 0 with _gather_ids.py missing; it graded a stale inventory "
+        f"and reported success. Output:\n{output}"
+    )
+
+
+def test_every_status_in_the_matrix_is_guarded_by_the_gate() -> None:
+    """No row may sit in a status the gate cannot detect its loss in.
+
+    A status absent from both REGRESSION_BUDGET and ABSOLUTE_CEILINGS is
+    invisible to the gate: its rows can be deleted, reclassified, or fabricated
+    and every checked count stays inside budget.
+    """
+    module = _load_gate()
+    matrix = ROOT / "docs" / "audits" / "fr-matrix.json"
+    if not matrix.exists():
+        pytest.skip("fr matrix not generated")
+    import json
+
+    data = json.loads(matrix.read_text(encoding="utf-8"))
+    present = {r.get("status", "UNKNOWN") for r in data.get("rows") or []}
+    assert present, "matrix has no rows"
+
+    guarded = (
+        set(module.REGRESSION_BUDGET)
+        | set(module.ABSOLUTE_CEILINGS)
+        | set(module.STATUS_FLOORS)
+    )
+    unguarded = sorted(present - guarded)
+    assert not unguarded, (
+        "these statuses appear in the matrix but in none of "
+        f"REGRESSION_BUDGET, ABSOLUTE_CEILINGS, or STATUS_FLOORS: {unguarded}"
+    )
+
+
+def test_status_floors_fire_when_covered_rows_are_lost() -> None:
+    """The floors must actually catch the loss they exist to catch.
+
+    Checked behaviourally rather than by asserting on the constants. A static
+    property such as "every budget is narrower than the count it guards" is
+    wrong for the gap statuses: `IMPL-NO-TEST` falling is an improvement, so a
+    budget wider than its count is harmless there. `COVERED` falling is the
+    regression that matters, and that is what this exercises.
+
+    Injects a synthetic matrix with rows removed and asserts the gate rejects it.
+    """
+    module = _load_gate()
+
+    import io
+    from contextlib import redirect_stdout
+
+    baseline = {
+        "COVERED": 840,
+        "SELF-TEST-ONLY": 228,
+        "SPEC-ONLY": 197,
+        "TEST-NO-CODE-REF": 156,
+        "IMPL-NO-TEST": 9,
+    }
+
+    def rows_for(counts: dict[str, int]) -> list[dict]:
+        return [
+            {"id": f"FR-TEST-{i:04d}", "status": s}
+            for s, n in counts.items()
+            for i in range(n)
+        ]
+
+    def run_with(counts: dict[str, int]) -> tuple[int, str]:
+        matrix = {"rows": rows_for(counts)}
+        real = module.regenerate_matrix
+        real_snapshot = module.load_snapshot
+        module.regenerate_matrix = lambda: matrix
+        module.load_snapshot = lambda: dict(baseline)
+        buf = io.StringIO()
+        try:
+            with redirect_stdout(buf):
+                import sys as _sys
+
+                _old = _sys.argv
+                _sys.argv = ["check-fr-coverage.py", "--no-write"]
+                try:
+                    rc = module.main()
+                finally:
+                    _sys.argv = _old
+        finally:
+            module.regenerate_matrix = real
+            module.load_snapshot = real_snapshot
+        return rc, buf.getvalue()
+
+    rc_ok, out_ok = run_with(baseline)
+    assert rc_ok == 0, f"baseline should pass, got rc={rc_ok}:\n{out_ok}"
+
+    # 840 -> 700 is a 140-row loss. Far beyond any plausible audit churn, and
+    # entirely invisible before STATUS_FLOORS existed.
+    loss = dict(baseline, COVERED=700)
+    rc_loss, out_loss = run_with(loss)
+    assert rc_loss != 0, (
+        "gate accepted a 140-row drop in COVERED; rows can be lost undetected"
+    )
+    assert "COVERED" in out_loss, f"failure did not name COVERED:\n{out_loss}"
+
+    # The same loss reported as a rise in a gap status must also fail, because a
+    # row that vanishes from COVERED has to land somewhere.
+    inflated = dict(baseline, COVERED=700)
+    inflated["SPEC-ONLY"] += 140
+    rc_inf, _ = run_with(inflated)
+    assert rc_inf != 0, "gate accepted a 140-row shift into SPEC-ONLY"
+
+
+def test_a_new_unguarded_status_fails_the_gate() -> None:
+    """Introducing a status the gate does not know about must be fatal.
+
+    Otherwise a new bucket can be invented and filled, and its rows become
+    invisible to every check at once.
+    """
+    module = _load_gate()
+
+    import io
+    from contextlib import redirect_stdout
+
+    counts = {
+        "COVERED": 840,
+        "SELF-TEST-ONLY": 228,
+        "SPEC-ONLY": 197,
+        "TEST-NO-CODE-REF": 156,
+        "IMPL-NO-TEST": 9,
+    }
+    matrix = {"rows": [
+        {"id": f"FR-TEST-{i:04d}", "status": s}
+        for s, n in counts.items()
+        for i in range(n)
+    ]}
+    matrix["rows"].extend(
+        {"id": f"FR-TEST-NEW-{i:04d}", "status": "PLACEHOLDER-DISGUISE"}
+        for i in range(50)
+    )
+
+    real = module.regenerate_matrix
+    real_snapshot = module.load_snapshot
+    module.regenerate_matrix = lambda: matrix
+    module.load_snapshot = lambda: dict(counts)
+    buf = io.StringIO()
+    try:
+        with redirect_stdout(buf):
+            import sys as _sys
+
+            _old = _sys.argv
+            _sys.argv = ["check-fr-coverage.py", "--no-write"]
+            try:
+                rc = module.main()
+            finally:
+                _sys.argv = _old
+    finally:
+        module.regenerate_matrix = real
+        module.load_snapshot = real_snapshot
+
+    out = buf.getvalue()
+    assert rc != 0, f"gate accepted an unguarded status:\n{out}"
+    assert "PLACEHOLDER-DISGUISE" in out, f"failure did not name the status:\n{out}"

@@ -3,7 +3,7 @@
   "program_id": "gaming-pair-20260929",
   "product": "Civis",
   "repository": "KooshaPari/Civis",
-  "observed_date": "2026-09-30",
+  "observed_date": "2026-10-02",
   "source_snapshot": "b3cd62a7394878cc64d024fbfcfd398b8bb88bf1",
   "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
   "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
@@ -88,18 +88,17 @@
     "Authority review remains open for unsuperseded Draft FR/design-catalogue families; new 205-ID audit cannot be imported wholesale",
     "State denominator has unresolved UNKNOWN and EPHEMERAL_CANDIDATE fields; no completeness percentage is valid",
     "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion",
-    "C-BEH-10 source-proven candidate: CivSaveBundle load restores state.tick but does not explicitly resynchronize Simulation.current_tick before dependent phases; exact vNext control added, execution result pending",
     "125 Simulation / 48 WorldState denominator remains intentionally non-terminal for rows requiring owner/boundary experiments; semantic ontology and closure rules are final",
     "Mounted local/server UI and process-restart journeys remain execution-dependent"
   ],
   "next_bounded_work": [
-    "Treat non-code/spec/doc/oracle/trace layers as final to reasonable falsification standard; do not expand prose without new evidence",
-    "Resolve remaining durable-owner rows only where implementation experiment is required to distinguish durable/derived/boundary semantics",
-    "Run filesystem durability and atomic-replacement matrix on target Linux and Windows; define filesystem-vs-SQLite authority",
-    "Run mounted save -> process destruction -> load -> causal continuation journey",
-    "Run causal emergence and LOD transfer experiments on named workloads",
-    "Obtain owner decisions on historical generated-catalog authority, scientific claims, supported platform/client matrix, multiplayer horizon and compatibility promises",
-    "Run external product/research pilot against realistic alternative stacks"
+    "Do not expand non-execution prose without new evidence; nonexec finality has passed",
+    "Resolve only state rows whose terminal disposition requires implementation/boundary experiments",
+    "Run target Linux/Windows filesystem durability plus filesystem-vs-SQLite reconciliation experiments",
+    "Run mounted save -> process destruction -> load -> causal continuation and local/server journeys",
+    "Run emergence ablations, LOD transfer/conservation and named scale workloads",
+    "Obtain owner decisions on catalog authority, scientific claims, platform/client matrix, multiplayer horizon and compatibility promises",
+    "Run external product/research alternative-stack pilot"
   ],
   "no_third_product_program": true,
   "merge_authorized": false,
@@ -134,7 +133,6 @@
       "successful generation commit switches CURRENT while preserving prior generation"
     ],
     "prototypes_pending": [
-      "current_tick mirror-resynchronization control on exact candidate",
       "filesystem durability/atomic replacement on target Linux and Windows filesystems",
       "SQLite save-index versus filesystem generation authority/reconciliation",
       "terminal durable-owner decisions requiring execution against 125 Simulation / 48 WorldState denominator",
@@ -212,6 +210,7 @@
     "adversarial_review": "FRESH-ADVERSARIAL-REVIEW.md",
     "sota_existence_gate": "SOTA-EXISTENCE-GATE-FINAL.md",
     "meaning": "Specification/documentation/research/trace/oracle-design layers are closed as far as current evidence permits; this is not overall spec/design 100% because execution/empirical/authority blockers remain.",
-    "amendment": "Pass44 source tracing sharpened current_tick mirror execution blocker without reopening semantic contract."
+    "amendment": "Pass45 exact candidate execution closed C-SI09 tick-mirror resynchronization for the opt-in vNext bridge: run 36820662241, 23/23 semantic lib tests green.",
+    "reopen_rule": "Reopen non-execution contract only for new user intent, contradictory source evidence, a newly discovered state-owner/model class, failed fresh-review challenge, or changed SOTA that materially alters build/bootstrap/existence decisions."
   }
 }

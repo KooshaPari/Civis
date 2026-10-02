@@ -40,6 +40,68 @@ WORK = Path(os.environ.get("CIVIS_AUDIT_WORK", ".")).resolve()
 OUT_JSON = WORK / "docs/audits/_id_inventory_v3.json"
 GENERATED_AT = os.environ.get("CIVIS_AUDIT_DATE", date.today().isoformat())
 
+# The audit's own removal tooling replaces a requirement tag with a
+# `// [unbound] <id>: <reason>` rationale explaining why the tag was wrong:
+# see docs/audits/_apply_verdicts.py, whose is_tag_line() already skips these
+# lines so it never mistakes one for a live tag. The gatherer did not, so every
+# one of those rationales was being counted as `in_code` evidence for the very
+# requirement the comment says is unbound. Measured, not estimated: 139 IDs
+# carry at least one `[unbound]` rationale (183 references). 96 had no other
+# code reference, and the matrix moved 97 of 1430 rows out of COVERED. An
+# earlier draft here claimed "133 IDs ... reported COVERED"; that was a
+# pre-regeneration heuristic, not a matrix diff, and it was wrong.
+UNBOUND_TOKEN = "[unbound]"
+
+# The same tooling has a second output shape. `_apply_verdicts.py:175`,
+# `_unbind_false_tags.py:261` and `_unbind_protocol_modhost.py:404` all open a
+# plain `//` comment block with the literal line
+#
+#     // Removed, with the reason each cannot be discharged here:
+#
+# and then list one `// <id>: <reason>` line per requirement it unbound. Those
+# per-id lines carry NO `[unbound]` token, so the rule above does not see them,
+# and the gatherer credited every one of them as `in_code`. Each line is a
+# verbatim restatement of why the tag was removed from the declaration below,
+# so crediting it asserts precisely the coverage the comment denies.
+#
+# Measured: 113 such blocks exist, and 83 references across 77 IDs sit inside
+# one. Every one is a false `in_code` credit. Detection is structural rather
+# than keyword-based on purpose -- three tools emit the header, and matching
+# prose like "does not exist" would also catch legitimate discussion.
+REMOVAL_MARKER = "Removed, with the reason each cannot be discharged here"
+
+
+def removal_block_ranges(lines):
+    """Yield (first, last) 1-based line spans of removal-rationale blocks.
+
+    A block starts at a line containing REMOVAL_MARKER and extends forward over
+    contiguous plain `//` line comments. A `///` or `//!` doc comment ENDS the
+    block: in `crates/engine/src/fixed_math.rs` the removal block at 18-20 is
+    immediately followed by the `Fixed` type's real doc comment at 21-27, and
+    that doc comment legitimately carries requirement tags. Treating `///` as
+    in-block would silently strip ~200 real tags and was the reason an earlier
+    pass of this analysis over-reported the blast radius.
+    """
+    for i, line in enumerate(lines, 1):
+        if REMOVAL_MARKER not in line:
+            continue
+        last = i
+        k = i
+        while k < len(lines):
+            k += 1
+            t = lines[k - 1].strip()
+            if t.startswith("///") or t.startswith("//!"):
+                break
+            if not t.startswith("//"):
+                break
+            last = k
+        yield (i, last)
+
+
+def in_removal_block(ranges, line_no):
+    """True if `line_no` falls inside any removal-rationale block span."""
+    return any(a <= line_no <= b for a, b in ranges)
+
 SCAN_DIRS = [
     "crates", "clients", "docs", "agileplus-specs", "web", "scripts", "mods",
     "scenarios", "schemas",
@@ -383,6 +445,9 @@ def main():
         # Code refs that came from a `#[cfg(test)]` block inside a src/*.rs
         # file. Post-passed into the `self_test_only` flag below.
         "_selftest_code": set(),
+        # `file:line` refs sitting on an `[unbound]` rationale rather than on a
+        # real tag. Post-passed into `unbound_refs` below.
+        "_unbound_code": set(),
     })
 
     max_refs = 8  # cap per category
@@ -397,6 +462,7 @@ def main():
         in_func = rel == "FUNCTIONAL_REQUIREMENTS.md"
 
         lines = text.splitlines()
+        removal_ranges = list(removal_block_ranges(lines))
         if kind == "test":
             in_cfg_test = [True] * (len(lines) + 1)
         else:
@@ -436,6 +502,21 @@ def main():
                 eid = cleaned
             rec = by_id[eid]
             ref = f"{rel}:{line_no}"
+            src = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+            # A `[unbound]` rationale names the ID to record that its tag was
+            # removed, so it is evidence about the requirement, not evidence
+            # that the requirement is implemented. Crediting it as `in_code`
+            # moved 97 of 1430 matrix rows out of COVERED; see UNBOUND_TOKEN.
+            if kind == "code" and UNBOUND_TOKEN in src:
+                rec["_unbound_code"].add(ref)
+                continue
+            # Same verdict, different shape: a per-id line inside a
+            # "Removed, with the reason each cannot be discharged here:" block
+            # states that the tag was unbound from the declaration below.
+            # Crediting it as `in_code` asserts exactly what it denies.
+            if kind == "code" and in_removal_block(removal_ranges, line_no):
+                rec["_unbound_code"].add(ref)
+                continue
             is_cover = bool(COVERS_RE.match(lines[line_no - 1])) if 0 < line_no <= len(lines) else False
             is_test_ref = kind == "test" or in_cfg_test[line_no] or (is_cover and has_cfg_test_attr)
             if is_test_ref:
@@ -493,11 +574,16 @@ def main():
     for eid in sorted(by_id.keys()):
         rec = by_id[eid]
         selftests = rec.pop("_selftest_code", set())
+        unbound = sorted(rec.pop("_unbound_code", set()))
         code_refs = rec["in_code"]
         # True only when EVERY code reference came from a self-test block, i.e.
         # the ID has no code reference outside test code. A single real
         # implementation line flips this back to False.
         rec["self_test_only"] = bool(code_refs) and selftests.issuperset(code_refs)
+        # Recorded, not counted: where an `[unbound]` rationale says this ID's
+        # tag was removed. Kept so the audit can name the reason an ID lost its
+        # code evidence instead of silently dropping it.
+        rec["unbound_refs"] = unbound
         ids_out.append({"id": eid, **rec})
 
     OUT_JSON.write_text(

@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -1241,8 +1243,13 @@ def test_status_floors_fire_when_covered_rows_are_lost() -> None:
     import io
     from contextlib import redirect_stdout
 
+    # Baseline derived from the gate's own floor plus a margin, so rebasing the
+    # floor (which happened on 2026-10-02 when 97 `[unbound]` false credits were
+    # removed) does not require editing this test by hand, and the test cannot
+    # silently drift away from the value it is supposed to be policing.
+    floor = module.STATUS_FLOORS["COVERED"]
     baseline = {
-        "COVERED": 840,
+        "COVERED": floor + 140,
         "SELF-TEST-ONLY": 228,
         "SPEC-ONLY": 197,
         "TEST-NO-CODE-REF": 156,
@@ -1281,21 +1288,23 @@ def test_status_floors_fire_when_covered_rows_are_lost() -> None:
     rc_ok, out_ok = run_with(baseline)
     assert rc_ok == 0, f"baseline should pass, got rc={rc_ok}:\n{out_ok}"
 
-    # 840 -> 700 is a 140-row loss. Far beyond any plausible audit churn, and
+    # floor + 140 -> floor - 1 is a 141-row loss, and it has to land strictly
+    # BELOW the floor: the check is `actual < floor`, so a count sitting exactly
+    # on the floor passes by design. Far beyond any plausible audit churn, and
     # entirely invisible before STATUS_FLOORS existed.
-    loss = dict(baseline, COVERED=700)
+    loss = dict(baseline, COVERED=floor - 1)
     rc_loss, out_loss = run_with(loss)
     assert rc_loss != 0, (
-        "gate accepted a 140-row drop in COVERED; rows can be lost undetected"
+        "gate accepted a 141-row drop in COVERED; rows can be lost undetected"
     )
     assert "COVERED" in out_loss, f"failure did not name COVERED:\n{out_loss}"
 
     # The same loss reported as a rise in a gap status must also fail, because a
     # row that vanishes from COVERED has to land somewhere.
-    inflated = dict(baseline, COVERED=700)
-    inflated["SPEC-ONLY"] += 140
+    inflated = dict(baseline, COVERED=floor - 1)
+    inflated["SPEC-ONLY"] += 141
     rc_inf, _ = run_with(inflated)
-    assert rc_inf != 0, "gate accepted a 140-row shift into SPEC-ONLY"
+    assert rc_inf != 0, "gate accepted a 141-row shift into SPEC-ONLY"
 
 
 def test_a_new_unguarded_status_fails_the_gate() -> None:
@@ -1480,3 +1489,320 @@ def test_index_generator_mints_no_ids_that_look_doubled_prefix() -> None:
         assert "FR-NFR-" not in got and "NFR-NFR-" not in got, (
             f"slug_to_id({slug!r}) produced a doubled-prefix phantom: {got!r}"
         )
+
+
+# --- rule: an [unbound] rationale is not an implementation ------------------
+#
+# `docs/audits/_apply_verdicts.py` replaces a wrong requirement tag with a
+# `// [unbound] <id>: <reason>` comment recording why the tag was removed. The
+# gatherer credited that comment as `in_code`, so requirements whose comments
+# read "NOT IMPLEMENTED" reported COVERED. These tests fail on the pre-fix
+# gatherer.
+
+
+def test_unbound_marker_is_not_counted_as_code_evidence() -> None:
+    """A `[unbound]` rationale must not make an ID look implemented."""
+    assert gather.UNBOUND_TOKEN == "[unbound]"
+
+    src = (
+        "// [unbound] FR-CIV-ZZQA-001: NOT IMPLEMENTED. The requirement needs a\n"
+        "// rendering pass that does not exist in this repository.\n"
+        "pub struct Whatever;\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "docs" / "audits").mkdir(parents=True)
+        crate = root / "crates" / "zzqa"
+        crate.mkdir(parents=True)
+        (crate / "src").mkdir()
+        (crate / "src" / "lib.rs").write_text(src, encoding="utf-8")
+        old = os.environ.get("CIVIS_AUDIT_WORK")
+        os.environ["CIVIS_AUDIT_WORK"] = str(root)
+        try:
+            gather.WORK = root.resolve()
+            gather.OUT_JSON = root / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+            gather.main()
+            data = json.loads(gather.OUT_JSON.read_text(encoding="utf-8"))
+        finally:
+            if old is None:
+                os.environ.pop("CIVIS_AUDIT_WORK", None)
+            else:
+                os.environ["CIVIS_AUDIT_WORK"] = old
+            gather.WORK = ROOT
+            gather.OUT_JSON = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+
+    entry = next(e for e in data["ids"] if e["id"] == "FR-CIV-ZZQA-001")
+    assert entry["in_code"] == [], (
+        "the [unbound] rationale was credited as a code reference: "
+        f"{entry['in_code']}"
+    )
+    assert entry["unbound_refs"], "the rationale should be recorded, not dropped"
+    # The scratch crate carries no spec source, so the row is CODE-ONLY-no-spec
+    # rather than SPEC-ONLY. Either is correct; the point of the assertion is
+    # that it is no longer COVERED on a comment saying NOT IMPLEMENTED.
+    assert audit.classify(entry) != "COVERED", (
+        "a requirement documented as NOT IMPLEMENTED reported COVERED"
+    )
+
+
+def test_real_tag_next_to_an_unbound_note_still_counts() -> None:
+    """The fix must not disable legitimate tags in the same file.
+
+    `crates/engine/src/build/src/lib.rs` carries a stack of `[unbound]`
+    rationales directly above `SCHEMA_VERSION`, and `crates/build` has other
+    IDs tagged on real declarations. Excluding `[unbound]` lines must not
+    disturb them.
+    """
+    src = (
+        "// [unbound] FR-CIV-ZZQB-001: NOT IMPLEMENTED, no such symbol.\n"
+        "pub const SCHEMA_VERSION: &str = \"0.1.0-stub\";\n"
+        "\n"
+        "/// Implements FR-CIV-ZZQB-002.\n"
+        "pub fn real_thing() -> u32 { 7 }\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "docs" / "audits").mkdir(parents=True)
+        crate = root / "crates" / "zzqb"
+        crate.mkdir(parents=True)
+        (crate / "src").mkdir()
+        (crate / "src" / "lib.rs").write_text(src, encoding="utf-8")
+        old = os.environ.get("CIVIS_AUDIT_WORK")
+        os.environ["CIVIS_AUDIT_WORK"] = str(root)
+        try:
+            gather.WORK = root.resolve()
+            gather.OUT_JSON = root / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+            gather.main()
+            data = json.loads(gather.OUT_JSON.read_text(encoding="utf-8"))
+        finally:
+            if old is None:
+                os.environ.pop("CIVIS_AUDIT_WORK", None)
+            else:
+                os.environ["CIVIS_AUDIT_WORK"] = old
+            gather.WORK = ROOT
+            gather.OUT_JSON = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+
+    by_id = {e["id"]: e for e in data["ids"]}
+    assert by_id["FR-CIV-ZZQB-001"]["in_code"] == []
+    assert by_id["FR-CIV-ZZQB-002"]["in_code"] == ["crates/zzqb/src/lib.rs:4"], (
+        "a real tag on a real declaration was dropped: "
+        f"{by_id['FR-CIV-ZZQB-002']['in_code']}"
+    )
+
+
+def test_no_committed_row_is_covered_only_by_unbound_refs() -> None:
+    """No row in the committed inventory may be covered by `[unbound]` alone.
+
+    This is the repo-wide assertion for the defect: before the fix, 97 of the
+    1430 matrix rows reported COVERED with every code reference sitting on a
+    comment that says the requirement is NOT IMPLEMENTED.
+
+    The population assertion below is load-bearing, not decoration. Asserting
+    only "no offenders" passes vacuously when `unbound_refs` is absent
+    entirely -- which is exactly what a reverted gatherer produces, because it
+    never writes the key. The offender loop then skips every ID via
+    `if not refs or not unbound: continue` and reports an empty list, so the
+    test goes green against the very defect it exists to catch. Requiring a
+    non-empty population first makes the emptiness conclusion meaningful.
+    """
+    inv = _inventory()
+    populated = [eid for eid, e in inv.items() if e.get("unbound_refs")]
+    assert populated, (
+        "no ID carries an [unbound] reference, so the offender check below "
+        "would pass vacuously: the invariant is untested, not satisfied"
+    )
+    assert len(populated) >= 100, (
+        f"only {len(populated)} IDs carry [unbound] refs; the 2026-10-02 "
+        f"measurement was 139, so the gatherer is probably not recording them"
+    )
+    offenders = []
+    for eid, e in inv.items():
+        refs = e.get("in_code") or []
+        unbound = e.get("unbound_refs") or []
+        if not refs or not unbound:
+            continue
+        if set(unbound).issuperset(set(refs)):
+            offenders.append(eid)
+    assert not offenders, (
+        f"{len(offenders)} rows have only [unbound] code evidence, e.g. "
+        f"{offenders[:8]}"
+    )
+
+
+def test_unbound_refs_never_appear_in_in_code() -> None:
+    """`unbound_refs` and `in_code` must be disjoint sets for every ID.
+
+    As in the sibling test, the disjointness result is meaningless unless
+    `unbound_refs` is actually populated: a gatherer that never records the
+    key trivially satisfies "no overlap" while crediting every `[unbound]`
+    comment as code. The population check keeps the assertion honest.
+    """
+    inv = _inventory()
+    populated = [eid for eid, e in inv.items() if e.get("unbound_refs")]
+    assert len(populated) >= 100, (
+        f"only {len(populated)} IDs carry [unbound] refs; the 2026-10-02 "
+        f"measurement was 139, so disjointness would be vacuous"
+    )
+    both = []
+    for eid, e in inv.items():
+        overlap = set(e.get("in_code") or []) & set(e.get("unbound_refs") or [])
+        if overlap:
+            both.append((eid, sorted(overlap)))
+    assert not both, f"{len(both)} IDs list a ref as both code and unbound: {both[:5]}"
+
+
+# --- rule 13: removal-rationale blocks are not implementation evidence ------
+
+
+def test_removal_block_lines_are_not_counted_as_code_evidence() -> None:
+    """A per-id line inside a removal block must not credit `in_code`.
+
+    `_apply_verdicts.py` and its two siblings write
+
+        // Removed, with the reason each cannot be discharged here:
+        // FR-SESSION-004: needs a NationAction queue; that type does not exist
+
+    The second line names the requirement only to record that its tag was
+    removed from the declaration below. Crediting it asserts exactly the
+    coverage the comment denies.
+    """
+    assert gather.REMOVAL_MARKER == (
+        "Removed, with the reason each cannot be discharged here"
+    )
+    src = (
+        "// The following 1 requirement tag was removed from Helper.\n"
+        "// It is not discharged by this symbol.\n"
+        "//\n"
+        "// Removed, with the reason each cannot be discharged here:\n"
+        "// FR-CIV-ZZZB-001: needs a NationAction queue; no such type exists\n"
+        "pub fn helper() -> u32 { 1 }\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "docs" / "audits").mkdir(parents=True)
+        crate = root / "crates" / "zzzb"
+        (crate / "src").mkdir(parents=True)
+        (crate / "src" / "lib.rs").write_text(src, encoding="utf-8")
+        old = os.environ.get("CIVIS_AUDIT_WORK")
+        os.environ["CIVIS_AUDIT_WORK"] = str(root)
+        try:
+            gather.WORK = root.resolve()
+            gather.OUT_JSON = root / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+            gather.main()
+            data = json.loads(gather.OUT_JSON.read_text(encoding="utf-8"))
+        finally:
+            if old is None:
+                os.environ.pop("CIVIS_AUDIT_WORK", None)
+            else:
+                os.environ["CIVIS_AUDIT_WORK"] = old
+            gather.WORK = ROOT
+            gather.OUT_JSON = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+
+    entry = next(e for e in data["ids"] if e["id"] == "FR-CIV-ZZZB-001")
+    assert entry["in_code"] == [], (
+        "a removal rationale was credited as code evidence: "
+        f"{entry['in_code']}"
+    )
+    assert entry["unbound_refs"], "the rationale should be recorded, not dropped"
+
+
+def test_doc_comment_after_a_removal_block_still_counts() -> None:
+    """A `///` doc comment ends a removal block and is real evidence again.
+
+    This is the regression for the over-broad version of the rule. Treating
+    every comment after the marker as in-block swallowed the legitimate tags on
+    `Fixed` in `crates/engine/src/fixed_math.rs` and reported 223 affected IDs
+    instead of the correct 77.
+    """
+    src = (
+        "// Removed, with the reason each cannot be discharged here:\n"
+        "// FR-CIV-ZZZC-001: needs a NationAction queue; no such type exists\n"
+        "/// Implements FR-CIV-ZZZC-002.\n"
+        "pub struct RealThing(pub u64);\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "docs" / "audits").mkdir(parents=True)
+        crate = root / "crates" / "zzzc"
+        (crate / "src").mkdir(parents=True)
+        (crate / "src" / "lib.rs").write_text(src, encoding="utf-8")
+        old = os.environ.get("CIVIS_AUDIT_WORK")
+        os.environ["CIVIS_AUDIT_WORK"] = str(root)
+        try:
+            gather.WORK = root.resolve()
+            gather.OUT_JSON = root / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+            gather.main()
+            data = json.loads(gather.OUT_JSON.read_text(encoding="utf-8"))
+        finally:
+            if old is None:
+                os.environ.pop("CIVIS_AUDIT_WORK", None)
+            else:
+                os.environ["CIVIS_AUDIT_WORK"] = old
+            gather.WORK = ROOT
+            gather.OUT_JSON = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+            gather._STUB_HEADER_CACHE.clear()
+
+    by_id = {e["id"]: e for e in data["ids"]}
+    assert by_id["FR-CIV-ZZZC-001"]["in_code"] == [], (
+        f"removal block not excluded: {by_id['FR-CIV-ZZZC-001']['in_code']}"
+    )
+    assert by_id["FR-CIV-ZZZC-002"]["in_code"] == ["crates/zzzc/src/lib.rs:3"], (
+        "a doc comment right after a removal block was wrongly excluded: "
+        f"{by_id['FR-CIV-ZZZC-002']['in_code']}"
+    )
+
+
+def test_removal_block_ranges_stop_at_doc_comments() -> None:
+    """The span helper must terminate on `///`, `//!`, blank, and code."""
+    lines = [
+        "// Removed, with the reason each cannot be discharged here:",   # 1
+        "// FR-X-001: reason one",                                       # 2
+        "// FR-X-002: reason two",                                       # 3
+        "/// doc comment",                                               # 4
+        "// FR-X-003: not in the block",                                # 5
+        "",                                                              # 6
+        "// FR-X-004: not in the block either",                          # 7
+        "pub struct S;",                                                 # 8
+    ]
+    spans = list(gather.removal_block_ranges(lines))
+    assert spans == [(1, 3)], spans
+    assert gather.in_removal_block(spans, 3)
+    for n in (4, 5, 6, 7, 8):
+        assert not gather.in_removal_block(spans, n), f"line {n} wrongly in block"
+
+
+def test_no_committed_code_ref_sits_inside_a_removal_block() -> None:
+    """Repo-wide: no `in_code` reference may land inside a removal block."""
+    inv = _inventory()
+    files = set()
+    for e in inv.values():
+        for ref in e.get("in_code") or []:
+            files.add(ref.rpartition(":")[0])
+
+    offenders = []
+    for rel in sorted(files):
+        p = ROOT / rel
+        try:
+            lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+        except Exception:
+            continue
+        spans = list(gather.removal_block_ranges(lines))
+        if not spans:
+            continue
+        for eid, e in inv.items():
+            for ref in e.get("in_code") or []:
+                r2, _, ln2 = ref.rpartition(":")
+                if r2 == rel and gather.in_removal_block(spans, int(ln2)):
+                    offenders.append((eid, ref))
+
+    assert not offenders, (
+        f"{len(offenders)} in_code refs sit inside a removal-rationale block, "
+        f"e.g. {offenders[:5]}"
+    )

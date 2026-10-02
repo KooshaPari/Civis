@@ -45,6 +45,18 @@ SNAPSHOT = ROOT / "docs" / "audits" / ".fr-snapshot.json"
 # Every budget must stay strictly below the current count of the status it
 # guards. A budget equal to or wider than the count means the status could fall
 # to zero and still pass, which is the one loss this gate exists to catch.
+#
+# REBASED 2026-10-02. 97 rows left COVERED and 96 entered TEST-NO-CODE-REF
+# because `_gather_ids.py` had been crediting `// [unbound] <id>: NOT
+# IMPLEMENTED` rationales as `in_code`, and a second pass found 74 more rows
+# covered only by a per-id line inside a "Removed, with the reason each cannot
+# be discharged here:" block. Both are comments asserting a requirement is NOT
+# met, so crediting them asserted exactly what they deny.
+#
+# The budgets below are unchanged: the corrections moved COVERED 840 -> 669 and
+# TEST-NO-CODE-REF 156 -> 326, and a 20-row regression budget still bites against
+# the larger TEST-NO-CODE-REF base, so no widening was needed or justified. Only
+# the COVERED floor, which had to follow a number that was itself wrong, moved.
 REGRESSION_BUDGET = {
     "SPEC-ONLY": 20,
     "TEST-NO-CODE-REF": 20,
@@ -72,8 +84,17 @@ ABSOLUTE_CEILINGS = {
 #
 # These two carried 1068 of 1430 rows while sitting in no budget and no ceiling
 # at all, so all of them could disappear with the gate reporting success.
+#
+# The COVERED floor moved 800 -> 600 on 2026-10-02 for the same reason as the
+# budgets above: 97 rows were covered only by their own `[unbound] NOT
+# IMPLEMENTED` comment. A second pass the same day found 74 more rows covered
+# only by a line inside a "Removed, with the reason each cannot be discharged
+# here:" block, which carries no `[unbound]` token and so escaped the first rule.
+# Together the two passes took COVERED from 840 to 669. The floor is now 600,
+# which keeps the guard meaningful against the corrected baseline rather than
+# pinning a number already known to be inflated.
 STATUS_FLOORS = {
-    "COVERED": 800,
+    "COVERED": 600,
     "SELF-TEST-ONLY": 220,
 }
 

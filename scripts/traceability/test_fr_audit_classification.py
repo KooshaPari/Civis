@@ -1198,6 +1198,42 @@ def test_gate_refuses_to_run_on_a_missing_inventory_generator() -> None:
     )
 
 
+def test_only_one_ci_workflow_guards_the_fr_audit() -> None:
+    """Pins the fact that `fr-coverage-gate.yml` is the ONLY CI guard on this data.
+
+    Two other workflows look relevant and are not:
+
+    - `audit-fr-coverage.yml` runs `Tools/audit-fr-coverage/audit.sh`, which
+      reads only three hand-maintained markdown tables under
+      `docs/traceability/` and greps them for `| dormant |` status cells. It
+      never opens `fr-matrix.json` or `_id_inventory_v3.json`, so a change to
+      the gatherer cannot affect its counts or its 200-row threshold. Running
+      it is not evidence that the audit is sound.
+    - `fr-coverage.yml` is `workflow_dispatch` only, and its coverage job runs
+      `scripts/fr-coverage/run-fr-coverage.sh`, which likewise never reads the
+      matrix. `scripts/traceability/check-traceability.sh` (pre-push) does not
+      either; it checks that FR-CIV ids appear in TRACEABILITY_MATRIX.md.
+
+    If a second workflow starts grading the audit artifacts, this test should
+    be updated to name it. If one ever stops grading them, this test failing is
+    the signal that the audit has lost its safety net.
+    """
+    wf = ROOT / ".github" / "workflows"
+    if not wf.exists():
+        pytest.skip("no workflows directory")
+
+    guards = {
+        p.name
+        for p in wf.glob("*.yml")
+        if "check-fr-coverage.py" in p.read_text(encoding="utf-8")
+    }
+    assert guards == {"fr-coverage-gate.yml"}, (
+        f"expected fr-coverage-gate.yml to be the only workflow running the "
+        f"gate; found {sorted(guards)}. A new guard is good news and should be "
+        f"recorded here; a removed one means the audit lost its CI safety net."
+    )
+
+
 def test_provenance_header_withdraws_its_ids_file_scoped() -> None:
     """A header declaring an id undefined withdraws it for that whole file.
 

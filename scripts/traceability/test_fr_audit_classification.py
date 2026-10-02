@@ -1198,6 +1198,72 @@ def test_gate_refuses_to_run_on_a_missing_inventory_generator() -> None:
     )
 
 
+def test_test_no_code_ref_rows_carry_no_code_refs() -> None:
+    """The status name is the contract: this status means zero code references.
+
+    `TEST-NO-CODE-REF` exists precisely to say a requirement is exercised by
+    tests but no implementation can be pointed at. If a row in that status
+    carries a `code_refs` entry, the gatherer found implementation the matrix
+    builder did not, and the status is a lie in the optimistic direction: the
+    row looks audited while actually being credited to code.
+
+    This is the artifact-level half of the removal-block fix. The gatherer
+    rule keeps provenance prose out of `in_code`, and this asserts the rebuilt
+    matrix actually reflects that, rather than trusting the comment describing
+    it.
+    """
+    matrix = ROOT / "docs" / "audits" / "fr-matrix.json"
+    if not matrix.exists():
+        pytest.skip("fr matrix not generated")
+    import json
+
+    rows = json.loads(matrix.read_text(encoding="utf-8")).get("rows") or []
+    violations = [
+        {"id": r.get("id"), "code_refs": r.get("code_refs")}
+        for r in rows
+        if r.get("status") == "TEST-NO-CODE-REF" and r.get("code_refs")
+    ]
+    assert not violations, (
+        f"{len(violations)} TEST-NO-CODE-REF row(s) carry code_refs, so they "
+        f"are credited to implementation while labelled as having none: "
+        f"{violations[:10]}"
+    )
+
+
+def test_every_regression_budget_is_strictly_below_its_live_count() -> None:
+    """A budget at or above its count guards nothing.
+
+    `REGRESSION_BUDGET` entries are checked as a delta against the snapshot,
+    `if delta > budget`. So a budget wider than the status' entire population
+    means the status could fall all the way to zero and the gate would still
+    pass. The gate file states this invariant in prose; nothing enforced it,
+    and `IMPL-NO-TEST` sat at budget 10 against a live count of 9.
+    """
+    module = _load_gate()
+    matrix = ROOT / "docs" / "audits" / "fr-matrix.json"
+    if not matrix.exists():
+        pytest.skip("fr matrix not generated")
+    import json
+
+    rows = json.loads(matrix.read_text(encoding="utf-8")).get("rows") or []
+    counts: dict[str, int] = {}
+    for r in rows:
+        s = r.get("status", "UNKNOWN")
+        counts[s] = counts.get(s, 0) + 1
+
+    # Only statuses that actually hold rows are in scope. A budget on a status
+    # with a live count of 0 is an anti-fabrication budget: its job is to fail
+    # when rows APPEAR, so it is legitimately wider than zero.
+    offenders = {
+        s: {"budget": b, "live": counts.get(s, 0)}
+        for s, b in module.REGRESSION_BUDGET.items()
+        if counts.get(s, 0) > 0 and counts.get(s, 0) <= b
+    }
+    assert not offenders, (
+        f"regression budget(s) not strictly below the live count: {offenders}"
+    )
+
+
 def test_every_status_in_the_matrix_is_guarded_by_the_gate() -> None:
     """No row may sit in a status the gate cannot detect its loss in.
 

@@ -60,7 +60,16 @@ SNAPSHOT = ROOT / "docs" / "audits" / ".fr-snapshot.json"
 REGRESSION_BUDGET = {
     "SPEC-ONLY": 20,
     "TEST-NO-CODE-REF": 20,
-    "IMPL-NO-TEST": 10,
+    # IMPL-NO-TEST was 10 against a live count of 9. A regression budget is
+    # checked as a delta (`if delta > budget`), so it only ever fails on upward
+    # drift. A budget at or above the status' whole population therefore guards
+    # nothing in the downward direction: all 9 rows could be deleted or
+    # reclassified, the count would fall to 0, and the gate would still pass.
+    # IMPL-NO-TEST has no entry in STATUS_FLOORS, so nothing else covered it.
+    # The file's own rule is that every budget stays strictly below its live
+    # count; 10 violated it and nothing enforced the rule. 8 keeps a +9 move
+    # failing while leaving the 20-row headroom the other budgets retain.
+    "IMPL-NO-TEST": 8,
     "STUB-TEST-ONLY": 5,
     "CODE-ONLY-no-spec": 2,
 }

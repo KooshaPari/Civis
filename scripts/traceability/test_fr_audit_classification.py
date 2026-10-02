@@ -868,3 +868,135 @@ def test_a_new_unguarded_status_fails_the_gate() -> None:
     out = buf.getvalue()
     assert rc != 0, f"gate accepted an unguarded status:\n{out}"
     assert "PLACEHOLDER-DISGUISE" in out, f"failure did not name the status:\n{out}"
+
+
+# --- rule 10: index.md is a second, stale source of truth ------------------
+#
+# `docs/traceability/index.md` claims "Auto-generated 2026-09-16 for 1231 FRs"
+# but no generator for it exists in the repo, and it has drifted from the matrix
+# on 435 of the 1229 rows they share. It also uses a status vocabulary the matrix
+# never emits: 631 rows claim `CODE-ONLY-no-spec`.
+#
+# Two sources of truth for coverage is the root problem, not the drift itself.
+# Rather than hand-patch 435 rows (which would be cosmetic and would hide the
+# next divergence), the file is required to stop asserting coverage statuses at
+# all and to point at the matrix instead. This test enforces that.
+
+
+def test_index_md_does_not_assert_its_own_coverage_statuses() -> None:
+    """index.md must not carry a coverage status column that can drift.
+
+    Measured drift before this rule: 163 agreements, 435 disagreements, 631 rows
+    in a status the matrix cannot produce, out of 1229 comparable rows. The file
+    is dated 2026-09-16 and has no generator, so nothing keeps it current.
+
+    Spot-checks confirmed the matrix is the correct side of every disagreement
+    sampled: `FR-AI-001` is defined at docs/FR.md:43, implemented at
+    crates/ai/src/decision.rs:3, and tested at crates/ai/tests/fr_fr_ai_001.rs:1,
+    yet index.md still called it SPEC-ONLY.
+    """
+    index = ROOT / "docs" / "traceability" / "index.md"
+    if not index.exists():
+        pytest.skip("traceability index not present")
+
+    import re
+
+    text = index.read_text(encoding="utf-8")
+
+    # The stale vocabulary specifically. The matrix derives these from evidence;
+    # index.md asserts them by hand.
+    for stale in ("CODE-ONLY-no-spec",):
+        offenders = [
+            i for i, line in enumerate(text.splitlines(), 1)
+            if stale in line and line.startswith("|")
+        ]
+        assert not offenders, (
+            f"{index.name} still asserts {stale!r} on {len(offenders)} rows "
+            f"(first at line {offenders[0] if offenders else '-'}). That status is "
+            "hand-maintained, has no generator, and disagrees with the matrix."
+        )
+
+    # A header that claims auto-generation with no generator behind it.
+    m = re.search(r"^>\s*Auto-generated\s+([0-9-]+)", text, re.M)
+    assert m is None, (
+        f"{index.name} claims 'Auto-generated {m.group(1) if m else ''}' but no "
+        "generator for it exists in the repo. Either restore the generator or "
+        "remove the claim."
+    )
+
+    # It must point readers at the authoritative artifact.
+    assert "fr-matrix.json" in text or "fr-coverage-audit" in text, (
+        f"{index.name} does not point at the authoritative coverage artifact "
+        "(docs/audits/fr-matrix.json)"
+    )
+
+
+def test_index_md_generator_is_idempotent() -> None:
+    """Running the generator twice must produce identical bytes.
+
+    A generator that is not idempotent cannot be trusted to be the thing that
+    maintains the file, which was the original problem: nothing regenerated it,
+    so it drifted for two weeks. This checks the file on disk already matches what
+    the generator produces.
+    """
+    gen = ROOT / "scripts" / "traceability" / "gen-traceability-index.py"
+    index = ROOT / "docs" / "traceability" / "index.md"
+    if not gen.exists() or not index.exists():
+        pytest.skip("index generator not present")
+
+    import subprocess
+
+    before = index.read_bytes()
+    proc = subprocess.run(
+        [sys.executable, str(gen)], cwd=ROOT, capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, f"generator failed:\n{proc.stdout}{proc.stderr}"
+
+    after = index.read_bytes()
+    assert before == after, (
+        f"{index.name} is not what its generator produces; re-run "
+        f"scripts/traceability/gen-traceability-index.py"
+    )
+
+
+def test_index_generator_mints_no_ids_that_look_doubled_prefix() -> None:
+    """`fr-nfr-*` directories must yield `NFR-*`, never `FR-NFR-*`.
+
+    The directory convention is `fr-` + lowercased ID, so an NFR requirement
+    lands in `fr-nfr-civ-port-001/`. Reading the `fr-` as the ID kind produced
+    `FR-NFR-CIV-PORT-001`, and regenerating the index added exactly 10 such
+    phantom SPEC-ONLY rows that no spec anywhere backs.
+
+    This asserts on the generator's own mapping rather than on the output file,
+    because the phantoms only appear when the matrix is rebuilt from the index,
+    which the output file alone cannot show.
+    """
+    gen = ROOT / "scripts" / "traceability" / "gen-traceability-index.py"
+    if not gen.exists():
+        pytest.skip("index generator not present")
+
+    spec = importlib.util.spec_from_file_location("fr_gen_index", gen)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["fr_gen_index"] = module
+    spec.loader.exec_module(module)
+
+    cases = {
+        "fr-civ-species-204": "FR-CIV-SPECIES-204",
+        "fr-ai-001": "FR-AI-001",
+        "fr-civ-0001-tick": "FR-CIV-0001-TICK",
+        # The doubled-prefix directories, which must not become FR-NFR-*.
+        "fr-nfr-civ-port-001": "NFR-CIV-PORT-001",
+        "fr-nfr-s-01": "NFR-S-01",
+        "fr-nfr-civ-dev-hygiene-001": "NFR-CIV-DEV-HYGIENE-001",
+        # Already-correct NFR directories.
+        "nfr-scale-02": "NFR-SCALE-02",
+        "nfr-s-05": "NFR-S-05",
+    }
+    for slug, expected in cases.items():
+        got = module.slug_to_id(slug)
+        assert got == expected, (
+            f"slug_to_id({slug!r}) returned {got!r}, expected {expected!r}"
+        )
+        assert "FR-NFR-" not in got and "NFR-NFR-" not in got, (
+            f"slug_to_id({slug!r}) produced a doubled-prefix phantom: {got!r}"
+        )

@@ -2788,7 +2788,8 @@
       "spec_refs": [
         "docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:1",
         "docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:4",
-        "docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:13"
+        "docs/traceability/fr-asset-pipeline-001/fr-asset-pipeline-001-intent.md:13",
+        "docs/traceability/index.md:53"
       ],
       "code_refs": [
         "crates/asset-pipeline/src/lib.rs:3",
@@ -2807,7 +2808,8 @@
       "epic": "FR-ASSET-PIPELINE",
       "spec_refs": [
         "docs/traceability/fr-asset-pipeline-002/fr-asset-pipeline-002-intent.md:1",
-        "docs/traceability/fr-asset-pipeline-002/fr-asset-pipeline-002-intent.md:4"
+        "docs/traceability/fr-asset-pipeline-002/fr-asset-pipeline-002-intent.md:4",
+        "docs/traceability/index.md:54"
       ],
       "code_refs": [
         "crates/asset-pipeline/Cargo.toml:8",
@@ -3259,7 +3261,8 @@
         "docs/traceability/fr-civ-014/fr-civ-014-intent.md:1",
         "docs/traceability/fr-civ-014/fr-civ-014-intent.md:4",
         "docs/traceability/fr-civ-014/fr-civ-014-intent.md:28",
-        "docs/traceability/fr-civ-014/fr-civ-014-intent.md:39"
+        "docs/traceability/fr-civ-014/fr-civ-014-intent.md:39",
+        "docs/traceability/index.md:79"
       ],
       "code_refs": [
         "crates/engine/src/emergence.rs:1692",
@@ -3290,7 +3293,8 @@
       "status": "TEST-NO-CODE-REF",
       "epic": "FR-CIV-3D",
       "spec_refs": [
-        "docs/design/civ-actor-assets-fix.md:251"
+        "docs/design/civ-actor-assets-fix.md:251",
+        "docs/traceability/index.md:87"
       ],
       "code_refs": [],
       "test_refs": [
@@ -4321,7 +4325,8 @@
         "docs/traceability/fr-civ-aggression-001/fr-civ-aggression-001-intent.md:1",
         "docs/traceability/fr-civ-aggression-001/fr-civ-aggression-001-intent.md:4",
         "docs/traceability/fr-civ-aggression-001/fr-civ-aggression-001-intent.md:24",
-        "docs/traceability/fr-civ-aggression-001/fr-civ-aggression-001-intent.md:54"
+        "docs/traceability/fr-civ-aggression-001/fr-civ-aggression-001-intent.md:54",
+        "docs/traceability/index.md:155"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:541",
@@ -4782,7 +4787,8 @@
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:1",
-        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4"
+        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4",
+        "docs/traceability/index.md:181"
       ],
       "code_refs": [
         "crates/engine/src/building_emergence.rs:134"
@@ -5009,7 +5015,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-a-001/fr-civ-arch-a-001-intent.md:1",
         "docs/traceability/fr-civ-arch-a-001/fr-civ-arch-a-001-intent.md:3",
-        "docs/traceability/fr-civ-arch-a-001/fr-civ-arch-a-001-intent.md:5"
+        "docs/traceability/fr-civ-arch-a-001/fr-civ-arch-a-001-intent.md:5",
+        "docs/traceability/index.md:195"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:405"
@@ -5026,7 +5033,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-a-002/fr-civ-arch-a-002-intent.md:1",
         "docs/traceability/fr-civ-arch-a-002/fr-civ-arch-a-002-intent.md:3",
-        "docs/traceability/fr-civ-arch-a-002/fr-civ-arch-a-002-intent.md:5"
+        "docs/traceability/fr-civ-arch-a-002/fr-civ-arch-a-002-intent.md:5",
+        "docs/traceability/index.md:196"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:426"
@@ -5043,7 +5051,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-a-003/fr-civ-arch-a-003-intent.md:1",
         "docs/traceability/fr-civ-arch-a-003/fr-civ-arch-a-003-intent.md:3",
-        "docs/traceability/fr-civ-arch-a-003/fr-civ-arch-a-003-intent.md:5"
+        "docs/traceability/fr-civ-arch-a-003/fr-civ-arch-a-003-intent.md:5",
+        "docs/traceability/index.md:197"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:448"
@@ -5060,7 +5069,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-001/fr-civ-arch-b-001-intent.md:1",
         "docs/traceability/fr-civ-arch-b-001/fr-civ-arch-b-001-intent.md:4",
-        "docs/traceability/fr-civ-arch-b-001/fr-civ-arch-b-001-intent.md:17"
+        "docs/traceability/fr-civ-arch-b-001/fr-civ-arch-b-001-intent.md:17",
+        "docs/traceability/index.md:203"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:472",
@@ -5079,7 +5089,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-002/fr-civ-arch-b-002-intent.md:1",
         "docs/traceability/fr-civ-arch-b-002/fr-civ-arch-b-002-intent.md:4",
-        "docs/traceability/fr-civ-arch-b-002/fr-civ-arch-b-002-intent.md:17"
+        "docs/traceability/fr-civ-arch-b-002/fr-civ-arch-b-002-intent.md:17",
+        "docs/traceability/index.md:204"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:492",
@@ -5098,7 +5109,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-003/fr-civ-arch-b-003-intent.md:1",
         "docs/traceability/fr-civ-arch-b-003/fr-civ-arch-b-003-intent.md:4",
-        "docs/traceability/fr-civ-arch-b-003/fr-civ-arch-b-003-intent.md:17"
+        "docs/traceability/fr-civ-arch-b-003/fr-civ-arch-b-003-intent.md:17",
+        "docs/traceability/index.md:205"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:507",
@@ -5117,7 +5129,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-b-004/fr-civ-arch-b-004-intent.md:1",
         "docs/traceability/fr-civ-arch-b-004/fr-civ-arch-b-004-intent.md:4",
-        "docs/traceability/fr-civ-arch-b-004/fr-civ-arch-b-004-intent.md:18"
+        "docs/traceability/fr-civ-arch-b-004/fr-civ-arch-b-004-intent.md:18",
+        "docs/traceability/index.md:206"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:517",
@@ -5137,7 +5150,8 @@
         "docs/traceability/fr-civ-arch-c-001/fr-civ-arch-c-001-intent.md:1",
         "docs/traceability/fr-civ-arch-c-001/fr-civ-arch-c-001-intent.md:4",
         "docs/traceability/fr-civ-arch-c-001/fr-civ-arch-c-001-intent.md:21",
-        "docs/traceability/fr-emg-007/fr-emg-007-intent.md:16"
+        "docs/traceability/fr-emg-007/fr-emg-007-intent.md:16",
+        "docs/traceability/index.md:212"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:534"
@@ -5155,7 +5169,8 @@
         "docs/traceability/fr-civ-arch-c-002/fr-civ-arch-c-002-intent.md:1",
         "docs/traceability/fr-civ-arch-c-002/fr-civ-arch-c-002-intent.md:4",
         "docs/traceability/fr-civ-arch-c-003/fr-civ-arch-c-003-intent.md:20",
-        "docs/traceability/fr-civ-arch-c-004/fr-civ-arch-c-004-intent.md:20"
+        "docs/traceability/fr-civ-arch-c-004/fr-civ-arch-c-004-intent.md:20",
+        "docs/traceability/index.md:213"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:562"
@@ -5172,7 +5187,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-arch-c-002/fr-civ-arch-c-002-intent.md:21",
         "docs/traceability/fr-civ-arch-c-003/fr-civ-arch-c-003-intent.md:1",
-        "docs/traceability/fr-civ-arch-c-003/fr-civ-arch-c-003-intent.md:4"
+        "docs/traceability/fr-civ-arch-c-003/fr-civ-arch-c-003-intent.md:4",
+        "docs/traceability/index.md:214"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:580"
@@ -5188,7 +5204,8 @@
       "epic": "FR-CIV-ARCH-C",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-c-004/fr-civ-arch-c-004-intent.md:1",
-        "docs/traceability/fr-civ-arch-c-004/fr-civ-arch-c-004-intent.md:4"
+        "docs/traceability/fr-civ-arch-c-004/fr-civ-arch-c-004-intent.md:4",
+        "docs/traceability/index.md:215"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:590"
@@ -5204,7 +5221,8 @@
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-001/fr-civ-arch-d-001-intent.md:1",
-        "docs/traceability/fr-civ-arch-d-001/fr-civ-arch-d-001-intent.md:4"
+        "docs/traceability/fr-civ-arch-d-001/fr-civ-arch-d-001-intent.md:4",
+        "docs/traceability/index.md:221"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:606"
@@ -5220,7 +5238,8 @@
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-002/fr-civ-arch-d-002-intent.md:1",
-        "docs/traceability/fr-civ-arch-d-002/fr-civ-arch-d-002-intent.md:4"
+        "docs/traceability/fr-civ-arch-d-002/fr-civ-arch-d-002-intent.md:4",
+        "docs/traceability/index.md:222"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:622"
@@ -5236,7 +5255,8 @@
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-003/fr-civ-arch-d-003-intent.md:1",
-        "docs/traceability/fr-civ-arch-d-003/fr-civ-arch-d-003-intent.md:4"
+        "docs/traceability/fr-civ-arch-d-003/fr-civ-arch-d-003-intent.md:4",
+        "docs/traceability/index.md:223"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:637"
@@ -5252,7 +5272,8 @@
       "epic": "FR-CIV-ARCH-D",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-d-004/fr-civ-arch-d-004-intent.md:1",
-        "docs/traceability/fr-civ-arch-d-004/fr-civ-arch-d-004-intent.md:4"
+        "docs/traceability/fr-civ-arch-d-004/fr-civ-arch-d-004-intent.md:4",
+        "docs/traceability/index.md:224"
       ],
       "code_refs": [
         "crates/build/src/tiers.rs:647"
@@ -6119,7 +6140,8 @@
         "docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:1",
         "docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:4",
         "docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:30",
-        "docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:39"
+        "docs/traceability/fr-civ-belief-001/fr-civ-belief-001-intent.md:39",
+        "docs/traceability/index.md:291"
       ],
       "code_refs": [
         "crates/engine/src/religion.rs:40",
@@ -6619,7 +6641,8 @@
         "docs/traceability/fr-civ-bevy-028/fr-civ-bevy-028-intent.md:1",
         "docs/traceability/fr-civ-bevy-028/fr-civ-bevy-028-intent.md:4",
         "docs/traceability/fr-civ-bevy-028/fr-civ-bevy-028-intent.md:25",
-        "docs/traceability/fr-civ-bevy-028/fr-civ-bevy-028-intent.md:55"
+        "docs/traceability/fr-civ-bevy-028/fr-civ-bevy-028-intent.md:55",
+        "docs/traceability/index.md:314"
       ],
       "code_refs": [
         "crates/server/src/ws_bridge.rs:57"
@@ -6638,7 +6661,8 @@
         "docs/traceability/fr-civ-bevy-034/fr-civ-bevy-034-intent.md:1",
         "docs/traceability/fr-civ-bevy-034/fr-civ-bevy-034-intent.md:4",
         "docs/traceability/fr-civ-bevy-034/fr-civ-bevy-034-intent.md:26",
-        "docs/traceability/fr-civ-bevy-034/fr-civ-bevy-034-intent.md:57"
+        "docs/traceability/fr-civ-bevy-034/fr-civ-bevy-034-intent.md:57",
+        "docs/traceability/index.md:315"
       ],
       "code_refs": [
         "clients/bevy-ref/src/diplomacy_ui.rs:625"
@@ -6656,7 +6680,8 @@
         "docs/traceability/fr-civ-bevy-035/fr-civ-bevy-035-intent.md:1",
         "docs/traceability/fr-civ-bevy-035/fr-civ-bevy-035-intent.md:4",
         "docs/traceability/fr-civ-bevy-035/fr-civ-bevy-035-intent.md:27",
-        "docs/traceability/fr-civ-bevy-035/fr-civ-bevy-035-intent.md:57"
+        "docs/traceability/fr-civ-bevy-035/fr-civ-bevy-035-intent.md:57",
+        "docs/traceability/index.md:316"
       ],
       "code_refs": [
         "clients/bevy-ref/src/lib.rs:1981"
@@ -6674,7 +6699,8 @@
         "docs/traceability/fr-civ-bevy-036/fr-civ-bevy-036-intent.md:1",
         "docs/traceability/fr-civ-bevy-036/fr-civ-bevy-036-intent.md:4",
         "docs/traceability/fr-civ-bevy-036/fr-civ-bevy-036-intent.md:26",
-        "docs/traceability/fr-civ-bevy-036/fr-civ-bevy-036-intent.md:56"
+        "docs/traceability/fr-civ-bevy-036/fr-civ-bevy-036-intent.md:56",
+        "docs/traceability/index.md:317"
       ],
       "code_refs": [
         "clients/bevy-ref/src/menus.rs:4",
@@ -7807,7 +7833,8 @@
       "epic": "FR-CIV-CA",
       "spec_refs": [
         "docs/traceability/fr-civ-ca-011/fr-civ-ca-011-intent.md:1",
-        "docs/traceability/fr-civ-ca-011/fr-civ-ca-011-intent.md:4"
+        "docs/traceability/fr-civ-ca-011/fr-civ-ca-011-intent.md:4",
+        "docs/traceability/index.md:378"
       ],
       "code_refs": [
         "crates/voxel/src/fluid_ca.rs:1360",
@@ -7830,7 +7857,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:1",
         "docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:3",
-        "docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:5"
+        "docs/traceability/fr-civ-caravan-001/fr-civ-caravan-001-intent.md:5",
+        "docs/traceability/index.md:384"
       ],
       "code_refs": [
         "crates/engine/src/caravan.rs:3",
@@ -7848,7 +7876,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-client-006/fr-civ-client-006-intent.md:1",
         "docs/traceability/fr-civ-client-006/fr-civ-client-006-intent.md:4",
-        "docs/traceability/fr-civ-client-006/fr-civ-client-006-intent.md:19"
+        "docs/traceability/fr-civ-client-006/fr-civ-client-006-intent.md:19",
+        "docs/traceability/index.md:390"
       ],
       "code_refs": [
         "crates/civis-mcp/src/server.rs:346",
@@ -7870,7 +7899,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:1",
         "docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:4",
-        "docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:19"
+        "docs/traceability/fr-civ-client-011/fr-civ-client-011-intent.md:19",
+        "docs/traceability/index.md:391"
       ],
       "code_refs": [
         "clients/bevy-ref/src/tutorial.rs:3",
@@ -7889,7 +7919,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-client-013/fr-civ-client-013-intent.md:1",
         "docs/traceability/fr-civ-client-013/fr-civ-client-013-intent.md:4",
-        "docs/traceability/fr-civ-client-013/fr-civ-client-013-intent.md:20"
+        "docs/traceability/fr-civ-client-013/fr-civ-client-013-intent.md:20",
+        "docs/traceability/index.md:392"
       ],
       "code_refs": [
         "clients/bevy-ref/src/civ_history.rs:2",
@@ -8052,7 +8083,8 @@
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-1/fr-civ-climate-1-intent.md:1",
-        "docs/traceability/fr-civ-climate-1/fr-civ-climate-1-intent.md:4"
+        "docs/traceability/fr-civ-climate-1/fr-civ-climate-1-intent.md:4",
+        "docs/traceability/index.md:408"
       ],
       "code_refs": [
         "crates/planet/src/seasonal.rs:181"
@@ -8068,7 +8100,8 @@
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-2/fr-civ-climate-2-intent.md:1",
-        "docs/traceability/fr-civ-climate-2/fr-civ-climate-2-intent.md:4"
+        "docs/traceability/fr-civ-climate-2/fr-civ-climate-2-intent.md:4",
+        "docs/traceability/index.md:409"
       ],
       "code_refs": [
         "crates/planet/src/seasonal.rs:193"
@@ -8086,7 +8119,8 @@
         "docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:1",
         "docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:4",
         "docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:21",
-        "docs/traceability/fr-emg-013/fr-emg-013-intent.md:23"
+        "docs/traceability/fr-emg-013/fr-emg-013-intent.md:23",
+        "docs/traceability/index.md:410"
       ],
       "code_refs": [
         "crates/planet/src/seasonal.rs:209"
@@ -8102,7 +8136,8 @@
       "epic": "FR-CIV-CLIMATE",
       "spec_refs": [
         "docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:1",
-        "docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:4"
+        "docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:4",
+        "docs/traceability/index.md:411"
       ],
       "code_refs": [
         "crates/planet/src/seasonal.rs:218"
@@ -8118,7 +8153,8 @@
       "epic": "FR-CIV-COHESION",
       "spec_refs": [
         "docs/traceability/fr-civ-cohesion-001/fr-civ-cohesion-001-intent.md:1",
-        "docs/traceability/fr-civ-cohesion-001/fr-civ-cohesion-001-intent.md:4"
+        "docs/traceability/fr-civ-cohesion-001/fr-civ-cohesion-001-intent.md:4",
+        "docs/traceability/index.md:417"
       ],
       "code_refs": [
         "crates/engine/src/engine/social_settlement_phases.rs:272"
@@ -8136,7 +8172,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-construction-001/fr-civ-construction-001-intent.md:1",
         "docs/traceability/fr-civ-construction-001/fr-civ-construction-001-intent.md:4",
-        "docs/traceability/fr-civ-construction-001/fr-civ-construction-001-intent.md:32"
+        "docs/traceability/fr-civ-construction-001/fr-civ-construction-001-intent.md:32",
+        "docs/traceability/index.md:423"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:514",
@@ -8156,7 +8193,8 @@
         "docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:1",
         "docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:4",
         "docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:27",
-        "docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:57"
+        "docs/traceability/fr-civ-content-001/fr-civ-content-001-intent.md:57",
+        "docs/traceability/index.md:429"
       ],
       "code_refs": [
         "crates/engine/src/emergence_coupling.rs:471",
@@ -8707,7 +8745,8 @@
       "epic": "FR-CIV-CORE",
       "spec_refs": [
         "docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:1",
-        "docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4"
+        "docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4",
+        "docs/traceability/index.md:455"
       ],
       "code_refs": [],
       "test_refs": [
@@ -8895,7 +8934,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-culture-001/fr-civ-culture-001-intent.md:1",
         "docs/traceability/fr-civ-culture-001/fr-civ-culture-001-intent.md:3",
-        "docs/traceability/fr-civ-culture-001/fr-civ-culture-001-intent.md:5"
+        "docs/traceability/fr-civ-culture-001/fr-civ-culture-001-intent.md:5",
+        "docs/traceability/index.md:477"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:526",
@@ -8942,7 +8982,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:1",
         "docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:4",
-        "docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:22"
+        "docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:22",
+        "docs/traceability/index.md:484"
       ],
       "code_refs": [],
       "test_refs": [
@@ -8963,7 +9004,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-det-003/fr-civ-det-003-intent.md:1",
         "docs/traceability/fr-civ-det-003/fr-civ-det-003-intent.md:4",
-        "docs/traceability/fr-civ-det-003/fr-civ-det-003-intent.md:20"
+        "docs/traceability/fr-civ-det-003/fr-civ-det-003-intent.md:20",
+        "docs/traceability/index.md:485"
       ],
       "code_refs": [],
       "test_refs": [
@@ -8985,7 +9027,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-det-004/fr-civ-det-004-intent.md:1",
         "docs/traceability/fr-civ-det-004/fr-civ-det-004-intent.md:4",
-        "docs/traceability/fr-civ-det-004/fr-civ-det-004-intent.md:19"
+        "docs/traceability/fr-civ-det-004/fr-civ-det-004-intent.md:19",
+        "docs/traceability/index.md:486"
       ],
       "code_refs": [],
       "test_refs": [
@@ -9004,7 +9047,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-det-005/fr-civ-det-005-intent.md:1",
         "docs/traceability/fr-civ-det-005/fr-civ-det-005-intent.md:4",
-        "docs/traceability/fr-civ-det-005/fr-civ-det-005-intent.md:20"
+        "docs/traceability/fr-civ-det-005/fr-civ-det-005-intent.md:20",
+        "docs/traceability/index.md:487"
       ],
       "code_refs": [],
       "test_refs": [
@@ -9023,7 +9067,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-det-006/fr-civ-det-006-intent.md:1",
         "docs/traceability/fr-civ-det-006/fr-civ-det-006-intent.md:4",
-        "docs/traceability/fr-civ-det-006/fr-civ-det-006-intent.md:21"
+        "docs/traceability/fr-civ-det-006/fr-civ-det-006-intent.md:21",
+        "docs/traceability/index.md:488"
       ],
       "code_refs": [],
       "test_refs": [
@@ -9042,7 +9087,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-det-007/fr-civ-det-007-intent.md:1",
         "docs/traceability/fr-civ-det-007/fr-civ-det-007-intent.md:4",
-        "docs/traceability/fr-civ-det-007/fr-civ-det-007-intent.md:21"
+        "docs/traceability/fr-civ-det-007/fr-civ-det-007-intent.md:21",
+        "docs/traceability/index.md:489"
       ],
       "code_refs": [],
       "test_refs": [
@@ -9593,7 +9639,8 @@
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-006/fr-civ-diplo-003-006-intent.md:1",
-        "docs/traceability/fr-civ-diplo-003-006/fr-civ-diplo-003-006-intent.md:4"
+        "docs/traceability/fr-civ-diplo-003-006/fr-civ-diplo-003-006-intent.md:4",
+        "docs/traceability/index.md:519"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:668"
@@ -9610,7 +9657,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:1",
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:4",
-        "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:22"
+        "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:22",
+        "docs/traceability/index.md:520"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:411",
@@ -9631,7 +9679,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-02/fr-civ-diplo-003-02-intent.md:1",
         "docs/traceability/fr-civ-diplo-003-02/fr-civ-diplo-003-02-intent.md:4",
-        "docs/traceability/fr-civ-diplo-003-02/fr-civ-diplo-003-02-intent.md:20"
+        "docs/traceability/fr-civ-diplo-003-02/fr-civ-diplo-003-02-intent.md:20",
+        "docs/traceability/index.md:521"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:478",
@@ -9651,7 +9700,8 @@
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-03/fr-civ-diplo-003-03-intent.md:1",
-        "docs/traceability/fr-civ-diplo-003-03/fr-civ-diplo-003-03-intent.md:4"
+        "docs/traceability/fr-civ-diplo-003-03/fr-civ-diplo-003-03-intent.md:4",
+        "docs/traceability/index.md:522"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:528",
@@ -9673,7 +9723,8 @@
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:21",
         "docs/traceability/fr-civ-diplo-003-04/fr-civ-diplo-003-04-intent.md:1",
         "docs/traceability/fr-civ-diplo-003-04/fr-civ-diplo-003-04-intent.md:4",
-        "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:23"
+        "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:23",
+        "docs/traceability/index.md:523"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:602",
@@ -9692,7 +9743,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-01/fr-civ-diplo-003-01-intent.md:22",
         "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:1",
-        "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:4"
+        "docs/traceability/fr-civ-diplo-003-05/fr-civ-diplo-003-05-intent.md:4",
+        "docs/traceability/index.md:524"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:628",
@@ -9711,7 +9763,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-06/fr-civ-diplo-003-06-intent.md:1",
         "docs/traceability/fr-civ-diplo-003-06/fr-civ-diplo-003-06-intent.md:4",
-        "docs/traceability/fr-civ-diplo-003-07/fr-civ-diplo-003-07-intent.md:20"
+        "docs/traceability/fr-civ-diplo-003-07/fr-civ-diplo-003-07-intent.md:20",
+        "docs/traceability/index.md:525"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:666"
@@ -9727,7 +9780,8 @@
       "epic": "FR-CIV-DIPLO",
       "spec_refs": [
         "docs/traceability/fr-civ-diplo-003-07/fr-civ-diplo-003-07-intent.md:1",
-        "docs/traceability/fr-civ-diplo-003-07/fr-civ-diplo-003-07-intent.md:4"
+        "docs/traceability/fr-civ-diplo-003-07/fr-civ-diplo-003-07-intent.md:4",
+        "docs/traceability/index.md:526"
       ],
       "code_refs": [
         "crates/diplomacy/src/shadow_networks.rs:718",
@@ -9910,7 +9964,8 @@
       "epic": "FR-CIV-DIPLOMACY",
       "spec_refs": [
         "docs/traceability/fr-civ-diplomacy-001/fr-civ-diplomacy-001-intent.md:1",
-        "docs/traceability/fr-civ-diplomacy-001/fr-civ-diplomacy-001-intent.md:4"
+        "docs/traceability/fr-civ-diplomacy-001/fr-civ-diplomacy-001-intent.md:4",
+        "docs/traceability/index.md:549"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:2267",
@@ -9929,7 +9984,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:1",
         "docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:4",
-        "docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:39"
+        "docs/traceability/fr-civ-diplomacy-004/fr-civ-diplomacy-004-intent.md:39",
+        "docs/traceability/index.md:550"
       ],
       "code_refs": [
         "crates/diplomacy/src/stance.rs:1",
@@ -10139,7 +10195,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-econ-010/fr-civ-econ-010-intent.md:1",
         "docs/traceability/fr-civ-econ-010/fr-civ-econ-010-intent.md:4",
-        "docs/traceability/fr-civ-econ-010/fr-civ-econ-010-intent.md:28"
+        "docs/traceability/fr-civ-econ-010/fr-civ-econ-010-intent.md:28",
+        "docs/traceability/index.md:560"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:581",
@@ -10197,7 +10254,8 @@
         "docs/traceability/fr-civ-econ-focus-001/fr-civ-econ-focus-001-intent.md:1",
         "docs/traceability/fr-civ-econ-focus-001/fr-civ-econ-focus-001-intent.md:4",
         "docs/traceability/fr-civ-econ-focus-001/fr-civ-econ-focus-001-intent.md:25",
-        "docs/traceability/fr-civ-econ-focus-001/fr-civ-econ-focus-001-intent.md:58"
+        "docs/traceability/fr-civ-econ-focus-001/fr-civ-econ-focus-001-intent.md:58",
+        "docs/traceability/index.md:579"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:520",
@@ -10347,7 +10405,8 @@
       "epic": "FR-CIV-EMERGE-DASH",
       "spec_refs": [
         "docs/traceability/fr-civ-emerge-dash-001/fr-civ-emerge-dash-001-intent.md:1",
-        "docs/traceability/fr-civ-emerge-dash-001/fr-civ-emerge-dash-001-intent.md:4"
+        "docs/traceability/fr-civ-emerge-dash-001/fr-civ-emerge-dash-001-intent.md:4",
+        "docs/traceability/index.md:595"
       ],
       "code_refs": [
         "clients/bevy-ref/src/emergence_dashboard.rs:3",
@@ -10908,7 +10967,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:1",
         "docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:3",
-        "docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:5"
+        "docs/traceability/fr-civ-emergent-migration-001/fr-civ-emergent-migration-001-intent.md:5",
+        "docs/traceability/index.md:616"
       ],
       "code_refs": [
         "crates/engine/src/emergent_migration.rs:1",
@@ -11252,7 +11312,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-era-001/fr-civ-era-001-intent.md:1",
         "docs/traceability/fr-civ-era-001/fr-civ-era-001-intent.md:4",
-        "docs/traceability/fr-civ-era-001/fr-civ-era-001-intent.md:19"
+        "docs/traceability/fr-civ-era-001/fr-civ-era-001-intent.md:19",
+        "docs/traceability/index.md:647"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:587",
@@ -11273,7 +11334,8 @@
         "docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:21",
         "docs/traceability/fr-civ-famine-001/fr-civ-famine-001-intent.md:1",
         "docs/traceability/fr-civ-famine-001/fr-civ-famine-001-intent.md:4",
-        "docs/traceability/fr-emg-025/fr-emg-025-intent.md:22"
+        "docs/traceability/fr-emg-025/fr-emg-025-intent.md:22",
+        "docs/traceability/index.md:653"
       ],
       "code_refs": [
         "crates/engine/src/famine.rs:1",
@@ -11290,7 +11352,8 @@
       "epic": "FR-CIV-FEST",
       "spec_refs": [
         "docs/traceability/fr-civ-fest-001/fr-civ-fest-001-intent.md:1",
-        "docs/traceability/fr-civ-fest-001/fr-civ-fest-001-intent.md:4"
+        "docs/traceability/fr-civ-fest-001/fr-civ-fest-001-intent.md:4",
+        "docs/traceability/index.md:659"
       ],
       "code_refs": [
         "crates/engine/src/festivals.rs:1",
@@ -11436,7 +11499,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:1",
         "docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:4",
-        "docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:29"
+        "docs/traceability/fr-civ-game-001/fr-civ-game-001-intent.md:29",
+        "docs/traceability/index.md:675"
       ],
       "code_refs": [
         "clients/bevy-ref/src/gameplay_hud.rs:3",
@@ -11462,7 +11526,8 @@
         "docs/traceability/fr-civ-game-002/fr-civ-game-002-intent.md:4",
         "docs/traceability/fr-civ-game-002/fr-civ-game-002-intent.md:19",
         "docs/traceability/fr-civ-game-002/fr-civ-game-002-intent.md:22",
-        "docs/traceability/fr-civ-game-002/fr-civ-game-002-intent.md:33"
+        "docs/traceability/fr-civ-game-002/fr-civ-game-002-intent.md:33",
+        "docs/traceability/index.md:676"
       ],
       "code_refs": [
         "clients/bevy-ref/src/god_panel.rs:2",
@@ -11484,7 +11549,8 @@
         "docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:4",
         "docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:20",
         "docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:23",
-        "docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:30"
+        "docs/traceability/fr-civ-game-003/fr-civ-game-003-intent.md:30",
+        "docs/traceability/index.md:677"
       ],
       "code_refs": [
         "clients/bevy-ref/src/era_hud.rs:2",
@@ -11650,7 +11716,8 @@
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:1",
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:4",
         "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:26",
-        "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:56"
+        "docs/traceability/fr-civ-genetics-seed-001/fr-civ-genetics-seed-001-intent.md:56",
+        "docs/traceability/index.md:694"
       ],
       "code_refs": [
         "crates/agents/src/lib.rs:567"
@@ -11670,7 +11737,8 @@
         "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:1",
         "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:4",
         "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:26",
-        "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:59"
+        "docs/traceability/fr-civ-genetics-seed-002/fr-civ-genetics-seed-002-intent.md:59",
+        "docs/traceability/index.md:695"
       ],
       "code_refs": [],
       "test_refs": [
@@ -11687,7 +11755,8 @@
         "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:1",
         "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:4",
         "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:25",
-        "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:56"
+        "docs/traceability/fr-civ-genetics-seed-003/fr-civ-genetics-seed-003-intent.md:56",
+        "docs/traceability/index.md:696"
       ],
       "code_refs": [
         "crates/genetics/src/seeds.rs:1119"
@@ -12077,7 +12146,8 @@
       "epic": "FR-CIV-GODTOOL",
       "spec_refs": [
         "docs/traceability/fr-civ-godtool-001/fr-civ-godtool-001-intent.md:1",
-        "docs/traceability/fr-civ-godtool-001/fr-civ-godtool-001-intent.md:4"
+        "docs/traceability/fr-civ-godtool-001/fr-civ-godtool-001-intent.md:4",
+        "docs/traceability/index.md:739"
       ],
       "code_refs": [
         "crates/civis-mcp/src/server.rs:148",
@@ -12397,7 +12467,8 @@
         "docs/traceability/fr-civ-gov-003/fr-civ-gov-003-intent.md:1",
         "docs/traceability/fr-civ-gov-003/fr-civ-gov-003-intent.md:3",
         "docs/traceability/fr-civ-gov-003/fr-civ-gov-003-intent.md:5",
-        "docs/traceability/fr-civ-gov-003/fr-civ-gov-003-intent.md:21"
+        "docs/traceability/fr-civ-gov-003/fr-civ-gov-003-intent.md:21",
+        "docs/traceability/index.md:754"
       ],
       "code_refs": [
         "crates/civ-institutions/src/lib.rs:38",
@@ -12419,7 +12490,8 @@
         "docs/traceability/fr-civ-gov-010/fr-civ-gov-010-intent.md:1",
         "docs/traceability/fr-civ-gov-010/fr-civ-gov-010-intent.md:3",
         "docs/traceability/fr-civ-gov-010/fr-civ-gov-010-intent.md:5",
-        "docs/traceability/fr-civ-gov-010/fr-civ-gov-010-intent.md:25"
+        "docs/traceability/fr-civ-gov-010/fr-civ-gov-010-intent.md:25",
+        "docs/traceability/index.md:755"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:3544"
@@ -12438,7 +12510,8 @@
         "docs/traceability/fr-civ-gov-020/fr-civ-gov-020-intent.md:3",
         "docs/traceability/fr-civ-gov-020/fr-civ-gov-020-intent.md:5",
         "docs/traceability/fr-civ-gov-020/fr-civ-gov-020-intent.md:17",
-        "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:15"
+        "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:15",
+        "docs/traceability/index.md:756"
       ],
       "code_refs": [
         "crates/engine/src/social_types.rs:5",
@@ -12489,7 +12562,8 @@
         "docs/traceability/fr-civ-gov-100/fr-civ-gov-100-intent.md:1",
         "docs/traceability/fr-civ-gov-100/fr-civ-gov-100-intent.md:3",
         "docs/traceability/fr-civ-gov-100/fr-civ-gov-100-intent.md:5",
-        "docs/traceability/fr-civ-gov-100/fr-civ-gov-100-intent.md:25"
+        "docs/traceability/fr-civ-gov-100/fr-civ-gov-100-intent.md:25",
+        "docs/traceability/index.md:757"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:955",
@@ -12515,7 +12589,8 @@
         "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:3",
         "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:5",
         "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:15",
-        "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:23"
+        "docs/traceability/fr-civ-gov-200/fr-civ-gov-200-intent.md:23",
+        "docs/traceability/index.md:758"
       ],
       "code_refs": [
         "crates/engine/src/engine/social_settlement_phases.rs:179"
@@ -12694,7 +12769,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-ideology-001/fr-civ-ideology-001-intent.md:1",
         "docs/traceability/fr-civ-ideology-001/fr-civ-ideology-001-intent.md:4",
-        "docs/traceability/fr-civ-ideology-001/fr-civ-ideology-001-intent.md:21"
+        "docs/traceability/fr-civ-ideology-001/fr-civ-ideology-001-intent.md:21",
+        "docs/traceability/index.md:774"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:534",
@@ -13843,7 +13919,8 @@
       "epic": "FR-CIV-INSTITUTIONS",
       "spec_refs": [
         "docs/traceability/fr-civ-institutions-001/fr-civ-institutions-001-intent.md:1",
-        "docs/traceability/fr-civ-institutions-001/fr-civ-institutions-001-intent.md:4"
+        "docs/traceability/fr-civ-institutions-001/fr-civ-institutions-001-intent.md:4",
+        "docs/traceability/index.md:834"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:506",
@@ -13862,7 +13939,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-int-001/fr-civ-int-001-intent.md:1",
         "docs/traceability/fr-civ-int-001/fr-civ-int-001-intent.md:4",
-        "docs/traceability/fr-civ-int-001/fr-civ-int-001-intent.md:36"
+        "docs/traceability/fr-civ-int-001/fr-civ-int-001-intent.md:36",
+        "docs/traceability/index.md:840"
       ],
       "code_refs": [],
       "test_refs": [
@@ -14716,7 +14794,8 @@
         "docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:1",
         "docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:4",
         "docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:22",
-        "docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:28"
+        "docs/traceability/fr-civ-legends-010/fr-civ-legends-010-intent.md:28",
+        "docs/traceability/index.md:886"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:1083",
@@ -16834,7 +16913,8 @@
         "docs/traceability/fr-civ-needs-decay-01/fr-civ-needs-decay-01-intent.md:1",
         "docs/traceability/fr-civ-needs-decay-01/fr-civ-needs-decay-01-intent.md:4",
         "docs/traceability/fr-civ-needs-decay-01/fr-civ-needs-decay-01-intent.md:32",
-        "docs/traceability/fr-civ-needs-decay-01/fr-civ-needs-decay-01-intent.md:65"
+        "docs/traceability/fr-civ-needs-decay-01/fr-civ-needs-decay-01-intent.md:65",
+        "docs/traceability/index.md:1067"
       ],
       "code_refs": [
         "crates/needs/src/decay.rs:32",
@@ -17300,7 +17380,8 @@
       "epic": "FR-CIV-PBR",
       "spec_refs": [
         "docs/traceability/fr-civ-pbr-009/fr-civ-pbr-009-intent.md:1",
-        "docs/traceability/fr-civ-pbr-009/fr-civ-pbr-009-intent.md:4"
+        "docs/traceability/fr-civ-pbr-009/fr-civ-pbr-009-intent.md:4",
+        "docs/traceability/index.md:1092"
       ],
       "code_refs": [
         "crates/voxel/src/material_pbr.rs:754",
@@ -17317,7 +17398,8 @@
       "epic": "FR-CIV-PBR",
       "spec_refs": [
         "docs/traceability/fr-civ-pbr-010/fr-civ-pbr-010-intent.md:1",
-        "docs/traceability/fr-civ-pbr-010/fr-civ-pbr-010-intent.md:4"
+        "docs/traceability/fr-civ-pbr-010/fr-civ-pbr-010-intent.md:4",
+        "docs/traceability/index.md:1093"
       ],
       "code_refs": [
         "CHANGELOG.md:16",
@@ -17339,7 +17421,8 @@
       "epic": "FR-CIV-PBR",
       "spec_refs": [
         "docs/traceability/fr-civ-pbr-011/fr-civ-pbr-011-intent.md:1",
-        "docs/traceability/fr-civ-pbr-011/fr-civ-pbr-011-intent.md:4"
+        "docs/traceability/fr-civ-pbr-011/fr-civ-pbr-011-intent.md:4",
+        "docs/traceability/index.md:1094"
       ],
       "code_refs": [
         "CHANGELOG.md:17",
@@ -18219,7 +18302,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-planet-050/fr-civ-planet-050-intent.md:1",
         "docs/traceability/fr-civ-planet-050/fr-civ-planet-050-intent.md:3",
-        "docs/traceability/fr-civ-planet-050/fr-civ-planet-050-intent.md:5"
+        "docs/traceability/fr-civ-planet-050/fr-civ-planet-050-intent.md:5",
+        "docs/traceability/index.md:1155"
       ],
       "code_refs": [
         "crates/planet/src/geology.rs:671",
@@ -20076,7 +20160,9 @@
       "spec_refs": [
         "docs/traceability/fr-civ-psyche-n11/fr-civ-psyche-n11-intent.md:1",
         "docs/traceability/fr-civ-psyche-n11/fr-civ-psyche-n11-intent.md:4",
-        "docs/traceability/fr-civ-psyche-n11/fr-civ-psyche-n11-intent.md:20"
+        "docs/traceability/fr-civ-psyche-n11/fr-civ-psyche-n11-intent.md:20",
+        "docs/traceability/index.md:1249",
+        "docs/traceability/index.md:1253"
       ],
       "code_refs": [
         "crates/engine/src/dormant_phases.rs:88",
@@ -20470,7 +20556,8 @@
       "epic": "FR-CIV-REL",
       "spec_refs": [
         "docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:1",
-        "docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:4"
+        "docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:4",
+        "docs/traceability/index.md:1278"
       ],
       "code_refs": [],
       "test_refs": [
@@ -22264,7 +22351,8 @@
       "epic": "FR-CIV-SERVER",
       "spec_refs": [
         "docs/traceability/fr-civ-server-003/fr-civ-server-003-intent.md:1",
-        "docs/traceability/fr-civ-server-003/fr-civ-server-003-intent.md:4"
+        "docs/traceability/fr-civ-server-003/fr-civ-server-003-intent.md:4",
+        "docs/traceability/index.md:1417"
       ],
       "code_refs": [
         "crates/civis-mcp/src/server.rs:2288",
@@ -25774,7 +25862,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-001/fr-civ-test-001-intent.md:1",
         "docs/traceability/fr-civ-test-001/fr-civ-test-001-intent.md:4",
-        "docs/traceability/fr-civ-test-001/fr-civ-test-001-intent.md:26"
+        "docs/traceability/fr-civ-test-001/fr-civ-test-001-intent.md:26",
+        "docs/traceability/index.md:1614"
       ],
       "code_refs": [],
       "test_refs": [
@@ -25789,7 +25878,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-002/fr-civ-test-002-intent.md:1",
         "docs/traceability/fr-civ-test-002/fr-civ-test-002-intent.md:4",
-        "docs/traceability/fr-civ-test-002/fr-civ-test-002-intent.md:21"
+        "docs/traceability/fr-civ-test-002/fr-civ-test-002-intent.md:21",
+        "docs/traceability/index.md:1615"
       ],
       "code_refs": [],
       "test_refs": [
@@ -25804,7 +25894,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-006/fr-civ-test-006-intent.md:1",
         "docs/traceability/fr-civ-test-006/fr-civ-test-006-intent.md:4",
-        "docs/traceability/fr-civ-test-006/fr-civ-test-006-intent.md:24"
+        "docs/traceability/fr-civ-test-006/fr-civ-test-006-intent.md:24",
+        "docs/traceability/index.md:1616"
       ],
       "code_refs": [
         "crates/economy/src/lib.rs:230"
@@ -25825,7 +25916,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-007/fr-civ-test-007-intent.md:1",
         "docs/traceability/fr-civ-test-007/fr-civ-test-007-intent.md:4",
-        "docs/traceability/fr-civ-test-007/fr-civ-test-007-intent.md:22"
+        "docs/traceability/fr-civ-test-007/fr-civ-test-007-intent.md:22",
+        "docs/traceability/index.md:1617"
       ],
       "code_refs": [],
       "test_refs": [
@@ -25840,7 +25932,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-008/fr-civ-test-008-intent.md:1",
         "docs/traceability/fr-civ-test-008/fr-civ-test-008-intent.md:4",
-        "docs/traceability/fr-civ-test-008/fr-civ-test-008-intent.md:25"
+        "docs/traceability/fr-civ-test-008/fr-civ-test-008-intent.md:25",
+        "docs/traceability/index.md:1618"
       ],
       "code_refs": [],
       "test_refs": [
@@ -25856,7 +25949,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-009/fr-civ-test-009-intent.md:1",
         "docs/traceability/fr-civ-test-009/fr-civ-test-009-intent.md:4",
-        "docs/traceability/fr-civ-test-009/fr-civ-test-009-intent.md:22"
+        "docs/traceability/fr-civ-test-009/fr-civ-test-009-intent.md:22",
+        "docs/traceability/index.md:1619"
       ],
       "code_refs": [],
       "test_refs": [
@@ -25871,7 +25965,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:1",
         "docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:4",
-        "docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:25"
+        "docs/traceability/fr-civ-test-021/fr-civ-test-021-intent.md:25",
+        "docs/traceability/index.md:1620"
       ],
       "code_refs": [],
       "test_refs": [
@@ -26095,7 +26190,8 @@
         "docs/traceability/fr-civ-unrest-002/fr-civ-unrest-002-intent.md:1",
         "docs/traceability/fr-civ-unrest-002/fr-civ-unrest-002-intent.md:4",
         "docs/traceability/fr-civ-unrest-002/fr-civ-unrest-002-intent.md:27",
-        "docs/traceability/fr-civ-unrest-002/fr-civ-unrest-002-intent.md:60"
+        "docs/traceability/fr-civ-unrest-002/fr-civ-unrest-002-intent.md:60",
+        "docs/traceability/index.md:1643"
       ],
       "code_refs": [
         "crates/engine/src/engine.rs:553",
@@ -28271,7 +28367,8 @@
       "epic": "FR-CIV-WARFARE",
       "spec_refs": [
         "docs/traceability/fr-civ-warfare-001/fr-civ-warfare-001-intent.md:1",
-        "docs/traceability/fr-civ-warfare-001/fr-civ-warfare-001-intent.md:4"
+        "docs/traceability/fr-civ-warfare-001/fr-civ-warfare-001-intent.md:4",
+        "docs/traceability/index.md:1769"
       ],
       "code_refs": [
         "crates/tactics/src/war_from_diplomacy.rs:1",
@@ -28290,7 +28387,8 @@
       "epic": "FR-CIV-WARFARE",
       "spec_refs": [
         "docs/traceability/fr-civ-warfare-002/fr-civ-warfare-002-intent.md:1",
-        "docs/traceability/fr-civ-warfare-002/fr-civ-warfare-002-intent.md:4"
+        "docs/traceability/fr-civ-warfare-002/fr-civ-warfare-002-intent.md:4",
+        "docs/traceability/index.md:1770"
       ],
       "code_refs": [
         "crates/tactics/src/doctrine_evolution.rs:1",
@@ -28307,7 +28405,8 @@
       "epic": "FR-CIV-WARFARE",
       "spec_refs": [
         "docs/traceability/fr-civ-warfare-003/fr-civ-warfare-003-intent.md:1",
-        "docs/traceability/fr-civ-warfare-003/fr-civ-warfare-003-intent.md:4"
+        "docs/traceability/fr-civ-warfare-003/fr-civ-warfare-003-intent.md:4",
+        "docs/traceability/index.md:1771"
       ],
       "code_refs": [
         "crates/tactics/src/war_economy.rs:1",
@@ -28324,7 +28423,8 @@
       "epic": "FR-CIV-WARFARE",
       "spec_refs": [
         "docs/traceability/fr-civ-warfare-004/fr-civ-warfare-004-intent.md:1",
-        "docs/traceability/fr-civ-warfare-004/fr-civ-warfare-004-intent.md:4"
+        "docs/traceability/fr-civ-warfare-004/fr-civ-warfare-004-intent.md:4",
+        "docs/traceability/index.md:1772"
       ],
       "code_refs": [
         "crates/tactics/src/war_legends.rs:1",
@@ -29347,7 +29447,8 @@
         "docs/traceability/fr-dip-002/fr-dip-002-intent.md:1",
         "docs/traceability/fr-dip-002/fr-dip-002-intent.md:3",
         "docs/traceability/fr-dip-002/fr-dip-002-intent.md:5",
-        "docs/traceability/fr-dip-002/fr-dip-002-intent.md:27"
+        "docs/traceability/fr-dip-002/fr-dip-002-intent.md:27",
+        "docs/traceability/index.md:1838"
       ],
       "code_refs": [
         "crates/diplomacy/src/effects.rs:1",
@@ -30160,7 +30261,8 @@
       "spec_refs": [
         "docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:1",
         "docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:4",
-        "docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:20"
+        "docs/traceability/fr-econ-emerge-001/fr-econ-emerge-001-intent.md:20",
+        "docs/traceability/index.md:1892"
       ],
       "code_refs": [
         "crates/economy/src/prices.rs:1",
@@ -30179,7 +30281,8 @@
       "spec_refs": [
         "docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:1",
         "docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:4",
-        "docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:20"
+        "docs/traceability/fr-econ-emerge-002/fr-econ-emerge-002-intent.md:20",
+        "docs/traceability/index.md:1893"
       ],
       "code_refs": [
         "crates/economy/src/trade.rs:1",
@@ -30198,7 +30301,8 @@
       "spec_refs": [
         "docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:1",
         "docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:4",
-        "docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:20"
+        "docs/traceability/fr-econ-emerge-004/fr-econ-emerge-004-intent.md:20",
+        "docs/traceability/index.md:1894"
       ],
       "code_refs": [
         "crates/economy/src/shocks.rs:1",
@@ -30217,7 +30321,8 @@
       "spec_refs": [
         "docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:23",
         "docs/traceability/fr-emg-001/fr-emg-001-intent.md:1",
-        "docs/traceability/fr-emg-001/fr-emg-001-intent.md:4"
+        "docs/traceability/fr-emg-001/fr-emg-001-intent.md:4",
+        "docs/traceability/index.md:1900"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/lib.rs:15",
@@ -30239,7 +30344,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-002/fr-emg-002-intent.md:1",
-        "docs/traceability/fr-emg-002/fr-emg-002-intent.md:4"
+        "docs/traceability/fr-emg-002/fr-emg-002-intent.md:4",
+        "docs/traceability/index.md:1901"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/language.rs:1",
@@ -30260,7 +30366,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-003/fr-emg-003-intent.md:1",
-        "docs/traceability/fr-emg-003/fr-emg-003-intent.md:4"
+        "docs/traceability/fr-emg-003/fr-emg-003-intent.md:4",
+        "docs/traceability/index.md:1902"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/economy.rs:1",
@@ -30281,7 +30388,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-004/fr-emg-004-intent.md:1",
-        "docs/traceability/fr-emg-004/fr-emg-004-intent.md:4"
+        "docs/traceability/fr-emg-004/fr-emg-004-intent.md:4",
+        "docs/traceability/index.md:1903"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/legends.rs:1",
@@ -30302,7 +30410,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-005/fr-emg-005-intent.md:1",
-        "docs/traceability/fr-emg-005/fr-emg-005-intent.md:4"
+        "docs/traceability/fr-emg-005/fr-emg-005-intent.md:4",
+        "docs/traceability/index.md:1904"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/bin/oracle_report.rs:17",
@@ -30325,7 +30434,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-006/fr-emg-006-intent.md:1",
-        "docs/traceability/fr-emg-006/fr-emg-006-intent.md:4"
+        "docs/traceability/fr-emg-006/fr-emg-006-intent.md:4",
+        "docs/traceability/index.md:1905"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/psyche.rs:1",
@@ -30346,7 +30456,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-007/fr-emg-007-intent.md:1",
-        "docs/traceability/fr-emg-007/fr-emg-007-intent.md:4"
+        "docs/traceability/fr-emg-007/fr-emg-007-intent.md:4",
+        "docs/traceability/index.md:1906"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/lib.rs:158",
@@ -30371,7 +30482,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-008/fr-emg-008-intent.md:1",
-        "docs/traceability/fr-emg-008/fr-emg-008-intent.md:4"
+        "docs/traceability/fr-emg-008/fr-emg-008-intent.md:4",
+        "docs/traceability/index.md:1907"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/bin/oracle_report.rs:18",
@@ -30394,7 +30506,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-009/fr-emg-009-intent.md:1",
-        "docs/traceability/fr-emg-009/fr-emg-009-intent.md:4"
+        "docs/traceability/fr-emg-009/fr-emg-009-intent.md:4",
+        "docs/traceability/index.md:1908"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/migration.rs:1",
@@ -30417,7 +30530,8 @@
       "spec_refs": [
         "docs/traceability/fr-emg-010/fr-emg-010-intent.md:1",
         "docs/traceability/fr-emg-010/fr-emg-010-intent.md:4",
-        "docs/traceability/fr-emg-010/fr-emg-010-intent.md:9"
+        "docs/traceability/fr-emg-010/fr-emg-010-intent.md:9",
+        "docs/traceability/index.md:1909"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/epidemic.rs:1",
@@ -30443,7 +30557,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-012/fr-emg-012-intent.md:1",
-        "docs/traceability/fr-emg-012/fr-emg-012-intent.md:4"
+        "docs/traceability/fr-emg-012/fr-emg-012-intent.md:4",
+        "docs/traceability/index.md:1910"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/festival.rs:1",
@@ -30465,7 +30580,8 @@
         "docs/traceability/fr-civ-climate-3/fr-civ-climate-3-intent.md:22",
         "docs/traceability/fr-civ-climate-4/fr-civ-climate-4-intent.md:22",
         "docs/traceability/fr-emg-013/fr-emg-013-intent.md:1",
-        "docs/traceability/fr-emg-013/fr-emg-013-intent.md:4"
+        "docs/traceability/fr-emg-013/fr-emg-013-intent.md:4",
+        "docs/traceability/index.md:1911"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/disaster.rs:1",
@@ -30487,7 +30603,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-014/fr-emg-014-intent.md:1",
-        "docs/traceability/fr-emg-014/fr-emg-014-intent.md:4"
+        "docs/traceability/fr-emg-014/fr-emg-014-intent.md:4",
+        "docs/traceability/index.md:1912"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/mood.rs:1",
@@ -30511,7 +30628,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-015/fr-emg-015-intent.md:1",
-        "docs/traceability/fr-emg-015/fr-emg-015-intent.md:4"
+        "docs/traceability/fr-emg-015/fr-emg-015-intent.md:4",
+        "docs/traceability/index.md:1913"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/stratification.rs:1",
@@ -30535,7 +30653,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-016/fr-emg-016-intent.md:1",
-        "docs/traceability/fr-emg-016/fr-emg-016-intent.md:4"
+        "docs/traceability/fr-emg-016/fr-emg-016-intent.md:4",
+        "docs/traceability/index.md:1914"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/religious_conflict.rs:1",
@@ -30560,7 +30679,8 @@
       "spec_refs": [
         "docs/traceability/fr-emg-017/fr-emg-017-intent.md:1",
         "docs/traceability/fr-emg-017/fr-emg-017-intent.md:4",
-        "docs/traceability/fr-emg-017/fr-emg-017-intent.md:21"
+        "docs/traceability/fr-emg-017/fr-emg-017-intent.md:21",
+        "docs/traceability/index.md:1915"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/expansion.rs:1",
@@ -30582,7 +30702,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-018/fr-emg-018-intent.md:1",
-        "docs/traceability/fr-emg-018/fr-emg-018-intent.md:4"
+        "docs/traceability/fr-emg-018/fr-emg-018-intent.md:4",
+        "docs/traceability/index.md:1916"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/migration_flow.rs:1",
@@ -30604,7 +30725,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-019/fr-emg-019-intent.md:1",
-        "docs/traceability/fr-emg-019/fr-emg-019-intent.md:4"
+        "docs/traceability/fr-emg-019/fr-emg-019-intent.md:4",
+        "docs/traceability/index.md:1917"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/coastal_settlement.rs:1",
@@ -30625,7 +30747,8 @@
       "spec_refs": [
         "docs/traceability/fr-emg-020/fr-emg-020-intent.md:1",
         "docs/traceability/fr-emg-020/fr-emg-020-intent.md:4",
-        "docs/traceability/fr-emg-020/fr-emg-020-intent.md:23"
+        "docs/traceability/fr-emg-020/fr-emg-020-intent.md:23",
+        "docs/traceability/index.md:1918"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/river_trade.rs:1",
@@ -30647,7 +30770,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-021/fr-emg-021-intent.md:1",
-        "docs/traceability/fr-emg-021/fr-emg-021-intent.md:4"
+        "docs/traceability/fr-emg-021/fr-emg-021-intent.md:4",
+        "docs/traceability/index.md:1919"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/mountain_pass.rs:1",
@@ -30671,7 +30795,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-022/fr-emg-022-intent.md:1",
-        "docs/traceability/fr-emg-022/fr-emg-022-intent.md:4"
+        "docs/traceability/fr-emg-022/fr-emg-022-intent.md:4",
+        "docs/traceability/index.md:1920"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/desert_caravan.rs:1",
@@ -30693,7 +30818,8 @@
       "epic": "FR-EMG",
       "spec_refs": [
         "docs/traceability/fr-emg-023/fr-emg-023-intent.md:1",
-        "docs/traceability/fr-emg-023/fr-emg-023-intent.md:4"
+        "docs/traceability/fr-emg-023/fr-emg-023-intent.md:4",
+        "docs/traceability/index.md:1921"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/genetics.rs:1",
@@ -30716,7 +30842,8 @@
       "spec_refs": [
         "docs/traceability/fr-emg-024/fr-emg-024-intent.md:1",
         "docs/traceability/fr-emg-024/fr-emg-024-intent.md:4",
-        "docs/traceability/fr-emg-024/fr-emg-024-intent.md:9"
+        "docs/traceability/fr-emg-024/fr-emg-024-intent.md:9",
+        "docs/traceability/index.md:1922"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/i18n.rs:1",
@@ -30739,7 +30866,8 @@
       "spec_refs": [
         "docs/traceability/fr-emg-025/fr-emg-025-intent.md:1",
         "docs/traceability/fr-emg-025/fr-emg-025-intent.md:4",
-        "docs/traceability/fr-emg-025/fr-emg-025-intent.md:9"
+        "docs/traceability/fr-emg-025/fr-emg-025-intent.md:9",
+        "docs/traceability/index.md:1923"
       ],
       "code_refs": [
         "crates/emergence-oracle/src/oracles/migration_pressure.rs:1",
@@ -30760,7 +30888,8 @@
       "spec_refs": [
         "docs/traceability/fr-fr-core-009/fr-fr-core-009-intent.md:1",
         "docs/traceability/fr-fr-core-009/fr-fr-core-009-intent.md:4",
-        "docs/traceability/fr-fr-core-009/fr-fr-core-009-intent.md:37"
+        "docs/traceability/fr-fr-core-009/fr-fr-core-009-intent.md:37",
+        "docs/traceability/index.md:1929"
       ],
       "code_refs": [],
       "test_refs": [
@@ -31034,7 +31163,8 @@
         "docs/traceability/fr-language-001/fr-language-001-intent.md:21",
         "docs/traceability/fr-language-001/fr-language-001-intent.md:23",
         "docs/traceability/fr-language-001/fr-language-001-intent.md:26",
-        "docs/traceability/fr-language-001/fr-language-001-intent.md:32"
+        "docs/traceability/fr-language-001/fr-language-001-intent.md:32",
+        "docs/traceability/index.md:1959"
       ],
       "code_refs": [
         "crates/engine/src/engine/culture_phases.rs:230",
@@ -31548,7 +31678,8 @@
         "docs/traceability/fr-music-001/fr-music-001-intent.md:1",
         "docs/traceability/fr-music-001/fr-music-001-intent.md:4",
         "docs/traceability/fr-music-001/fr-music-001-intent.md:26",
-        "docs/traceability/fr-music-001/fr-music-001-intent.md:57"
+        "docs/traceability/fr-music-001/fr-music-001-intent.md:57",
+        "docs/traceability/index.md:2000"
       ],
       "code_refs": [],
       "test_refs": [
@@ -35830,7 +35961,8 @@
         "docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:1",
         "docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:4",
         "docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:27",
-        "docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:54"
+        "docs/traceability/fr-viewport-001/fr-viewport-001-intent.md:54",
+        "docs/traceability/index.md:2291"
       ],
       "code_refs": [
         "clients/bevy-ref/src/minimap.rs:756",
@@ -35847,7 +35979,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2041",
-        "docs/traceability/index.md:1151",
+        "docs/traceability/index.md:2297",
         "docs/traceability/nfr-c-01/nfr-c-01-spec.md:1",
         "docs/traceability/nfr-c-01/nfr-c-01-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
@@ -35867,7 +35999,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2042",
-        "docs/traceability/index.md:1152",
+        "docs/traceability/index.md:2298",
         "docs/traceability/nfr-c-02/nfr-c-02-spec.md:1",
         "docs/traceability/nfr-c-02/nfr-c-02-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
@@ -35882,7 +36014,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2043",
-        "docs/traceability/index.md:1153",
+        "docs/traceability/index.md:2299",
         "docs/traceability/nfr-c-03/nfr-c-03-spec.md:1",
         "docs/traceability/nfr-c-03/nfr-c-03-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
@@ -35903,7 +36035,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2044",
-        "docs/traceability/index.md:1154",
+        "docs/traceability/index.md:2300",
         "docs/traceability/nfr-c-04/nfr-c-04-spec.md:1",
         "docs/traceability/nfr-c-04/nfr-c-04-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
@@ -35923,7 +36055,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2045",
-        "docs/traceability/index.md:1155",
+        "docs/traceability/index.md:2301",
         "docs/traceability/nfr-c-05/nfr-c-05-spec.md:1",
         "docs/traceability/nfr-c-05/nfr-c-05-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:243"
@@ -35943,7 +36075,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2046",
-        "docs/traceability/index.md:1156",
+        "docs/traceability/index.md:2302",
         "docs/traceability/nfr-c-06/nfr-c-06-spec.md:1",
         "docs/traceability/nfr-c-06/nfr-c-06-spec.md:5"
       ],
@@ -35962,7 +36094,7 @@
       "epic": "NFR-C",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2047",
-        "docs/traceability/index.md:1157",
+        "docs/traceability/index.md:2303",
         "docs/traceability/nfr-c-07/nfr-c-07-spec.md:1",
         "docs/traceability/nfr-c-07/nfr-c-07-spec.md:5"
       ],
@@ -36130,7 +36262,7 @@
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:82",
         "docs/traceability/fr-nfr-matrix.md:155",
-        "docs/traceability/index.md:1158",
+        "docs/traceability/index.md:2309",
         "docs/traceability/nfr-civ-acc-001/nfr-civ-acc-001-spec.md:1",
         "docs/traceability/nfr-civ-acc-001/nfr-civ-acc-001-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:331"
@@ -36158,7 +36290,7 @@
         "docs/reference/non-functional-requirements.md:574",
         "docs/traceability/fr-nfr-matrix.md:83",
         "docs/traceability/fr-nfr-matrix.md:156",
-        "docs/traceability/index.md:1159",
+        "docs/traceability/index.md:2310",
         "docs/traceability/nfr-civ-acc-002/nfr-civ-acc-002-spec.md:1",
         "docs/traceability/nfr-civ-acc-002/nfr-civ-acc-002-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:331"
@@ -36185,7 +36317,7 @@
         "docs/reference/non-functional-requirements.md:380",
         "docs/reference/non-functional-requirements.md:575",
         "docs/traceability/fr-nfr-matrix.md:84",
-        "docs/traceability/index.md:1160",
+        "docs/traceability/index.md:2311",
         "docs/traceability/nfr-civ-acc-003/nfr-civ-acc-003-spec.md:1",
         "docs/traceability/nfr-civ-acc-003/nfr-civ-acc-003-spec.md:5"
       ],
@@ -36212,7 +36344,7 @@
         "docs/reference/non-functional-requirements.md:576",
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:85",
-        "docs/traceability/index.md:1161",
+        "docs/traceability/index.md:2312",
         "docs/traceability/nfr-civ-acc-004/nfr-civ-acc-004-spec.md:1",
         "docs/traceability/nfr-civ-acc-004/nfr-civ-acc-004-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:331"
@@ -36238,7 +36370,7 @@
         "docs/design/civ-ai-crate.md:48",
         "docs/design/civ-ai-crate.md:180",
         "docs/design/civ-ai-crate.md:216",
-        "docs/traceability/index.md:1162",
+        "docs/traceability/index.md:2318",
         "docs/traceability/nfr-civ-ai-001/nfr-civ-ai-001-research.md:1",
         "docs/traceability/nfr-civ-ai-001/nfr-civ-ai-001-research.md:4",
         "docs/traceability/nfr-civ-ai-001/nfr-civ-ai-001-spec.md:1",
@@ -36259,7 +36391,7 @@
       "epic": "NFR-CIV-AI",
       "spec_refs": [
         "docs/design/civ-ai-crate.md:49",
-        "docs/traceability/index.md:1163",
+        "docs/traceability/index.md:2319",
         "docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-research.md:1",
         "docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-research.md:4",
         "docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-spec.md:1",
@@ -36277,7 +36409,7 @@
       "spec_refs": [
         "docs/design/civ-ai-crate.md:50",
         "docs/design/civ-ai-crate.md:164",
-        "docs/traceability/index.md:1164",
+        "docs/traceability/index.md:2320",
         "docs/traceability/nfr-civ-ai-003/nfr-civ-ai-003-research.md:1",
         "docs/traceability/nfr-civ-ai-003/nfr-civ-ai-003-research.md:4",
         "docs/traceability/nfr-civ-ai-003/nfr-civ-ai-003-spec.md:1",
@@ -36309,7 +36441,7 @@
         "docs/traceability/fr-nfr-civ-port-003/fr-nfr-civ-port-003-intent.md:19",
         "docs/traceability/fr-nfr-matrix.md:34",
         "docs/traceability/fr-nfr-matrix.md:152",
-        "docs/traceability/index.md:1165",
+        "docs/traceability/index.md:2326",
         "docs/traceability/nfr-civ-det-001/nfr-civ-det-001-intent.md:1",
         "docs/traceability/nfr-civ-det-001/nfr-civ-det-001-intent.md:4",
         "docs/traceability/nfr-civ-det-001/nfr-civ-det-001-spec.md:1",
@@ -36343,7 +36475,7 @@
         "docs/reference/non-functional-requirements.md:606",
         "docs/reference/non-functional-requirements.md:614",
         "docs/traceability/fr-nfr-matrix.md:35",
-        "docs/traceability/index.md:1166",
+        "docs/traceability/index.md:2327",
         "docs/traceability/nfr-civ-det-002/nfr-civ-det-002-intent.md:1",
         "docs/traceability/nfr-civ-det-002/nfr-civ-det-002-intent.md:4",
         "docs/traceability/nfr-civ-det-002/nfr-civ-det-002-spec.md:1",
@@ -36373,7 +36505,7 @@
         "docs/reference/non-functional-requirements.md:560",
         "docs/traceability/fr-nfr-matrix.md:36",
         "docs/traceability/fr-nfr-matrix.md:129",
-        "docs/traceability/index.md:1167",
+        "docs/traceability/index.md:2328",
         "docs/traceability/nfr-civ-det-001/nfr-civ-det-001-intent.md:19",
         "docs/traceability/nfr-civ-det-002/nfr-civ-det-002-intent.md:19",
         "docs/traceability/nfr-civ-det-003/nfr-civ-det-003-spec.md:1",
@@ -36402,7 +36534,7 @@
         "docs/reference/non-functional-requirements.md:605",
         "docs/traceability/fr-nfr-matrix.md:37",
         "docs/traceability/fr-nfr-matrix.md:130",
-        "docs/traceability/index.md:1168",
+        "docs/traceability/index.md:2329",
         "docs/traceability/nfr-civ-det-004/nfr-civ-det-004-spec.md:1",
         "docs/traceability/nfr-civ-det-004/nfr-civ-det-004-spec.md:5"
       ],
@@ -36423,7 +36555,8 @@
         "docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:1",
         "docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:4",
         "docs/traceability/fr-nfr-civ-dev-hygiene-001/fr-nfr-civ-dev-hygiene-001-intent.md:34",
-        "docs/traceability/index.md:1169",
+        "docs/traceability/index.md:2335",
+        "docs/traceability/index.md:2336",
         "docs/traceability/nfr-civ-dev-hygiene-001/nfr-civ-dev-hygiene-001-spec.md:1",
         "docs/traceability/nfr-civ-dev-hygiene-001/nfr-civ-dev-hygiene-001-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:304"
@@ -36448,7 +36581,7 @@
       "spec_refs": [
         "docs/design/legends-engine.md:454",
         "docs/traceability/fr-emergence-matrix.md:259",
-        "docs/traceability/index.md:1170",
+        "docs/traceability/index.md:2342",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:1",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-research.md:4",
         "docs/traceability/nfr-civ-legends-config-04/nfr-civ-legends-config-04-spec.md:1",
@@ -36469,7 +36602,6 @@
       "epic": "NFR-CIV-LEGENDS-LOUD",
       "spec_refs": [
         "docs/design/legends-engine.md:453",
-        "docs/traceability/index.md:1171",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:306"
       ],
       "code_refs": [
@@ -36491,7 +36623,7 @@
       "spec_refs": [
         "docs/design/legends-engine.md:451",
         "docs/traceability/fr-emergence-matrix.md:260",
-        "docs/traceability/index.md:1172",
+        "docs/traceability/index.md:2348",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:1",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-research.md:4",
         "docs/traceability/nfr-civ-legends-perf-01/nfr-civ-legends-perf-01-spec.md:1",
@@ -36518,7 +36650,7 @@
       "spec_refs": [
         "docs/design/legends-engine.md:452",
         "docs/traceability/fr-emergence-matrix.md:261",
-        "docs/traceability/index.md:1173",
+        "docs/traceability/index.md:2354",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:1",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:6",
         "docs/traceability/nfr-civ-legends-scale-02/nfr-civ-legends-scale-02-adr.md:10",
@@ -36549,7 +36681,7 @@
         "docs/reference/non-functional-requirements.md:612",
         "docs/traceability/fr-nfr-matrix.md:103",
         "docs/traceability/fr-nfr-matrix.md:158",
-        "docs/traceability/index.md:1174",
+        "docs/traceability/index.md:2360",
         "docs/traceability/nfr-civ-maint-001/nfr-civ-maint-001-research.md:1",
         "docs/traceability/nfr-civ-maint-001/nfr-civ-maint-001-research.md:4",
         "docs/traceability/nfr-civ-maint-001/nfr-civ-maint-001-spec.md:1",
@@ -36575,7 +36707,7 @@
         "docs/reference/non-functional-requirements.md:597",
         "docs/reference/non-functional-requirements.md:598",
         "docs/traceability/fr-nfr-matrix.md:104",
-        "docs/traceability/index.md:1175",
+        "docs/traceability/index.md:2361",
         "docs/traceability/nfr-civ-maint-002/nfr-civ-maint-002-research.md:1",
         "docs/traceability/nfr-civ-maint-002/nfr-civ-maint-002-research.md:4",
         "docs/traceability/nfr-civ-maint-002/nfr-civ-maint-002-spec.md:1",
@@ -36602,7 +36734,7 @@
         "docs/reference/non-functional-requirements.md:489",
         "docs/reference/non-functional-requirements.md:582",
         "docs/traceability/fr-nfr-matrix.md:105",
-        "docs/traceability/index.md:1176",
+        "docs/traceability/index.md:2362",
         "docs/traceability/nfr-civ-maint-003/nfr-civ-maint-003-research.md:1",
         "docs/traceability/nfr-civ-maint-003/nfr-civ-maint-003-research.md:4",
         "docs/traceability/nfr-civ-maint-003/nfr-civ-maint-003-spec.md:1",
@@ -36631,7 +36763,7 @@
         "docs/reference/non-functional-requirements.md:608",
         "docs/reference/non-functional-requirements.md:609",
         "docs/traceability/fr-nfr-matrix.md:106",
-        "docs/traceability/index.md:1177",
+        "docs/traceability/index.md:2363",
         "docs/traceability/nfr-civ-maint-004/nfr-civ-maint-004-research.md:1",
         "docs/traceability/nfr-civ-maint-004/nfr-civ-maint-004-research.md:4",
         "docs/traceability/nfr-civ-maint-004/nfr-civ-maint-004-spec.md:1",
@@ -36660,7 +36792,7 @@
         "docs/reference/non-functional-requirements.md:584",
         "docs/reference/non-functional-requirements.md:608",
         "docs/traceability/fr-nfr-matrix.md:107",
-        "docs/traceability/index.md:1178",
+        "docs/traceability/index.md:2364",
         "docs/traceability/nfr-civ-maint-005/nfr-civ-maint-005-research.md:1",
         "docs/traceability/nfr-civ-maint-005/nfr-civ-maint-005-research.md:4",
         "docs/traceability/nfr-civ-maint-005/nfr-civ-maint-005-spec.md:1",
@@ -36678,7 +36810,7 @@
         "docs/reference/non-functional-requirements.md:531",
         "docs/reference/non-functional-requirements.md:585",
         "docs/traceability/fr-nfr-matrix.md:108",
-        "docs/traceability/index.md:1179",
+        "docs/traceability/index.md:2365",
         "docs/traceability/nfr-civ-maint-006/nfr-civ-maint-006-research.md:1",
         "docs/traceability/nfr-civ-maint-006/nfr-civ-maint-006-research.md:4",
         "docs/traceability/nfr-civ-maint-006/nfr-civ-maint-006-spec.md:1",
@@ -36703,7 +36835,7 @@
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:17",
         "docs/traceability/fr-nfr-matrix.md:148",
-        "docs/traceability/index.md:1180",
+        "docs/traceability/index.md:2371",
         "docs/traceability/nfr-civ-perf-001/nfr-civ-perf-001-research.md:1",
         "docs/traceability/nfr-civ-perf-001/nfr-civ-perf-001-research.md:4",
         "docs/traceability/nfr-civ-perf-001/nfr-civ-perf-001-spec.md:1",
@@ -36732,7 +36864,7 @@
         "docs/reference/non-functional-requirements.md:552",
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:18",
-        "docs/traceability/index.md:1181",
+        "docs/traceability/index.md:2372",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-intent.md:1",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-intent.md:4",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-research.md:1",
@@ -36764,7 +36896,7 @@
         "docs/traceability/fr-nfr-matrix.md:19",
         "docs/traceability/fr-nfr-matrix.md:163",
         "docs/traceability/fr-nfr-matrix.md:167",
-        "docs/traceability/index.md:1182",
+        "docs/traceability/index.md:2373",
         "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:1",
         "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:4",
         "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-research.md:1",
@@ -36788,7 +36920,7 @@
         "docs/reference/non-functional-requirements.md:595",
         "docs/reference/non-functional-requirements.md:599",
         "docs/traceability/fr-nfr-matrix.md:20",
-        "docs/traceability/index.md:1183",
+        "docs/traceability/index.md:2374",
         "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-intent.md:1",
         "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-intent.md:4",
         "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-research.md:1",
@@ -36817,7 +36949,7 @@
         "docs/traceability/fr-nfr-matrix.md:149",
         "docs/traceability/fr-nfr-matrix.md:163",
         "docs/traceability/fr-nfr-matrix.md:172",
-        "docs/traceability/index.md:1184",
+        "docs/traceability/index.md:2375",
         "docs/traceability/nfr-civ-perf-005/nfr-civ-perf-005-intent.md:1",
         "docs/traceability/nfr-civ-perf-005/nfr-civ-perf-005-intent.md:4",
         "docs/traceability/nfr-civ-perf-005/nfr-civ-perf-005-research.md:1"
@@ -36838,7 +36970,7 @@
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:22",
         "docs/traceability/fr-nfr-matrix.md:151",
-        "docs/traceability/index.md:1185",
+        "docs/traceability/index.md:2376",
         "docs/traceability/nfr-civ-perf-006/nfr-civ-perf-006-intent.md:1",
         "docs/traceability/nfr-civ-perf-006/nfr-civ-perf-006-intent.md:4",
         "docs/traceability/nfr-civ-perf-006/nfr-civ-perf-006-research.md:1",
@@ -36861,7 +36993,7 @@
         "docs/reference/non-functional-requirements.md:604",
         "docs/traceability/fr-nfr-matrix.md:23",
         "docs/traceability/fr-nfr-matrix.md:150",
-        "docs/traceability/index.md:1186",
+        "docs/traceability/index.md:2377",
         "docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-intent.md:1",
         "docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-intent.md:4",
         "docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-research.md:1",
@@ -36879,7 +37011,7 @@
       "spec_refs": [
         "docs/guides/voxel-emergent-vision-and-migration.md:171",
         "docs/guides/voxel-emergent-vision-and-migration.md:191",
-        "docs/traceability/index.md:1187",
+        "docs/traceability/index.md:2378",
         "docs/traceability/nfr-civ-perf-008/nfr-civ-perf-008-intent.md:1",
         "docs/traceability/nfr-civ-perf-008/nfr-civ-perf-008-intent.md:4",
         "docs/traceability/nfr-civ-perf-008/nfr-civ-perf-008-research.md:1",
@@ -36903,7 +37035,7 @@
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:15",
         "docs/traceability/fr-nfr-matrix.md:24",
         "docs/traceability/fr-nfr-matrix.md:148",
-        "docs/traceability/index.md:1188",
+        "docs/traceability/index.md:2379",
         "docs/traceability/nfr-civ-perf-900/nfr-civ-perf-900-intent.md:1",
         "docs/traceability/nfr-civ-perf-900/nfr-civ-perf-900-intent.md:4",
         "docs/traceability/nfr-civ-perf-900/nfr-civ-perf-900-research.md:1",
@@ -36926,7 +37058,7 @@
         "docs/research/songs-of-syx.md:36",
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:16",
         "docs/traceability/fr-nfr-matrix.md:25",
-        "docs/traceability/index.md:1189",
+        "docs/traceability/index.md:2380",
         "docs/traceability/nfr-civ-perf-901/nfr-civ-perf-901-intent.md:1",
         "docs/traceability/nfr-civ-perf-901/nfr-civ-perf-901-intent.md:4",
         "docs/traceability/nfr-civ-perf-901/nfr-civ-perf-901-research.md:1",
@@ -36949,7 +37081,7 @@
         "docs/research/songs-of-syx.md:40",
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:17",
         "docs/traceability/fr-nfr-matrix.md:26",
-        "docs/traceability/index.md:1190",
+        "docs/traceability/index.md:2381",
         "docs/traceability/nfr-civ-perf-902/nfr-civ-perf-902-intent.md:1",
         "docs/traceability/nfr-civ-perf-902/nfr-civ-perf-902-intent.md:4",
         "docs/traceability/nfr-civ-perf-902/nfr-civ-perf-902-research.md:1",
@@ -36977,10 +37109,10 @@
         "docs/traceability/fr-nfr-civ-port-001/fr-nfr-civ-port-001-intent.md:4",
         "docs/traceability/fr-nfr-matrix.md:93",
         "docs/traceability/fr-nfr-matrix.md:157",
-        "docs/traceability/index.md:1191",
+        "docs/traceability/index.md:2387",
+        "docs/traceability/index.md:2388",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-intent.md:18",
-        "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:18",
-        "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-intent.md:18"
+        "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:18"
       ],
       "code_refs": [
         "crates/server/src/portability.rs:1",
@@ -37018,7 +37150,8 @@
         "docs/traceability/fr-nfr-civ-port-002/fr-nfr-civ-port-002-intent.md:4",
         "docs/traceability/fr-nfr-matrix.md:94",
         "docs/traceability/fr-nfr-matrix.md:156",
-        "docs/traceability/index.md:1192",
+        "docs/traceability/index.md:2389",
+        "docs/traceability/index.md:2390",
         "docs/traceability/nfr-civ-port-002/nfr-civ-port-002-spec.md:1",
         "docs/traceability/nfr-civ-port-002/nfr-civ-port-002-spec.md:5"
       ],
@@ -37053,7 +37186,8 @@
         "docs/traceability/fr-nfr-civ-port-003/fr-nfr-civ-port-003-intent.md:1",
         "docs/traceability/fr-nfr-civ-port-003/fr-nfr-civ-port-003-intent.md:4",
         "docs/traceability/fr-nfr-matrix.md:95",
-        "docs/traceability/index.md:1193",
+        "docs/traceability/index.md:2391",
+        "docs/traceability/index.md:2392",
         "docs/traceability/nfr-civ-port-003/nfr-civ-port-003-spec.md:1",
         "docs/traceability/nfr-civ-port-003/nfr-civ-port-003-spec.md:5"
       ],
@@ -37088,7 +37222,7 @@
         "docs/reference/non-functional-requirements.md:602",
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:60",
-        "docs/traceability/index.md:1194",
+        "docs/traceability/index.md:2398",
         "docs/traceability/nfr-civ-rel-001/nfr-civ-rel-001-spec.md:1",
         "docs/traceability/nfr-civ-rel-001/nfr-civ-rel-001-spec.md:5"
       ],
@@ -37107,7 +37241,7 @@
         "docs/reference/non-functional-requirements.md:595",
         "docs/traceability/fr-nfr-matrix.md:61",
         "docs/traceability/fr-nfr-matrix.md:139",
-        "docs/traceability/index.md:1195",
+        "docs/traceability/index.md:2399",
         "docs/traceability/nfr-civ-rel-002/nfr-civ-rel-002-spec.md:1",
         "docs/traceability/nfr-civ-rel-002/nfr-civ-rel-002-spec.md:5"
       ],
@@ -37125,7 +37259,7 @@
         "docs/reference/non-functional-requirements.md:595",
         "docs/reference/non-functional-requirements.md:605",
         "docs/traceability/fr-nfr-matrix.md:62",
-        "docs/traceability/index.md:1196",
+        "docs/traceability/index.md:2400",
         "docs/traceability/nfr-civ-rel-003/nfr-civ-rel-003-spec.md:1",
         "docs/traceability/nfr-civ-rel-003/nfr-civ-rel-003-spec.md:5"
       ],
@@ -37144,7 +37278,7 @@
         "docs/reference/non-functional-requirements.md:606",
         "docs/traceability/fr-nfr-matrix.md:63",
         "docs/traceability/fr-nfr-matrix.md:131",
-        "docs/traceability/index.md:1197",
+        "docs/traceability/index.md:2401",
         "docs/traceability/nfr-civ-rel-004/nfr-civ-rel-004-spec.md:1",
         "docs/traceability/nfr-civ-rel-004/nfr-civ-rel-004-spec.md:5"
       ],
@@ -37169,13 +37303,13 @@
         "docs/reference/non-functional-requirements.md:599",
         "docs/reference/non-functional-requirements.md:601",
         "docs/traceability/fr-nfr-matrix.md:45",
-        "docs/traceability/index.md:1198",
         "docs/traceability/nfr-civ-perf-002/nfr-civ-perf-002-intent.md:18",
         "docs/traceability/nfr-civ-perf-003/nfr-civ-perf-003-intent.md:18",
         "docs/traceability/nfr-civ-perf-004/nfr-civ-perf-004-intent.md:18",
         "docs/traceability/nfr-civ-perf-005/nfr-civ-perf-005-intent.md:18",
         "docs/traceability/nfr-civ-perf-006/nfr-civ-perf-006-intent.md:18",
-        "docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-intent.md:18"
+        "docs/traceability/nfr-civ-perf-007/nfr-civ-perf-007-intent.md:18",
+        "docs/traceability/nfr-civ-perf-008/nfr-civ-perf-008-intent.md:18"
       ],
       "code_refs": [],
       "test_refs": [
@@ -37196,7 +37330,6 @@
         "docs/reference/non-functional-requirements.md:610",
         "docs/traceability/fr-nfr-matrix.md:46",
         "docs/traceability/fr-nfr-matrix.md:149",
-        "docs/traceability/index.md:1199",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:343"
       ],
       "code_refs": [
@@ -37218,8 +37351,7 @@
         "docs/reference/non-functional-requirements.md:603",
         "docs/reference/non-functional-requirements.md:604",
         "docs/traceability/fr-nfr-matrix.md:47",
-        "docs/traceability/fr-nfr-matrix.md:150",
-        "docs/traceability/index.md:1200"
+        "docs/traceability/fr-nfr-matrix.md:150"
       ],
       "code_refs": [],
       "test_refs": [],
@@ -37231,7 +37363,6 @@
       "epic": "NFR-CIV-SCALE",
       "spec_refs": [
         "docs/guides/voxel-emergent-vision-and-migration.md:172",
-        "docs/traceability/index.md:1201",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248"
       ],
       "code_refs": [],
@@ -37250,7 +37381,6 @@
         "docs/research/bevy-ecosystem-reference.md:30",
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:11",
         "docs/traceability/fr-nfr-matrix.md:48",
-        "docs/traceability/index.md:1202",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248"
       ],
       "code_refs": [],
@@ -37268,7 +37398,6 @@
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:12",
         "docs/traceability/fr-nfr-matrix.md:49",
         "docs/traceability/fr-nfr-matrix.md:132",
-        "docs/traceability/index.md:1203",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248"
       ],
       "code_refs": [],
@@ -37288,7 +37417,6 @@
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:13",
         "docs/traceability/fr-nfr-matrix.md:50",
         "docs/traceability/fr-nfr-matrix.md:159",
-        "docs/traceability/index.md:1204",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248"
       ],
       "code_refs": [],
@@ -37306,7 +37434,6 @@
         "docs/research/songs-of-syx.md:33",
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:14",
         "docs/traceability/fr-nfr-matrix.md:51",
-        "docs/traceability/index.md:1205",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248"
       ],
       "code_refs": [],
@@ -37323,8 +37450,7 @@
         "docs/agileplus/README.md:24",
         "docs/specs/requirements/NFR-CIV-SCALE-PERF.md:18",
         "docs/traceability/fr-nfr-matrix.md:52",
-        "docs/traceability/fr-nfr-matrix.md:159",
-        "docs/traceability/index.md:1206"
+        "docs/traceability/fr-nfr-matrix.md:159"
       ],
       "code_refs": [],
       "test_refs": [],
@@ -37335,6 +37461,7 @@
       "status": "COVERED",
       "epic": "NFR-CIV-SCALE-PERF",
       "spec_refs": [
+        "docs/traceability/index.md:2407",
         "docs/traceability/nfr-civ-scale-perf-900/nfr-civ-scale-perf-900-intent.md:1",
         "docs/traceability/nfr-civ-scale-perf-900/nfr-civ-scale-perf-900-intent.md:4"
       ],
@@ -37364,7 +37491,7 @@
         "docs/reference/non-functional-requirements.md:607",
         "docs/reference/non-functional-requirements.md:609",
         "docs/traceability/fr-nfr-matrix.md:71",
-        "docs/traceability/index.md:1207",
+        "docs/traceability/index.md:2413",
         "docs/traceability/nfr-civ-sec-001/nfr-civ-sec-001-spec.md:1",
         "docs/traceability/nfr-civ-sec-001/nfr-civ-sec-001-spec.md:5"
       ],
@@ -37394,7 +37521,7 @@
         "docs/reference/non-functional-requirements.md:602",
         "docs/traceability/fr-nfr-matrix.md:72",
         "docs/traceability/fr-nfr-matrix.md:153",
-        "docs/traceability/index.md:1208",
+        "docs/traceability/index.md:2414",
         "docs/traceability/nfr-civ-sec-002/nfr-civ-sec-002-spec.md:1",
         "docs/traceability/nfr-civ-sec-002/nfr-civ-sec-002-spec.md:5"
       ],
@@ -37412,7 +37539,7 @@
         "docs/reference/non-functional-requirements.md:602",
         "docs/traceability/fr-nfr-matrix.md:73",
         "docs/traceability/fr-nfr-matrix.md:154",
-        "docs/traceability/index.md:1209",
+        "docs/traceability/index.md:2415",
         "docs/traceability/nfr-civ-sec-003/nfr-civ-sec-003-spec.md:1",
         "docs/traceability/nfr-civ-sec-003/nfr-civ-sec-003-spec.md:5"
       ],
@@ -37429,7 +37556,7 @@
         "docs/reference/non-functional-requirements.md:572",
         "docs/reference/non-functional-requirements.md:611",
         "docs/traceability/fr-nfr-matrix.md:74",
-        "docs/traceability/index.md:1210",
+        "docs/traceability/index.md:2416",
         "docs/traceability/nfr-civ-sec-004/nfr-civ-sec-004-spec.md:1",
         "docs/traceability/nfr-civ-sec-004/nfr-civ-sec-004-spec.md:5"
       ],
@@ -37443,7 +37570,7 @@
       "epic": "NFR-O",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2088",
-        "docs/traceability/index.md:1211",
+        "docs/traceability/index.md:2422",
         "docs/traceability/nfr-o-01/nfr-o-01-spec.md:1",
         "docs/traceability/nfr-o-01/nfr-o-01-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:249"
@@ -37458,7 +37585,7 @@
       "epic": "NFR-O",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2089",
-        "docs/traceability/index.md:1212",
+        "docs/traceability/index.md:2423",
         "docs/traceability/nfr-o-02/nfr-o-02-spec.md:1",
         "docs/traceability/nfr-o-02/nfr-o-02-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:249"
@@ -37473,7 +37600,7 @@
       "epic": "NFR-O",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2090",
-        "docs/traceability/index.md:1213",
+        "docs/traceability/index.md:2424",
         "docs/traceability/nfr-o-03/nfr-o-03-spec.md:1",
         "docs/traceability/nfr-o-03/nfr-o-03-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:249"
@@ -37488,7 +37615,7 @@
       "epic": "NFR-O",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2091",
-        "docs/traceability/index.md:1214",
+        "docs/traceability/index.md:2425",
         "docs/traceability/nfr-o-04/nfr-o-04-spec.md:1",
         "docs/traceability/nfr-o-04/nfr-o-04-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:249"
@@ -37503,7 +37630,7 @@
       "epic": "NFR-O",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2092",
-        "docs/traceability/index.md:1215",
+        "docs/traceability/index.md:2426",
         "docs/traceability/nfr-o-05/nfr-o-05-spec.md:1",
         "docs/traceability/nfr-o-05/nfr-o-05-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:249"
@@ -37518,7 +37645,7 @@
       "epic": "NFR-O",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2093",
-        "docs/traceability/index.md:1216",
+        "docs/traceability/index.md:2427",
         "docs/traceability/nfr-o-06/nfr-o-06-spec.md:1",
         "docs/traceability/nfr-o-06/nfr-o-06-spec.md:5"
       ],
@@ -37532,7 +37659,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2053",
-        "docs/traceability/index.md:1217",
+        "docs/traceability/index.md:2433",
         "docs/traceability/nfr-p-01/nfr-p-01-spec.md:1",
         "docs/traceability/nfr-p-01/nfr-p-01-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
@@ -37554,7 +37681,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2054",
-        "docs/traceability/index.md:1218",
+        "docs/traceability/index.md:2434",
         "docs/traceability/nfr-p-02/nfr-p-02-spec.md:1",
         "docs/traceability/nfr-p-02/nfr-p-02-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
@@ -37579,7 +37706,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2055",
-        "docs/traceability/index.md:1219",
+        "docs/traceability/index.md:2435",
         "docs/traceability/nfr-p-03/nfr-p-03-spec.md:1",
         "docs/traceability/nfr-p-03/nfr-p-03-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
@@ -37599,7 +37726,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2056",
-        "docs/traceability/index.md:1220",
+        "docs/traceability/index.md:2436",
         "docs/traceability/nfr-p-04/nfr-p-04-spec.md:1",
         "docs/traceability/nfr-p-04/nfr-p-04-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
@@ -37618,7 +37745,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2057",
-        "docs/traceability/index.md:1221",
+        "docs/traceability/index.md:2437",
         "docs/traceability/nfr-p-05/nfr-p-05-spec.md:1",
         "docs/traceability/nfr-p-05/nfr-p-05-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:238"
@@ -37640,7 +37767,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2058",
-        "docs/traceability/index.md:1222",
+        "docs/traceability/index.md:2438",
         "docs/traceability/nfr-p-06/nfr-p-06-spec.md:1",
         "docs/traceability/nfr-p-06/nfr-p-06-spec.md:5"
       ],
@@ -37659,7 +37786,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2059",
-        "docs/traceability/index.md:1223",
+        "docs/traceability/index.md:2439",
         "docs/traceability/nfr-p-07/nfr-p-07-spec.md:1",
         "docs/traceability/nfr-p-07/nfr-p-07-spec.md:5"
       ],
@@ -37680,7 +37807,7 @@
       "epic": "NFR-P",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2060",
-        "docs/traceability/index.md:1224",
+        "docs/traceability/index.md:2440",
         "docs/traceability/nfr-p-08/nfr-p-08-spec.md:1",
         "docs/traceability/nfr-p-08/nfr-p-08-spec.md:5"
       ],
@@ -37699,7 +37826,7 @@
       "epic": "NFR-R",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2077",
-        "docs/traceability/index.md:1225",
+        "docs/traceability/index.md:2446",
         "docs/traceability/nfr-r-01/nfr-r-01-intent.md:1",
         "docs/traceability/nfr-r-01/nfr-r-01-intent.md:4",
         "docs/traceability/nfr-r-01/nfr-r-01-spec.md:1",
@@ -37716,7 +37843,7 @@
       "epic": "NFR-R",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2078",
-        "docs/traceability/index.md:1226",
+        "docs/traceability/index.md:2447",
         "docs/traceability/nfr-r-02/nfr-r-02-intent.md:1",
         "docs/traceability/nfr-r-02/nfr-r-02-intent.md:4",
         "docs/traceability/nfr-r-02/nfr-r-02-spec.md:1",
@@ -37733,7 +37860,7 @@
       "epic": "NFR-R",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2079",
-        "docs/traceability/index.md:1227",
+        "docs/traceability/index.md:2448",
         "docs/traceability/nfr-r-03/nfr-r-03-intent.md:1",
         "docs/traceability/nfr-r-03/nfr-r-03-intent.md:4",
         "docs/traceability/nfr-r-03/nfr-r-03-spec.md:1",
@@ -37750,7 +37877,7 @@
       "epic": "NFR-R",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2080",
-        "docs/traceability/index.md:1228",
+        "docs/traceability/index.md:2449",
         "docs/traceability/nfr-r-04/nfr-r-04-intent.md:1",
         "docs/traceability/nfr-r-04/nfr-r-04-intent.md:4",
         "docs/traceability/nfr-r-04/nfr-r-04-spec.md:1",
@@ -37767,7 +37894,7 @@
       "epic": "NFR-R",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2081",
-        "docs/traceability/index.md:1229",
+        "docs/traceability/index.md:2450",
         "docs/traceability/nfr-r-05/nfr-r-05-intent.md:1",
         "docs/traceability/nfr-r-05/nfr-r-05-intent.md:4",
         "docs/traceability/nfr-r-05/nfr-r-05-spec.md:1",
@@ -37784,7 +37911,7 @@
       "epic": "NFR-R",
       "spec_refs": [
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2082",
-        "docs/traceability/index.md:1230",
+        "docs/traceability/index.md:2451",
         "docs/traceability/nfr-r-06/nfr-r-06-intent.md:1",
         "docs/traceability/nfr-r-06/nfr-r-06-intent.md:4",
         "docs/traceability/nfr-r-06/nfr-r-06-spec.md:1",
@@ -37802,7 +37929,8 @@
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2066",
         "docs/traceability/fr-nfr-s-01/fr-nfr-s-01-intent.md:1",
         "docs/traceability/fr-nfr-s-01/fr-nfr-s-01-intent.md:4",
-        "docs/traceability/index.md:1231",
+        "docs/traceability/index.md:2457",
+        "docs/traceability/index.md:2458",
         "docs/traceability/nfr-s-01/nfr-s-01-spec.md:1",
         "docs/traceability/nfr-s-01/nfr-s-01-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:251"
@@ -37837,7 +37965,8 @@
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2067",
         "docs/traceability/fr-nfr-s-02/fr-nfr-s-02-intent.md:1",
         "docs/traceability/fr-nfr-s-02/fr-nfr-s-02-intent.md:4",
-        "docs/traceability/index.md:1232",
+        "docs/traceability/index.md:2459",
+        "docs/traceability/index.md:2460",
         "docs/traceability/nfr-s-02/nfr-s-02-spec.md:1",
         "docs/traceability/nfr-s-02/nfr-s-02-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:251"
@@ -37872,7 +38001,8 @@
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2068",
         "docs/traceability/fr-nfr-s-03/fr-nfr-s-03-intent.md:1",
         "docs/traceability/fr-nfr-s-03/fr-nfr-s-03-intent.md:4",
-        "docs/traceability/index.md:1233",
+        "docs/traceability/index.md:2461",
+        "docs/traceability/index.md:2462",
         "docs/traceability/nfr-s-03/nfr-s-03-spec.md:1",
         "docs/traceability/nfr-s-03/nfr-s-03-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:251"
@@ -37907,7 +38037,8 @@
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2069",
         "docs/traceability/fr-nfr-s-04/fr-nfr-s-04-intent.md:1",
         "docs/traceability/fr-nfr-s-04/fr-nfr-s-04-intent.md:4",
-        "docs/traceability/index.md:1234",
+        "docs/traceability/index.md:2463",
+        "docs/traceability/index.md:2464",
         "docs/traceability/nfr-s-04/nfr-s-04-spec.md:1",
         "docs/traceability/nfr-s-04/nfr-s-04-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:251"
@@ -37941,7 +38072,8 @@
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2070",
         "docs/traceability/fr-nfr-s-05/fr-nfr-s-05-intent.md:1",
         "docs/traceability/fr-nfr-s-05/fr-nfr-s-05-intent.md:4",
-        "docs/traceability/index.md:1235",
+        "docs/traceability/index.md:2465",
+        "docs/traceability/index.md:2466",
         "docs/traceability/nfr-s-05/nfr-s-05-spec.md:1",
         "docs/traceability/nfr-s-05/nfr-s-05-spec.md:5",
         "docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:251"
@@ -37975,7 +38107,8 @@
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2071",
         "docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md:1",
         "docs/traceability/fr-nfr-s-06/fr-nfr-s-06-intent.md:4",
-        "docs/traceability/index.md:1236",
+        "docs/traceability/index.md:2467",
+        "docs/traceability/index.md:2468",
         "docs/traceability/nfr-s-06/nfr-s-06-spec.md:1",
         "docs/traceability/nfr-s-06/nfr-s-06-spec.md:5"
       ],
@@ -38007,7 +38140,7 @@
       "epic": "NFR-SCALE",
       "spec_refs": [
         "docs/traceability/fr-emergence-matrix.md:261",
-        "docs/traceability/index.md:1237",
+        "docs/traceability/index.md:2474",
         "docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:1",
         "docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:6",
         "docs/traceability/nfr-scale-02/nfr-scale-02-adr.md:10",

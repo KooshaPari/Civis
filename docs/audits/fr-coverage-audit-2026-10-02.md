@@ -563,7 +563,7 @@
 - `FR-UX-027`
   - spec: docs/models/civ-sim/USER_SPEC.md:999, docs/traceability/fr-ux-027/fr-ux-027-adr.md:1, docs/traceability/fr-ux-027/fr-ux-027-adr.md:6
 - `NFR-C-02`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2042, docs/traceability/index.md:1152, docs/traceability/nfr-c-02/nfr-c-02-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2042, docs/traceability/index.md:2298, docs/traceability/nfr-c-02/nfr-c-02-spec.md:1
 - `NFR-CIV-001`
   - spec: docs/traceability/nfr-matrix.md:52
 - `NFR-CIV-002`
@@ -591,7 +591,7 @@
 - `NFR-CIV-013`
   - spec: docs/traceability/nfr-matrix.md:64
 - `NFR-CIV-AI-002`
-  - spec: docs/design/civ-ai-crate.md:49, docs/traceability/index.md:1163, docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-research.md:1
+  - spec: docs/design/civ-ai-crate.md:49, docs/traceability/index.md:2319, docs/traceability/nfr-civ-ai-002/nfr-civ-ai-002-research.md:1
 - `NFR-CIV-MAINT-005`
   - spec: docs/reference/non-functional-requirements.md:517, docs/reference/non-functional-requirements.md:584, docs/reference/non-functional-requirements.md:608
 - `NFR-CIV-MAINT-006`
@@ -607,7 +607,7 @@
 - `NFR-CIV-PERF-007`
   - spec: docs/reference/non-functional-requirements.md:114, docs/reference/non-functional-requirements.md:230, docs/reference/non-functional-requirements.md:557
 - `NFR-CIV-PERF-008`
-  - spec: docs/guides/voxel-emergent-vision-and-migration.md:171, docs/guides/voxel-emergent-vision-and-migration.md:191, docs/traceability/index.md:1187
+  - spec: docs/guides/voxel-emergent-vision-and-migration.md:171, docs/guides/voxel-emergent-vision-and-migration.md:191, docs/traceability/index.md:2378
 - `NFR-CIV-PERF-900`
   - spec: docs/agileplus/epics/civ-w5-scale.md:14, docs/agileplus/epics/civ-w5-scale.md:27, docs/agileplus/README.md:24
 - `NFR-CIV-PERF-901`
@@ -623,7 +623,7 @@
 - `NFR-CIV-SCALE-003`
   - spec: docs/reference/non-functional-requirements.md:220, docs/reference/non-functional-requirements.md:564, docs/reference/non-functional-requirements.md:602
 - `NFR-CIV-SCALE-004`
-  - spec: docs/guides/voxel-emergent-vision-and-migration.md:172, docs/traceability/index.md:1201, docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248
+  - spec: docs/guides/voxel-emergent-vision-and-migration.md:172, docs/traceability/TRACEABILITY-GAP-REPORT-20260916.md:248
 - `NFR-CIV-SCALE-900`
   - spec: docs/agileplus/epics/civ-w5-scale.md:9, docs/agileplus/epics/civ-w5-scale.md:22, docs/agileplus/README.md:24
 - `NFR-CIV-SCALE-902`
@@ -639,37 +639,37 @@
 - `NFR-CIV-SEC-004`
   - spec: docs/reference/non-functional-requirements.md:336, docs/reference/non-functional-requirements.md:572, docs/reference/non-functional-requirements.md:611
 - `NFR-O-01`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2088, docs/traceability/index.md:1211, docs/traceability/nfr-o-01/nfr-o-01-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2088, docs/traceability/index.md:2422, docs/traceability/nfr-o-01/nfr-o-01-spec.md:1
 - `NFR-O-02`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2089, docs/traceability/index.md:1212, docs/traceability/nfr-o-02/nfr-o-02-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2089, docs/traceability/index.md:2423, docs/traceability/nfr-o-02/nfr-o-02-spec.md:1
 - `NFR-O-03`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2090, docs/traceability/index.md:1213, docs/traceability/nfr-o-03/nfr-o-03-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2090, docs/traceability/index.md:2424, docs/traceability/nfr-o-03/nfr-o-03-spec.md:1
 - `NFR-O-04`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2091, docs/traceability/index.md:1214, docs/traceability/nfr-o-04/nfr-o-04-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2091, docs/traceability/index.md:2425, docs/traceability/nfr-o-04/nfr-o-04-spec.md:1
 - `NFR-O-05`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2092, docs/traceability/index.md:1215, docs/traceability/nfr-o-05/nfr-o-05-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2092, docs/traceability/index.md:2426, docs/traceability/nfr-o-05/nfr-o-05-spec.md:1
 - `NFR-O-06`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2093, docs/traceability/index.md:1216, docs/traceability/nfr-o-06/nfr-o-06-spec.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2093, docs/traceability/index.md:2427, docs/traceability/nfr-o-06/nfr-o-06-spec.md:1
 - `NFR-R-01`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2077, docs/traceability/index.md:1225, docs/traceability/nfr-r-01/nfr-r-01-intent.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2077, docs/traceability/index.md:2446, docs/traceability/nfr-r-01/nfr-r-01-intent.md:1
 - `NFR-R-02`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2078, docs/traceability/index.md:1226, docs/traceability/nfr-r-02/nfr-r-02-intent.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2078, docs/traceability/index.md:2447, docs/traceability/nfr-r-02/nfr-r-02-intent.md:1
 - `NFR-R-03`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2079, docs/traceability/index.md:1227, docs/traceability/nfr-r-03/nfr-r-03-intent.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2079, docs/traceability/index.md:2448, docs/traceability/nfr-r-03/nfr-r-03-intent.md:1
 - `NFR-R-04`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2080, docs/traceability/index.md:1228, docs/traceability/nfr-r-04/nfr-r-04-intent.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2080, docs/traceability/index.md:2449, docs/traceability/nfr-r-04/nfr-r-04-intent.md:1
 - `NFR-R-05`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2081, docs/traceability/index.md:1229, docs/traceability/nfr-r-05/nfr-r-05-intent.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2081, docs/traceability/index.md:2450, docs/traceability/nfr-r-05/nfr-r-05-intent.md:1
 - `NFR-R-06`
-  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:1230, docs/traceability/nfr-r-06/nfr-r-06-intent.md:1
+  - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:2451, docs/traceability/nfr-r-06/nfr-r-06-intent.md:1
 
 ## Tested IDs with no ID-tagged code (add a code reference) (156)
 
 - `FR-CIV-3D`
-  - spec: docs/design/civ-actor-assets-fix.md:251
+  - spec: docs/design/civ-actor-assets-fix.md:251, docs/traceability/index.md:87
   - tests: crates/engine/tests/fr_fr_civ_3d_001.rs:3, crates/engine/tests/fr_fr_civ_3d_002.rs:3, crates/engine/tests/fr_fr_civ_3d_003.rs:3
 - `FR-CIV-CORE-021`
-  - spec: docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:1, docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4
+  - spec: docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:1, docs/traceability/fr-civ-core-021/fr-civ-core-021-intent.md:4, docs/traceability/index.md:455
   - tests: crates/build/tests/fr_matrix_batch12.rs:765
 - `FR-CIV-DET-002`
   - spec: docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:1, docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:4, docs/traceability/fr-civ-det-002/fr-civ-det-002-intent.md:22
@@ -861,7 +861,7 @@
   - spec: docs/design/onboarding-qol.md:249, docs/traceability/fr-civ-qol-230/fr-civ-qol-230-adr.md:1, docs/traceability/fr-civ-qol-230/fr-civ-qol-230-adr.md:6
   - tests: crates/engine/tests/fr_fr_civ_qol_230.rs:1, crates/engine/tests/fr_fr_civ_qol_230.rs:7
 - `FR-CIV-REL-007`
-  - spec: docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:1, docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:4
+  - spec: docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:1, docs/traceability/fr-civ-rel-007/fr-civ-rel-007-intent.md:4, docs/traceability/index.md:1278
   - tests: crates/engine/tests/fr_civ_religion_007_phase_belief.rs:1
 - `FR-CIV-RTS-002`
   - spec: docs/reports/STATUS_REPORT.md:94, docs/specs/CIV-0300-rts-ui-ux-spec.md:1314, docs/specs/CIV-0300-rts-ui-ux-spec.md:1315

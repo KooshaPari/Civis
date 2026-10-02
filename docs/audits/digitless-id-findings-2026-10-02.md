@@ -60,7 +60,38 @@ that a requirement exists when none does.
 
 ## Related finding: `docs/traceability/index.md` is a stale snapshot
 
-1066 of its 1231 rows disagree with `docs/audits/fr-matrix.json`, including 631
-rows still claiming `CODE-ONLY-no-spec`. Patching the five `SPECIES-300..304`
-rows by hand would have been cosmetic. The file needs regeneration from the
-matrix, tracked separately.
+Regenerated status comparison, all 1231 rows parsed:
+
+| Measure | Count |
+|---|---:|
+| Rows in `index.md` | 1231 |
+| IDs also present in the matrix | 1229 |
+| Status agrees with the matrix | 163 |
+| Status disagrees with the matrix | 435 |
+| Not comparable (absent from the matrix) | 631 |
+| Only in `index.md` | 2 (`FR-CIV-TACTICS-001-`, `FR-CIV-TACTICS-025-`, both known phantoms) |
+| Only in the matrix | 201 |
+
+The file is dated 2026-09-16 by its own header and its generator no longer
+exists in the repo. It uses a status vocabulary the matrix does not emit at all:
+631 rows claim `CODE-ONLY-no-spec`, which the matrix has never produced.
+
+The matrix is authoritative where they differ. Spot-checked three of the 435
+disagreements against source:
+
+- `FR-AI-001` — `index.md` says `SPEC-ONLY`, matrix says `COVERED`. The matrix
+  is right: `docs/FR.md:43` defines it, `crates/ai/src/decision.rs:3` cites it,
+  and `crates/ai/tests/fr_fr_ai_001.rs:1` tests it.
+- `FR-CIV-CULT-001` — `index.md` says `IMPL-NO-TEST`, matrix says `COVERED`.
+  Specified in `agileplus-specs/civ-009-culture-diffusion/spec.md:24`.
+- `FR-CIV-AGENTS-000` — `index.md` says `COVERED`, matrix says `SELF-TEST-ONLY`.
+  The matrix is stricter, which is the correct direction for a needs-test row.
+
+Patching the five `SPECIES-300..304` rows by hand would have been cosmetic, so it
+was not done. The file needs regeneration from the matrix, or retirement as a
+duplicate source of truth. Tracked separately.
+
+The `Completeness` column is not a coverage signal. It ranges 3/7 to 7/7 and is
+computed from seven documentation artefacts existing per ID, not from whether
+behaviour is implemented. An ID can score 7/7 and still be `SPEC-ONLY`, so the
+column must not be read as implementation status.

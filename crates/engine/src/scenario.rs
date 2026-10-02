@@ -28,7 +28,7 @@ fn default_quadrant_spread() -> i32 {
     2500
 }
 
-/// One entry in a scenario's weighted seed-mix (FR-CONTENT-SEEDMIX).
+/// One entry in a scenario's weighted seed-mix (FR-API-001).
 ///
 /// The `weight` is relative — only ratios matter, not magnitudes.
 /// Must be > 0 and finite.
@@ -40,7 +40,7 @@ pub struct SeedWeight {
     pub weight: f32,
 }
 
-/// Scenario-level starting-population parameters (FR-CONTENT-STARTCOND).
+/// Scenario-level starting-population parameters (FR-API-001).
 ///
 /// Controls how many civilian agents are spawned per faction, how many factions
 /// are placed, and how far from each faction's capital they are scattered.
@@ -853,7 +853,7 @@ scarcity_multiplier: 1.0
         );
     }
 
-    // ---- starting_conditions tests (FR-CONTENT-STARTCOND) ----
+    // ---- starting_conditions tests (FR-API-001) ----
 
     #[test]
     fn scenario_starting_conditions_defaults() {
@@ -977,7 +977,7 @@ starting_conditions:
         Ok(scenario)
     }
 
-    // ── FR-CONTENT-SEEDMIX: scenario seed_mix parsing & validation ───────────
+    // ── FR-API-001: scenario seed_mix parsing & validation ─────────────────
 
     fn minimal_yaml_with_starting_conditions(extra: &str) -> String {
         format!(
@@ -1059,7 +1059,7 @@ starting_conditions:
         );
     }
 
-    // ── Preset YAML tests (FR-CONTENT-SEEDMIX / FR-CONTENT-STARTCOND) ────────
+    // ── Preset YAML tests (FR-API-001) ───────────────────────────────────────
 
     /// Every preset in `preset_names()` must load, validate, and have a
     /// non-empty name and finite positive weights.

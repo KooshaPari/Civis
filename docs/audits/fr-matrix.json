@@ -2576,17 +2576,22 @@
         "docs/traceability/fr-api-001/fr-api-001-plan.md:1"
       ],
       "code_refs": [
-        "crates/engine/src/scenario.rs:1"
+        "crates/engine/src/scenario.rs:1",
+        "crates/engine/src/scenario.rs:31",
+        "crates/engine/src/scenario.rs:43",
+        "crates/engine/src/scenario.rs:856",
+        "crates/engine/src/scenario.rs:980",
+        "crates/engine/src/scenario.rs:1062"
       ],
       "test_refs": [
+        "crates/engine/src/engine/engine_tests.rs:3170",
+        "crates/engine/src/scenario.rs:856",
+        "crates/engine/src/scenario.rs:980",
+        "crates/engine/src/scenario.rs:1062",
         "crates/engine/tests/fr_matrix_batch1.rs:18",
         "crates/engine/tests/fr_matrix_batch1.rs:366",
         "crates/engine/tests/fr_matrix_batch1.rs:367",
-        "crates/engine/tests/fr_matrix_batch1.rs:368",
-        "crates/engine/tests/fr_matrix_batch1.rs:402",
-        "crates/engine/tests/fr_matrix_batch1.rs:403",
-        "crates/engine/tests/fr_matrix_batch3.rs:184",
-        "crates/engine/tests/fr_matrix_batch3.rs:185"
+        "crates/engine/tests/fr_matrix_batch1.rs:368"
       ],
       "stub_test_refs": []
     },

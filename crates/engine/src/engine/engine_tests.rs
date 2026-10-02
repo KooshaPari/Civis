@@ -3167,7 +3167,7 @@ mod tests {
         );
     }
 
-    // ── FR-CONTENT-SEEDMIX: choose_named_seed helper unit tests ──────────────
+    // ── FR-API-001: choose_named_seed helper unit tests ─────────────────────
 
     /// Empty seed_mix must reproduce the classic Ardani/Velthari/Grundak round-robin
     /// without advancing the RNG (bit-identical default path).

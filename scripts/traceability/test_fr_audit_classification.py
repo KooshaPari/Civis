@@ -16,6 +16,7 @@ Run with:  python -m pytest scripts/traceability/test_fr_audit_classification.py
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -505,6 +506,157 @@ def test_speciation_implementation_cites_species_3xx(ref: str) -> None:
         f"{ref} still cites the self-minted alias FR-CIV-SPECIATION"
     )
     assert "FR-CIV-SPECIES-30" in text, f"{ref} cites no authoritative SPECIES-3xx ID"
+
+
+# --- rule 9: two self-minted CONTENT IDs double-tag FR-API-001 -------------
+#
+# `crates/engine/src/scenario.rs` declares `FR-API-001` at line 1 and defines the
+# scenario YAML schema. Inside that same schema, `SeedWeight` (line 31) and
+# `ScenarioStartingConditions` (line 43) tag themselves with invented digitless
+# IDs `FR-CONTENT-SEEDMIX` and `FR-CONTENT-STARTCOND`.
+#
+# `agileplus-specs/civ-013-research-api/spec.md:25` defines FR-API-001 as
+# "Scenario YAML format -- versioned schema specifying map dimensions, entity
+# placement, starting conditions, policy parameters". "starting conditions" is
+# named verbatim. Both types are fields of the FR-API-001 schema struct, so the
+# digitless labels split one specified requirement into two unspecified ones.
+#
+# `FR-CONTENT` has zero rows in the matrix; the namespace is entirely self-minted.
+# The fix is to re-tag with FR-API-001, not to admit FR-CONTENT-* as requirements.
+
+SCENARIO_ALIASES = ["FR-CONTENT-SEEDMIX", "FR-CONTENT-STARTCOND"]
+
+
+@pytest.mark.parametrize("alias", SCENARIO_ALIASES)
+def test_scenario_alias_is_not_admitted_as_an_id(alias: str) -> None:
+    """A self-minted CONTENT alias must never become a traceability row."""
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    if not inventory.exists():
+        pytest.skip("id inventory not generated")
+    import json
+
+    data = json.loads(inventory.read_text(encoding="utf-8"))
+    ids = {r["id"] for r in data.get("ids", [])}
+    assert alias not in ids, f"self-minted alias {alias} leaked into the inventory"
+
+
+@pytest.mark.parametrize(
+    "ref",
+    [
+        "crates/engine/src/scenario.rs",
+        "crates/engine/src/engine/engine_tests.rs",
+    ],
+)
+def test_scenario_implementation_cites_fr_api_001(ref: str) -> None:
+    """The scenario schema files must cite FR-API-001, not a CONTENT alias.
+
+    These files already declared FR-API-001 before the aliases existed. The
+    aliases were added later, splitting one requirement into three names.
+    """
+    text = (ROOT / ref).read_text(encoding="utf-8")
+    for alias in SCENARIO_ALIASES:
+        assert alias not in text, f"{ref} still cites the self-minted alias {alias}"
+    assert "FR-API-001" in text, f"{ref} cites no authoritative FR-API-001"
+
+
+def test_fr_api_001_is_covered() -> None:
+    """FR-API-001 owns the scenario schema, so it must not regress to SPEC-ONLY."""
+    matrix = ROOT / "docs" / "audits" / "fr-matrix.json"
+    if not matrix.exists():
+        pytest.skip("fr matrix not generated")
+    import json
+
+    data = json.loads(matrix.read_text(encoding="utf-8"))
+    rows = {r["id"]: r for r in data.get("rows", [])}
+    assert "FR-API-001" in rows, "FR-API-001 missing from the matrix"
+    assert rows["FR-API-001"]["status"] == "COVERED", (
+        "FR-API-001 owns crates/engine/src/scenario.rs and has integration tests in "
+        f"crates/engine/tests/fr_matrix_batch1.rs, but is {rows['FR-API-001']['status']}"
+    )
+
+
+# --- rule 10: the audit cannot see digitless IDs by construction ------------
+#
+# `docs/audits/_gather_ids.py` requires a numeric segment, so all 9 digitless
+# code-side tokens are invisible to the matrix. That is why they survived three
+# audit rounds. The classification is recorded in
+# docs/audits/digitless-code-ids-2026-10-02.md: 2 are misfiled duplicates of
+# FR-API-001, 7 are undocumented behaviour.
+#
+# The 7 undocumented ones must NOT be admitted. Admitting a token found only in
+# code comments would mint a requirement from an implementation, which is the
+# defect class this audit exists to detect. They stay recorded, not counted.
+#
+# This test pins the classification so it cannot silently drift into the matrix,
+# and it guards the gatherer's blind spot: if someone widens the ID regex to
+# admit digitless tokens, these 9 must still be excluded by name.
+
+UNDOCUMENTED_DIGITLESS = [
+    "FR-CIV-LEGAL-PRECEDENT",
+    "FR-CIV-NICHE-ADAPT",
+    "FR-CIV-TECH-OBSOLETE",
+    "FR-CIV-phasewire",
+    "FR-CLIENT-godbuttons",
+    "FR-ENGINE-phaseorder",
+    "FR-RELIG-readapi",
+]
+
+
+@pytest.mark.parametrize("token", UNDOCUMENTED_DIGITLESS)
+def test_undocumented_digitless_token_is_not_admitted(token: str) -> None:
+    """An ID that only exists in code comments must not become a requirement row."""
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    if not inventory.exists():
+        pytest.skip("id inventory not generated")
+    import json
+
+    data = json.loads(inventory.read_text(encoding="utf-8"))
+    ids = {r["id"] for r in data.get("ids", [])}
+    assert token not in ids, (
+        f"{token} was found only in code comments with no spec backing, "
+        "but it leaked into the inventory as a requirement"
+    )
+
+
+def test_digitless_gather_blind_spot_is_documented() -> None:
+    """The gatherer's numeric-segment requirement is what hid all 9 tokens.
+
+    If this ever stops being true, the 9 tokens start reaching the matrix by
+    accident rather than by decision, and this audit's premise changes.
+    """
+    source = (ROOT / "docs" / "audits" / "_gather_ids.py").read_text(encoding="utf-8")
+    assert re.search(r"\\d", source), (
+        "_gather_ids.py no longer requires a numeric segment; the 9 digitless tokens "
+        "recorded in docs/audits/digitless-code-ids-2026-10-02.md must be re-classified "
+        "before any of them can reach the matrix"
+    )
+
+
+# --- rule 11: traceability dirs are template-filled, not authored ----------
+#
+# `docs/traceability/fr-civ-tech-003/fr-civ-tech-003-adr.md` contains, verbatim,
+# "TBD -- The architectural decision for FR-CIV-TECH-003 needs to be finalized
+# based on implementation exploration." Every row in the matrix credits ~6 such
+# template files in its spec_refs. They restate the ID rather than specify
+# behaviour, which is why `docs/traceability/index.md`'s Completeness column was
+# relabelled `Artifacts` in 95b506cf.
+#
+# This test does not delete the template credit -- that is a status-affecting
+# change and is recorded as an open question in the findings doc rather than
+# made silently. It asserts the honest thing: the templates are identifiable, so
+# any future attempt to credit them as requirements can be caught.
+
+
+def test_traceability_templates_are_identifiable() -> None:
+    """Template-filled traceability docs are detectable by their placeholder text."""
+    adr = (ROOT / "docs/traceability/fr-civ-tech-003/fr-civ-tech-003-adr.md").read_text(
+        encoding="utf-8"
+    )
+    assert "needs to be finalized based on implementation exploration" in adr, (
+        "fr-civ-tech-003-adr.md no longer contains the template placeholder; if it was "
+        "genuinely authored, update docs/audits/digitless-code-ids-2026-10-02.md, which "
+        "records this file as template-filled"
+    )
 
 
 # --- rule 8: the coverage gate can pass on a stale inventory ---------------

@@ -53,8 +53,23 @@ SNAPSHOT = ROOT / "docs" / "audits" / ".fr-snapshot.json"
 # be discharged here:" block. Both are comments asserting a requirement is NOT
 # met, so crediting them asserted exactly what they deny.
 #
-# The budgets below are unchanged: the corrections moved COVERED 840 -> 669 and
-# TEST-NO-CODE-REF 156 -> 326, and a 20-row regression budget still bites against
+# A third pass the same day found 8 more, from the id-provenance corrections in
+# docs/audits/id-provenance-corrections.md. Those withdrew 12 ids that no
+# authoritative spec defines, but left the ids behind in three places: the
+# withdrawal header itself, the surviving mention inside it, and doc comments on
+# real declarations (`/// Frame budget struct (FR-PERF-003).`).
+#   FR-ASSET-002, FR-ASSET-004, FR-AUD-002, FR-UX-001..005 -> no code refs left
+#   FR-ASSET-001, FR-AUD-001, FR-PERF-003                  -> kept their refs
+#     outside the render crate, which carry no withdrawal header
+# That last shape cannot be detected by line pattern: `/// Text (FR-X-NNN).` is
+# the project's normal tag convention, and 1,929 such mentions exist in files
+# with no header. So the rule is file-scoped: only a file's own header withdraws
+# an id, for that file alone. Verified as 11 ids / 24 refs changed with zero
+# collateral, and with FR-CIV-AUDIO-004, FR-CIV-ASSET-001 and FR-CIV-3D-001 --
+# the ids those headers explicitly vouch for -- left untouched.
+#
+# The budgets below are unchanged: the corrections moved COVERED 840 -> 661 and
+# TEST-NO-CODE-REF 156 -> 334, and a 20-row regression budget still bites against
 # the larger TEST-NO-CODE-REF base, so no widening was needed or justified. Only
 # the COVERED floor, which had to follow a number that was itself wrong, moved.
 REGRESSION_BUDGET = {
@@ -99,9 +114,10 @@ ABSOLUTE_CEILINGS = {
 # IMPLEMENTED` comment. A second pass the same day found 74 more rows covered
 # only by a line inside a "Removed, with the reason each cannot be discharged
 # here:" block, which carries no `[unbound]` token and so escaped the first rule.
-# Together the two passes took COVERED from 840 to 669. The floor is now 600,
+# Together the three passes took COVERED from 840 to 661. The floor is now 600,
 # which keeps the guard meaningful against the corrected baseline rather than
-# pinning a number already known to be inflated.
+# pinning a number already known to be inflated. It still leaves 61 rows of
+# margin, so it bites well before the baseline is reached.
 STATUS_FLOORS = {
     "COVERED": 600,
     "SELF-TEST-ONLY": 220,

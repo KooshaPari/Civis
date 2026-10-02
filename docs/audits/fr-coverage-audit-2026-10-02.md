@@ -20,10 +20,10 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 669 | 46.8 |
+| `COVERED` | 661 | 46.2 |
 | `SELF-TEST-ONLY` | 229 | 16.0 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 326 | 22.8 |
+| `TEST-NO-CODE-REF` | 334 | 23.4 |
 | `IMPL-NO-TEST` | 9 | 0.6 |
 | `SPEC-ONLY` | 197 | 13.8 |
 | `CODE-ONLY-no-spec` | 0 | 0.0 |
@@ -35,9 +35,9 @@
 |------|------:|---------|----------------|----------------|------------------|--------------|-----------|-------------------|
 | FR-AI | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-API | 4 | 1 | 0 | 0 | 3 | 0 | 0 | 0 |
-| FR-ASSET | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
+| FR-ASSET | 4 | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
 | FR-ASSET-PIPELINE | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
-| FR-AUD | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| FR-AUD | 3 | 2 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-CIV | 15 | 10 | 1 | 0 | 3 | 0 | 1 | 0 |
 | FR-CIV-0001-TICK | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-3D | 16 | 12 | 0 | 0 | 4 | 0 | 0 | 0 |
@@ -240,7 +240,7 @@
 | FR-STOR | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-TEST | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-THRY | 4 | 0 | 0 | 0 | 4 | 0 | 0 | 0 |
-| FR-UX | 27 | 5 | 0 | 0 | 0 | 0 | 22 | 0 |
+| FR-UX | 27 | 0 | 0 | 0 | 5 | 0 | 22 | 0 |
 | FR-VAL | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-VIEWPORT | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | NFR-C | 7 | 6 | 0 | 0 | 0 | 0 | 1 | 0 |
@@ -663,7 +663,7 @@
 - `NFR-R-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:2451, docs/traceability/nfr-r-06/nfr-r-06-intent.md:1
 
-## Tested IDs with no ID-tagged code (add a code reference) (326)
+## Tested IDs with no ID-tagged code (add a code reference) (334)
 
 - `FR-API-002`
   - spec: FUNCTIONAL_REQUIREMENTS.md, agileplus-specs/civ-013-research-api/plan.md:17, agileplus-specs/civ-013-research-api/spec.md:26
@@ -674,6 +674,15 @@
 - `FR-API-004`
   - spec: FUNCTIONAL_REQUIREMENTS.md, agileplus-specs/civ-013-research-api/plan.md:24, agileplus-specs/civ-013-research-api/spec.md:28
   - tests: crates/build/tests/fr_matrix_batch12.rs:94, crates/build/tests/fr_matrix_batch12.rs:97
+- `FR-ASSET-002`
+  - spec: docs/traceability/TRACEABILITY_MATRIX.md:220, docs/traceability/fr-asset-002/fr-asset-002-adr.md:1, docs/traceability/fr-asset-002/fr-asset-002-adr.md:6
+  - tests: crates/render/tests/atlas_packed_per_lod.rs:2
+- `FR-ASSET-004`
+  - spec: docs/traceability/TRACEABILITY_MATRIX.md:222, docs/traceability/fr-asset-004/fr-asset-004-adr.md:1, docs/traceability/fr-asset-004/fr-asset-004-adr.md:6
+  - tests: crates/render/tests/gltf_lazy_loaded.rs:2
+- `FR-AUD-002`
+  - spec: docs/traceability/TRACEABILITY_MATRIX.md:247, docs/traceability/fr-aud-002/fr-aud-002-adr.md:1, docs/traceability/fr-aud-002/fr-aud-002-adr.md:6
+  - tests: crates/engine/tests/fr_fr_aud_002.rs:1, crates/engine/tests/fr_fr_aud_002.rs:5, crates/engine/tests/fr_fr_aud_002.rs:9
 - `FR-CIV-0104-003`
   - spec: docs/specs/CIV-0104-minimal-constraint-set-theorem.md:1464, docs/traceability/fr-civ-0104-003/fr-civ-0104-003-adr.md:1, docs/traceability/fr-civ-0104-003/fr-civ-0104-003-adr.md:6
   - tests: crates/engine/tests/fr_fr_civ_0104_003.rs:1, crates/engine/tests/fr_fr_civ_0104_003.rs:6
@@ -1622,6 +1631,21 @@
 - `FR-THRY-004`
   - spec: docs/traceability/TRACEABILITY_MATRIX.md:121, docs/traceability/fr-thry-004/fr-thry-004-adr.md:1, docs/traceability/fr-thry-004/fr-thry-004-adr.md:6
   - tests: crates/engine/tests/fr_fr_thry_004.rs:1, crates/engine/tests/fr_fr_thry_004.rs:3, crates/engine/tests/fr_fr_thry_004.rs:16
+- `FR-UX-001`
+  - spec: docs/models/civ-sim/USER_SPEC.md:911, docs/models/civ-sim/USER_SPEC.md:1808, docs/traceability/TRACEABILITY_MATRIX.md:205
+  - tests: crates/render/tests/hex_map_draw_list.rs:2
+- `FR-UX-002`
+  - spec: docs/models/civ-sim/USER_SPEC.md:914, docs/traceability/TRACEABILITY_MATRIX.md:206, docs/traceability/fr-ux-002/fr-ux-002-adr.md:1
+  - tests: crates/render/tests/rts_camera_controls.rs:2
+- `FR-UX-003`
+  - spec: docs/models/civ-sim/USER_SPEC.md:917, docs/traceability/TRACEABILITY_MATRIX.md:207, docs/traceability/fr-ux-003/fr-ux-003-adr.md:1
+  - tests: crates/render/tests/timeline_scrubber_rewind.rs:2
+- `FR-UX-004`
+  - spec: docs/models/civ-sim/USER_SPEC.md:920, docs/traceability/TRACEABILITY_MATRIX.md:208, docs/traceability/fr-ux-004/fr-ux-004-adr.md:1
+  - tests: crates/render/tests/lod_seamless_transition.rs:2
+- `FR-UX-005`
+  - spec: docs/models/civ-sim/USER_SPEC.md:923, docs/traceability/TRACEABILITY_MATRIX.md:209, docs/traceability/fr-ux-005/fr-ux-005-adr.md:1
+  - tests: crates/render/tests/state_from_events_only.rs:2
 - `FR-VAL-001`
   - spec: docs/models/civ-sim/OPS_GOVERNANCE_SPEC.md:170, docs/traceability/fr-val-001/fr-val-001-adr.md:1, docs/traceability/fr-val-001/fr-val-001-adr.md:6
   - tests: crates/engine/tests/fr_fr_val_001.rs:1, crates/engine/tests/fr_fr_val_001.rs:5, crates/engine/tests/fr_fr_val_001.rs:9
@@ -1682,13 +1706,12 @@ _None._
 
 _None._
 
-## Placeholder-only coverage (weakest evidence) (3)
+## Placeholder-only coverage (weakest evidence) (2)
 
 These IDs are counted `COVERED` on tests whose file matches the auto-generated placeholder pattern above. Their tests assert properties of shared types, not the requirement, so treat the coverage as unverified until a real oracle exists.
 
-`183` placeholder test files affect `3` IDs.
+`183` placeholder test files affect `2` IDs.
 
 - `FR-AUD-001`
-- `FR-AUD-002`
 - `FR-AUD-003`
 

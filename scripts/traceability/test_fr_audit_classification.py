@@ -1198,6 +1198,101 @@ def test_gate_refuses_to_run_on_a_missing_inventory_generator() -> None:
     )
 
 
+def test_provenance_header_withdraws_its_ids_file_scoped() -> None:
+    """A header declaring an id undefined withdraws it for that whole file.
+
+    The id-provenance corrections left three artifacts the earlier `[unbound]`
+    and "Removed, with the reason" rules all missed: the header itself, the
+    surviving mention inside it, and `/// Frame budget struct (FR-PERF-003).`
+    left on a real declaration.
+
+    Shape three is indistinguishable from a genuine tag by pattern alone --
+    `/// Text (FR-X-NNN).` is the project's normal convention, and 1,929 such
+    mentions exist in files with no header. So the rule keys on the file's own
+    header, never on the doc line's shape.
+    """
+    # Mirrors crates/render/src/atlas.rs: the header-bearing line names the ids
+    # it withdrew, and the same ids survive on real declarations further down.
+    src = (
+        "//! NOTE: this module previously carried `FR-PROV-001`, `FR-PROV-002`.\n"
+        "//! No authoritative spec defines those ids.\n"
+        "\n"
+        "/// Pack sprites into one atlas per LOD level (FR-PROV-002).\n"
+        "pub fn pack_atlas_per_lod() {}\n"
+        "\n"
+        "/// Deterministic replay satisfies FR-PROV-003 on every run.\n"
+        "pub fn replay() {}\n"
+    )
+    lines = src.split("\n")
+    withdrawn = gather.withdrawn_ids(lines)
+
+    # The header's own ids are withdrawn. Ids named only on CONTINUATION lines of
+    # the header are deliberately NOT: see the next test.
+    assert withdrawn == {"FR-PROV-001", "FR-PROV-002"}, f"got {withdrawn}"
+    assert "FR-PROV-003" not in withdrawn
+
+    # Both leftover citations are withdrawn; the genuine one is not. This is
+    # the assertion a line-shaped rule could not make.
+    assert gather.cites_withdrawn(lines[3], withdrawn)
+    assert gather.cites_withdrawn(lines[0], withdrawn)
+    assert not gather.cites_withdrawn(lines[6], withdrawn)
+
+    # A file with no header withdraws nothing, so the check is inert there.
+    clean = ["/// Deterministic replay satisfies FR-PROV-003 on every run."]
+    assert gather.withdrawn_ids(clean) == set()
+    assert not gather.cites_withdrawn(clean[0], set())
+
+
+def test_provenance_scan_is_line_scoped_not_block_scoped() -> None:
+    """Regression: a block-scoped header scan withdraws ids the file vouches for.
+
+    The obvious generalization -- scan the whole comment block containing the
+    header -- is wrong, and measurably so. A provenance header routinely names
+    BOTH what it withdrew and the one real requirement that survived:
+
+        //! NOTE: this module previously carried an `FR-ASSET-004` tag. No
+        //! authoritative spec defines that id ... The real
+        //! CIV-0601 spec numbers its requirements `FR-CIV-3D-001..015`.
+
+    Block-scanning that header would withdraw FR-CIV-3D-001. Measured over the
+    render crate, it would additionally withdraw FR-CIV-AUDIO-004 and
+    FR-CIV-ASSET-001, which `lib.rs:31-33` explicitly names as "the surviving
+    tag" and "the one audio requirement this crate genuinely implements".
+
+    So only ids on a header-bearing line itself are withdrawn. An id named on a
+    continuation line is either part of the withdrawal prose or a genuine
+    survivor, and the file gives no way to tell the two apart. That residual is
+    recorded as an accepted limit rather than guessed at.
+    """
+    src = (
+        "//! NOTE: this module previously carried an `FR-PROV-001` tag. No\n"
+        "//! authoritative spec defines that id. The real spec numbers its\n"
+        "//! requirements `FR-CIV-SURVIVOR-002..015`.\n"
+    )
+    assert gather.withdrawn_ids(src.split("\n")) == {"FR-PROV-001"}
+
+
+def test_provenance_header_matches_only_its_own_literal_openings() -> None:
+    """Guard the over-reach case: prose that merely discusses a withdrawal.
+
+    Matching on 'does not exist' or 'no authoritative spec' would catch
+    legitimate discussion in ordinary module docs, so the rule is anchored to
+    the literal openings the correction tools emit.
+    """
+    discussing = [
+        "//! The spec file CIV-0600 does not exist; use the asset pipeline spec.",
+        "//! No authoritative spec defines the entity budget, so we derive one.",
+    ]
+    assert gather.withdrawn_ids(discussing) == set()
+
+    assert gather.withdrawn_ids(
+        ["//! Provenance: this module previously carried a `FR-X-001` tag."]
+    ) == {"FR-X-001"}
+    assert gather.withdrawn_ids(
+        ["//! This crate previously advertised `FR-Y-002` implementations."]
+    ) == {"FR-Y-002"}
+
+
 def test_test_no_code_ref_rows_carry_no_code_refs() -> None:
     """The status name is the contract: this status means zero code references.
 

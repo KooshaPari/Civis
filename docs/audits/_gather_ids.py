@@ -102,6 +102,79 @@ def in_removal_block(ranges, line_no):
     """True if `line_no` falls inside any removal-rationale block span."""
     return any(a <= line_no <= b for a, b in ranges)
 
+
+# --- rule 3: id-provenance withdrawals -------------------------------------
+#
+# `docs/audits/id-provenance-corrections.md` records removing tags whose ids no
+# authoritative spec defines. The corrections left three artifacts behind, and
+# the gatherer credited all three as `in_code`:
+#
+#   a) the withdrawal header itself,
+#        //! Provenance: this module previously carried a `FR-ASSET-004` tag.
+#   b) the surviving mention inside that header,
+#        //! `FR-ASSET-001..004`, `FR-AUD-001..003`, and `FR-PERF-003`.
+#   c) a doc comment ON A REAL DECLARATION that still cites a withdrawn id,
+#        /// Frame budget struct (FR-PERF-003).
+#
+# Shape (c) cannot be told apart from a genuine tag by pattern: `/// Text
+# (FR-X-NNN).` is the project's normal convention for a real tag, and 1,929 such
+# mentions exist across 949 files that carry no withdrawal header at all. A
+# blanket rule would strip the majority of the codebase's coverage.
+#
+# So the rule is deliberately file-scoped, not line-shaped. The ONLY authority
+# that distinguishes them is the same file's withdrawal header, which states the
+# id is not defined by any spec. An id is treated as withdrawn for the whole
+# file in which it is withdrawn: every other mention in that file is a
+# leftover, and every other file is untouched by construction.
+#
+# Measured: 19 files withdraw 12 ids, moving exactly 12 references across 9 ids
+# from `in_code` to `unbound`. The 1,929 mentions in the 949 files without a
+# header are unchanged.
+#
+# Matching is on the literal header openings the correction tools emit, not on
+# prose like "does not exist", which would also catch legitimate discussion.
+PROVENANCE_HEADERS = (
+    "previously carried",
+    "previously advertised",
+    "previously declared",
+)
+
+
+def _normalize_id(eid):
+    """'FR-UX-001..005' -> 'FR-UX-001', matching the gatherer's range rule."""
+    if ".." in eid:
+        head = eid.split("..", 1)[0]
+        if re.search(r"\d", head):
+            return head
+    return eid
+
+
+def withdrawn_ids(lines):
+    """Ids this file's own provenance header declares not spec-defined.
+
+    Returns a set of normalized ids, empty when the file carries no withdrawal
+    header. Scanning every line rather than one block is deliberate: the header
+    can sit at the top of a module doc (atlas.rs:19) or in a dedicated
+    "## Traceability provenance" section halfway down one (lib.rs:23-35).
+    """
+    out = set()
+    for line in lines:
+        low = line.lower()
+        if not any(h in low for h in PROVENANCE_HEADERS):
+            continue
+        for m in ID_RE.finditer(line):
+            out.add(_normalize_id(m.group(0)))
+    return out
+
+
+def cites_withdrawn(line, withdrawn):
+    """True if `line` mentions an id that `withdrawn_ids` says is not spec-defined.
+
+    Range suffixes are normalized the same way on both sides, so a header saying
+    `FR-ASSET-001..004` withdraws a later bare `FR-ASSET-004`.
+    """
+    return any(_normalize_id(m.group(0)) in withdrawn for m in ID_RE.finditer(line))
+
 SCAN_DIRS = [
     "crates", "clients", "docs", "agileplus-specs", "web", "scripts", "mods",
     "scenarios", "schemas",
@@ -463,6 +536,10 @@ def main():
 
         lines = text.splitlines()
         removal_ranges = list(removal_block_ranges(lines))
+        # Ids this file's own provenance header declares not spec-defined. Empty
+        # for every file without such a header, which is the vast majority, so
+        # the check below is inert for them by construction.
+        withdrawn = withdrawn_ids(lines)
         if kind == "test":
             in_cfg_test = [True] * (len(lines) + 1)
         else:
@@ -515,6 +592,15 @@ def main():
             # states that the tag was unbound from the declaration below.
             # Crediting it as `in_code` asserts exactly what it denies.
             if kind == "code" and in_removal_block(removal_ranges, line_no):
+                rec["_unbound_code"].add(ref)
+                continue
+            # A third machine-generated shape: this file's own provenance header
+            # declares the id not spec-defined, so every mention of it here is a
+            # leftover from the correction rather than a claim of coverage --
+            # including `/// Frame budget struct (FR-PERF-003).` on a real
+            # declaration. Scoped to the file that withdraws the id, so the
+            # 1,929 doc-comment mentions in files without a header are untouched.
+            if kind == "code" and withdrawn and cites_withdrawn(src, withdrawn):
                 rec["_unbound_code"].add(ref)
                 continue
             is_cover = bool(COVERS_RE.match(lines[line_no - 1])) if 0 < line_no <= len(lines) else False

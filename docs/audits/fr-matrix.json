@@ -14,10 +14,10 @@
   "totals": {
     "rows": 1430,
     "by_status": {
-      "COVERED": 669,
+      "COVERED": 661,
       "SELF-TEST-ONLY": 229,
       "STUB-TEST-ONLY": 0,
-      "TEST-NO-CODE-REF": 326,
+      "TEST-NO-CODE-REF": 334,
       "IMPL-NO-TEST": 9,
       "SPEC-ONLY": 197,
       "CODE-ONLY-no-spec": 0
@@ -276,10 +276,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-ASSET": {
-        "COVERED": 4,
+        "COVERED": 2,
         "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
+        "TEST-NO-CODE-REF": 2,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -294,10 +294,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-AUD": {
-        "COVERED": 3,
+        "COVERED": 2,
         "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
+        "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -2121,10 +2121,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-UX": {
-        "COVERED": 5,
+        "COVERED": 0,
         "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
+        "TEST-NO-CODE-REF": 5,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 22,
         "CODE-ONLY-no-spec": 0
@@ -2698,8 +2698,6 @@
         "docs/traceability/fr-asset-001/fr-asset-001-plan.md:1"
       ],
       "code_refs": [
-        "crates/render/src/atlas.rs:19",
-        "crates/render/src/atlas.rs:117",
         "crates/render/src/lib.rs:26"
       ],
       "test_refs": [
@@ -2709,7 +2707,7 @@
     },
     {
       "id": "FR-ASSET-002",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-ASSET",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:220",
@@ -2722,11 +2720,7 @@
         "docs/traceability/fr-asset-002/fr-asset-002-intent.md:15",
         "docs/traceability/fr-asset-002/fr-asset-002-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/atlas.rs:19",
-        "crates/render/src/atlas.rs:168",
-        "crates/render/src/atlas.rs:199"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/atlas_packed_per_lod.rs:2"
       ],
@@ -2758,7 +2752,7 @@
     },
     {
       "id": "FR-ASSET-004",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-ASSET",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:222",
@@ -2771,10 +2765,7 @@
         "docs/traceability/fr-asset-004/fr-asset-004-intent.md:15",
         "docs/traceability/fr-asset-004/fr-asset-004-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/gltf.rs:12",
-        "crates/render/src/gltf.rs:79"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/gltf_lazy_loaded.rs:2"
       ],
@@ -2843,7 +2834,6 @@
         "docs/traceability/fr-aud-001/fr-aud-001-plan.md:1"
       ],
       "code_refs": [
-        "crates/render/src/audio.rs:32",
         "crates/render/src/lib.rs:26"
       ],
       "test_refs": [
@@ -2855,7 +2845,7 @@
     },
     {
       "id": "FR-AUD-002",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-AUD",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:247",
@@ -2868,9 +2858,7 @@
         "docs/traceability/fr-aud-002/fr-aud-002-intent.md:15",
         "docs/traceability/fr-aud-002/fr-aud-002-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/audio.rs:32"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/engine/tests/fr_fr_aud_002.rs:1",
         "crates/engine/tests/fr_fr_aud_002.rs:5",
@@ -31541,9 +31529,6 @@
       ],
       "code_refs": [
         "crates/engine/src/lib.rs:116",
-        "crates/render/src/frame.rs:1",
-        "crates/render/src/frame.rs:10",
-        "crates/render/src/frame.rs:29",
         "crates/render/src/lib.rs:26"
       ],
       "test_refs": [
@@ -34966,7 +34951,7 @@
     },
     {
       "id": "FR-UX-001",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-UX",
       "spec_refs": [
         "docs/models/civ-sim/USER_SPEC.md:911",
@@ -34981,12 +34966,7 @@
         "docs/traceability/fr-ux-001/fr-ux-001-intent.md:15",
         "docs/traceability/fr-ux-001/fr-ux-001-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/hex_map.rs:8",
-        "crates/render/src/hex_map.rs:99",
-        "crates/render/src/lib.rs:25",
-        "crates/render/src/lib.rs:29"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/hex_map_draw_list.rs:2"
       ],
@@ -34994,7 +34974,7 @@
     },
     {
       "id": "FR-UX-002",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-UX",
       "spec_refs": [
         "docs/models/civ-sim/USER_SPEC.md:914",
@@ -35008,10 +34988,7 @@
         "docs/traceability/fr-ux-002/fr-ux-002-intent.md:15",
         "docs/traceability/fr-ux-002/fr-ux-002-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/camera.rs:6",
-        "crates/render/src/camera.rs:67"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/rts_camera_controls.rs:2"
       ],
@@ -35019,7 +34996,7 @@
     },
     {
       "id": "FR-UX-003",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-UX",
       "spec_refs": [
         "docs/models/civ-sim/USER_SPEC.md:917",
@@ -35033,10 +35010,7 @@
         "docs/traceability/fr-ux-003/fr-ux-003-intent.md:15",
         "docs/traceability/fr-ux-003/fr-ux-003-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/timeline.rs:10",
-        "crates/render/src/timeline.rs:28"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/timeline_scrubber_rewind.rs:2"
       ],
@@ -35044,7 +35018,7 @@
     },
     {
       "id": "FR-UX-004",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-UX",
       "spec_refs": [
         "docs/models/civ-sim/USER_SPEC.md:920",
@@ -35058,10 +35032,7 @@
         "docs/traceability/fr-ux-004/fr-ux-004-intent.md:15",
         "docs/traceability/fr-ux-004/fr-ux-004-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/lod.rs:9",
-        "crates/render/src/lod.rs:44"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/lod_seamless_transition.rs:2"
       ],
@@ -35069,7 +35040,7 @@
     },
     {
       "id": "FR-UX-005",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-UX",
       "spec_refs": [
         "docs/models/civ-sim/USER_SPEC.md:923",
@@ -35083,10 +35054,7 @@
         "docs/traceability/fr-ux-005/fr-ux-005-intent.md:15",
         "docs/traceability/fr-ux-005/fr-ux-005-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/state.rs:12",
-        "crates/render/src/state.rs:48"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/state_from_events_only.rs:2"
       ],

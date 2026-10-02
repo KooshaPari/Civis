@@ -408,8 +408,6 @@
         "docs/traceability/fr-asset-001/fr-asset-001-plan.md:1"
       ],
       "in_code": [
-        "crates/render/src/atlas.rs:19",
-        "crates/render/src/atlas.rs:117",
         "crates/render/src/lib.rs:26"
       ],
       "in_tests": [
@@ -417,7 +415,10 @@
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/atlas.rs:117",
+        "crates/render/src/atlas.rs:19"
+      ]
     },
     {
       "id": "FR-ASSET-002",
@@ -436,17 +437,17 @@
         "docs/traceability/fr-asset-002/fr-asset-002-intent.md:15",
         "docs/traceability/fr-asset-002/fr-asset-002-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/atlas.rs:19",
-        "crates/render/src/atlas.rs:168",
-        "crates/render/src/atlas.rs:199"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/atlas_packed_per_lod.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/atlas.rs:168",
+        "crates/render/src/atlas.rs:19",
+        "crates/render/src/atlas.rs:199"
+      ]
     },
     {
       "id": "FR-ASSET-003",
@@ -493,16 +494,16 @@
         "docs/traceability/fr-asset-004/fr-asset-004-intent.md:15",
         "docs/traceability/fr-asset-004/fr-asset-004-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/gltf.rs:12",
-        "crates/render/src/gltf.rs:79"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/gltf_lazy_loaded.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/gltf.rs:12",
+        "crates/render/src/gltf.rs:79"
+      ]
     },
     {
       "id": "FR-ASSET-PIPELINE-001",
@@ -575,7 +576,6 @@
         "docs/traceability/fr-aud-001/fr-aud-001-plan.md:1"
       ],
       "in_code": [
-        "crates/render/src/audio.rs:32",
         "crates/render/src/lib.rs:26"
       ],
       "in_tests": [
@@ -585,7 +585,9 @@
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/audio.rs:32"
+      ]
     },
     {
       "id": "FR-AUD-002",
@@ -604,9 +606,7 @@
         "docs/traceability/fr-aud-002/fr-aud-002-intent.md:15",
         "docs/traceability/fr-aud-002/fr-aud-002-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/audio.rs:32"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/engine/tests/fr_fr_aud_002.rs:1",
         "crates/engine/tests/fr_fr_aud_002.rs:5",
@@ -614,7 +614,9 @@
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/audio.rs:32"
+      ]
     },
     {
       "id": "FR-AUD-003",
@@ -33894,9 +33896,6 @@
       ],
       "in_code": [
         "crates/engine/src/lib.rs:116",
-        "crates/render/src/frame.rs:1",
-        "crates/render/src/frame.rs:10",
-        "crates/render/src/frame.rs:29",
         "crates/render/src/lib.rs:26"
       ],
       "in_tests": [
@@ -33912,7 +33911,10 @@
       "in_stub_tests": [],
       "self_test_only": false,
       "unbound_refs": [
-        "crates/engine/src/lib.rs:121"
+        "crates/engine/src/lib.rs:121",
+        "crates/render/src/frame.rs:1",
+        "crates/render/src/frame.rs:10",
+        "crates/render/src/frame.rs:29"
       ]
     },
     {
@@ -38019,18 +38021,18 @@
         "docs/traceability/fr-ux-001/fr-ux-001-intent.md:15",
         "docs/traceability/fr-ux-001/fr-ux-001-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/hex_map.rs:8",
-        "crates/render/src/hex_map.rs:99",
-        "crates/render/src/lib.rs:25",
-        "crates/render/src/lib.rs:29"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/hex_map_draw_list.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/hex_map.rs:8",
+        "crates/render/src/hex_map.rs:99",
+        "crates/render/src/lib.rs:25",
+        "crates/render/src/lib.rs:29"
+      ]
     },
     {
       "id": "FR-UX-002",
@@ -38050,16 +38052,16 @@
         "docs/traceability/fr-ux-002/fr-ux-002-intent.md:15",
         "docs/traceability/fr-ux-002/fr-ux-002-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/camera.rs:6",
-        "crates/render/src/camera.rs:67"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/rts_camera_controls.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/camera.rs:6",
+        "crates/render/src/camera.rs:67"
+      ]
     },
     {
       "id": "FR-UX-003",
@@ -38079,16 +38081,16 @@
         "docs/traceability/fr-ux-003/fr-ux-003-intent.md:15",
         "docs/traceability/fr-ux-003/fr-ux-003-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/timeline.rs:10",
-        "crates/render/src/timeline.rs:28"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/timeline_scrubber_rewind.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/timeline.rs:10",
+        "crates/render/src/timeline.rs:28"
+      ]
     },
     {
       "id": "FR-UX-004",
@@ -38108,16 +38110,16 @@
         "docs/traceability/fr-ux-004/fr-ux-004-intent.md:15",
         "docs/traceability/fr-ux-004/fr-ux-004-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/lod.rs:9",
-        "crates/render/src/lod.rs:44"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/lod_seamless_transition.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/lod.rs:44",
+        "crates/render/src/lod.rs:9"
+      ]
     },
     {
       "id": "FR-UX-005",
@@ -38137,16 +38139,16 @@
         "docs/traceability/fr-ux-005/fr-ux-005-intent.md:15",
         "docs/traceability/fr-ux-005/fr-ux-005-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/state.rs:12",
-        "crates/render/src/state.rs:48"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/state_from_events_only.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/state.rs:12",
+        "crates/render/src/state.rs:48"
+      ]
     },
     {
       "id": "FR-UX-006",

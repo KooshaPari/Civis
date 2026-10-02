@@ -1120,13 +1120,22 @@ mod tests {
     // divergence never produces a genome closer to the archetype, and
     // mid-range divergence yields a genome distinct from both the exact
     // archetype and the fully-diverged genome for most seeds.
+    //
+    // Monotonicity is a property of a *fixed* random draw: for one set of target
+    // bytes, `out[i] = round(base[i] + d*(rand[i]-base[i]))` is monotone in `d`.
+    // Each call must therefore reuse the same RNG stream. Advancing a single
+    // generator across the two calls compares two independent draws, where no
+    // ordering is guaranteed, and the assertion fails on seed noise rather than
+    // on a real dial regression.
     #[test]
     fn fr_civ_genetics_seed_003_divergence_dial_is_monotone() {
         for &named in ALL_NAMED_SEEDS.iter() {
             let archetype = archetype_dna(named);
-            let mut rng = ChaCha8Rng::seed_from_u64(0xFEED_FACE);
-            let mid = seed_with_divergence(&archetype, 0.5, &mut rng);
-            let full = seed_with_divergence(&archetype, 1.0, &mut rng);
+            // Same seed for both ends of the dial, so the only difference is `d`.
+            let mut mid_rng = ChaCha8Rng::seed_from_u64(0xFEED_FACE);
+            let mut full_rng = ChaCha8Rng::seed_from_u64(0xFEED_FACE);
+            let mid = seed_with_divergence(&archetype, 0.5, &mut mid_rng);
+            let full = seed_with_divergence(&archetype, 1.0, &mut full_rng);
             // Length preserved across the dial.
             assert_eq!(mid.0.len(), archetype.0.len());
             assert_eq!(full.0.len(), archetype.0.len());
@@ -1141,6 +1150,46 @@ mod tests {
             assert!(
                 dist(&mid, &archetype) <= dist(&full, &archetype),
                 "{named:?}: divergence dial must be monotone"
+            );
+        }
+    }
+
+    /// Same invariant, asserted across every dial step rather than one pair, so
+    /// a regression that only shows up mid-range cannot slip through.
+    #[test]
+    fn fr_civ_genetics_seed_003_divergence_is_monotone_across_all_steps() {
+        for &named in ALL_NAMED_SEEDS.iter() {
+            let archetype = archetype_dna(named);
+            let dist = |a: &Dna, b: &Dna| {
+                a.0.iter()
+                    .zip(b.0.iter())
+                    .filter(|(x, y)| x != y)
+                    .count()
+            };
+            let mut previous = 0usize;
+            for step in 0..=10 {
+                let d = step as f32 / 10.0;
+                // Re-seed each step so `d` is the only variable.
+                let mut rng = ChaCha8Rng::seed_from_u64(0xFEED_FACE);
+                let genome = seed_with_divergence(&archetype, d, &mut rng);
+                let now = dist(&genome, &archetype);
+                assert!(
+                    now >= previous,
+                    "{named:?}: divergence {d} moved distance backwards ({previous} -> {now})"
+                );
+                previous = now;
+            }
+            // The endpoints must actually bracket the range, otherwise the
+            // monotonicity above is vacuous.
+            let mut zero_rng = ChaCha8Rng::seed_from_u64(0xFEED_FACE);
+            assert_eq!(
+                seed_with_divergence(&archetype, 0.0, &mut zero_rng),
+                archetype,
+                "{named:?}: divergence 0.0 must return the archetype unchanged"
+            );
+            assert!(
+                previous > 0,
+                "{named:?}: full divergence must actually differ from the archetype"
             );
         }
     }

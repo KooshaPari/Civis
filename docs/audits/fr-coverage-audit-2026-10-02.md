@@ -20,12 +20,12 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 835 | 58.4 |
+| `COVERED` | 840 | 58.7 |
 | `SELF-TEST-ONLY` | 228 | 15.9 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
 | `TEST-NO-CODE-REF` | 156 | 10.9 |
 | `IMPL-NO-TEST` | 9 | 0.6 |
-| `SPEC-ONLY` | 202 | 14.1 |
+| `SPEC-ONLY` | 197 | 13.8 |
 | `CODE-ONLY-no-spec` | 0 | 0.0 |
 | **Total** | **1430** | **100.0** |
 
@@ -178,7 +178,7 @@
 | FR-CIV-SOCIAL | 2 | 0 | 0 | 0 | 0 | 0 | 2 | 0 |
 | FR-CIV-SOCIAL-001-INSTITUTIONS | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | FR-CIV-SOCIAL-002-IDEOLOGY | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| FR-CIV-SPECIES | 48 | 1 | 12 | 0 | 0 | 0 | 35 | 0 |
+| FR-CIV-SPECIES | 48 | 6 | 12 | 0 | 0 | 0 | 30 | 0 |
 | FR-CIV-TACTICS | 63 | 35 | 19 | 0 | 9 | 0 | 0 | 0 |
 | FR-CIV-TECH | 21 | 4 | 0 | 0 | 0 | 0 | 17 | 0 |
 | FR-CIV-TERRAIN | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -266,7 +266,7 @@
 | NFR-S | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 |
 | NFR-SCALE | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 
-## Spec-only IDs (need implementation) (202)
+## Spec-only IDs (need implementation) (197)
 
 - `FR-CIV-0700`
   - spec: docs/design/civ-actor-assets-fix.md:322
@@ -432,16 +432,6 @@
   - spec: docs/design/species-sentience.md:102, docs/traceability/fr-civ-species-204/fr-civ-species-204-adr.md:1, docs/traceability/fr-civ-species-204/fr-civ-species-204-adr.md:6
 - `FR-CIV-SPECIES-205`
   - spec: docs/design/species-sentience.md:103, docs/traceability/fr-civ-species-205/fr-civ-species-205-adr.md:1, docs/traceability/fr-civ-species-205/fr-civ-species-205-adr.md:6
-- `FR-CIV-SPECIES-300`
-  - spec: docs/design/species-sentience.md:120, docs/traceability/fr-civ-species-300/fr-civ-species-300-adr.md:1, docs/traceability/fr-civ-species-300/fr-civ-species-300-adr.md:6
-- `FR-CIV-SPECIES-301`
-  - spec: docs/design/species-sentience.md:121, docs/traceability/fr-civ-species-301/fr-civ-species-301-adr.md:1, docs/traceability/fr-civ-species-301/fr-civ-species-301-adr.md:6
-- `FR-CIV-SPECIES-302`
-  - spec: docs/design/species-sentience.md:122, docs/design/species-sentience.md:192, docs/traceability/fr-civ-species-302/fr-civ-species-302-adr.md:1
-- `FR-CIV-SPECIES-303`
-  - spec: docs/design/species-sentience.md:123, docs/traceability/fr-civ-species-303/fr-civ-species-303-adr.md:1, docs/traceability/fr-civ-species-303/fr-civ-species-303-adr.md:6
-- `FR-CIV-SPECIES-304`
-  - spec: docs/design/species-sentience.md:124, docs/traceability/fr-civ-species-304/fr-civ-species-304-adr.md:1, docs/traceability/fr-civ-species-304/fr-civ-species-304-adr.md:6
 - `FR-CIV-SPECIES-400`
   - spec: docs/design/species-sentience.md:167, docs/traceability/fr-civ-species-400/fr-civ-species-400-adr.md:1, docs/traceability/fr-civ-species-400/fr-civ-species-400-adr.md:6
 - `FR-CIV-SPECIES-401`

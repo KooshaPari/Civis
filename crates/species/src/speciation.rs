@@ -3,20 +3,44 @@
 //! This module keeps speciation pure and substrate-driven: when two population
 //! centroids drift past the class threshold, they are minted as distinct species
 //! records with deterministic identifiers.
+//!
+//! Traceability (`docs/design/species-sentience.md:120-124`):
+//! - `FR-CIV-SPECIES-300` — a new species is issued *iff* a genome's Hamming
+//!   distance to its species reference exceeds `speciation_threshold`; below the
+//!   threshold the child stays in the parent species.
+//! - `FR-CIV-SPECIES-301` — `speciation_distance` is symmetric, normalised to
+//!   `[0,1]`. (Implemented in `civ-genetics`, which this module calls.)
+//! - `FR-CIV-SPECIES-302` — each `SpeciesRecord` links to its parent species.
+//! - `FR-CIV-SPECIES-303` — speciation never compares across `DnaClass`
+//!   boundaries; archetypes form disjoint species forests.
+//! - `FR-CIV-SPECIES-304` — species issuance is stable and idempotent per split:
+//!   the caller's IDs are minted verbatim, never reallocated.
+//!
+//! This module previously tagged itself with a digitless alias naming
+//! "speciation" that no spec defines. That alias hid all five requirements
+//! above from the traceability matrix, which reported them SPEC-ONLY while
+//! code and tests existed here. The alias is deliberately not written here so
+//! the scanner cannot mistake it for a requirement ID.
 
 use civ_genetics::{should_speciate, Dna, DnaClass};
 use serde::{Deserialize, Serialize};
 
 /// A stable species record minted from a population centroid.
+///
+/// FR-CIV-SPECIES-302 — the record links to the species it split from, so the
+/// inspector and legends engine can render an evolutionary tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpeciesRecord {
-    /// Stable species ID.
+    /// Stable species ID. FR-CIV-SPECIES-304 — minted verbatim from the caller
+    /// so re-evaluating a split cannot duplicate or renumber species.
     pub id: u64,
-    /// The DNA class the species belongs to.
+    /// The DNA class the species belongs to. FR-CIV-SPECIES-303 — comparisons
+    /// are confined to one class, so classes form disjoint species forests.
     pub dna_class: String,
     /// Founder centroid that triggered the split.
     pub founder_centroid: Dna,
     /// Optional parent species ID when this species split from an ancestor.
+    /// FR-CIV-SPECIES-302 — founders have no parent.
     pub parent_species_id: Option<u64>,
 }
 
@@ -39,6 +63,11 @@ pub enum SpeciationError {
 }
 
 /// Split two diverged populations into distinct species records.
+///
+/// FR-CIV-SPECIES-300 — the split fires *iff* the class threshold is exceeded,
+/// and FR-CIV-SPECIES-304 — the two caller-supplied IDs are minted verbatim, so
+/// the result is deterministic and re-evaluating one birth cannot mint
+/// duplicate species.
 ///
 /// The function is deterministic:
 /// - when the populations are still within the threshold, it returns `Err(NotDiverged)`;
@@ -123,19 +152,24 @@ mod tests {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // FR-CIV-SPECIATION — populations diverge into new species past a
-    // genetic-distance threshold. Two diverged populations are recognised as
-    // distinct species records (unique IDs, distinct founder centroids).
+    // FR-CIV-SPECIES-300/302/303/304 — populations diverge into new species
+    // past a genetic-distance threshold. Two diverged populations are
+    // recognised as distinct species records (unique IDs, distinct founder
+    // centroids, shared parent, confined to one DNA class).
     // ──────────────────────────────────────────────────────────────────────
 
-    /// Covers FR-CIV-SPECIATION — two populations whose DNA Hamming-distance
+    /// Covers FR-CIV-SPECIES-300 — two populations whose DNA Hamming-distance
     /// fraction exceeds the class's `speciation_threshold` are split into
     /// distinct `SpeciesRecord`s. The resulting records carry unique IDs,
     /// matching class names, the original centroids, and the shared parent.
+    ///
+    /// Also covers FR-CIV-SPECIES-302 (shared parent link), FR-CIV-SPECIES-303
+    /// (both records stay inside one `DnaClass`) and FR-CIV-SPECIES-304 (the
+    /// caller-supplied IDs 101/202 are minted verbatim and stay distinct).
     #[test]
-    fn fr_civ_speciation_diverged_populations_become_distinct_species() {
+    fn fr_civ_species_300_diverged_populations_become_distinct_species() {
         let class = DnaClass {
-            name: "fr-civ-speciation-lineage".into(),
+            name: "fr-civ-species-300-lineage".into(),
             length: 16,
             mutation_rate: 0.01,
             speciation_threshold: 0.25,
@@ -177,19 +211,19 @@ mod tests {
         assert_eq!(split.right.founder_centroid, right_pop);
 
         // Both records carry the class name and share the parent species ID.
-        assert_eq!(split.left.dna_class, "fr-civ-speciation-lineage");
-        assert_eq!(split.right.dna_class, "fr-civ-speciation-lineage");
+        assert_eq!(split.left.dna_class, "fr-civ-species-300-lineage");
+        assert_eq!(split.right.dna_class, "fr-civ-species-300-lineage");
         assert_eq!(split.left.parent_species_id, Some(7));
         assert_eq!(split.right.parent_species_id, Some(7));
     }
 
-    /// Covers FR-CIV-SPECIATION — under-threshold populations stay as a single
+    /// Covers FR-CIV-SPECIES-300 — under-threshold populations stay as a single
     /// lineage (no speciation event is minted). This complements the divergence
     /// case above and proves the threshold gate is honoured.
     #[test]
-    fn fr_civ_speciation_under_threshold_stays_one_species() {
+    fn fr_civ_species_300_under_threshold_stays_one_species() {
         let class = DnaClass {
-            name: "fr-civ-speciation-lineage".into(),
+            name: "fr-civ-species-300-lineage".into(),
             length: 16,
             mutation_rate: 0.01,
             speciation_threshold: 0.5,

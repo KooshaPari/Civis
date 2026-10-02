@@ -154,6 +154,10 @@ pub fn fitness(dna: &Dna, environment: &[u8]) -> f32 {
 /// Normalised Hamming distance between two DNAs of equal length (`0.0` =
 /// identical, `1.0` = every byte differs). Panics on length mismatch — callers
 /// are expected to compare within the same `DnaClass`.
+///
+/// FR-CIV-SPECIES-301 — symmetric and normalised to `[0,1]`. Callers must keep
+/// comparisons inside one `DnaClass` (FR-CIV-SPECIES-303), which is why a length
+/// mismatch panics rather than silently comparing across archetypes.
 #[must_use]
 pub fn speciation_distance(a: &Dna, b: &Dna) -> f32 {
     assert_eq!(a.0.len(), b.0.len(), "speciation_distance: length mismatch");
@@ -165,6 +169,10 @@ pub fn speciation_distance(a: &Dna, b: &Dna) -> f32 {
 }
 
 /// True when two genomes have drifted past the class's speciation threshold.
+///
+/// FR-CIV-SPECIES-300 — the threshold is the sole gate: a new species is issued
+/// *iff* the Hamming fraction exceeds it, and a child below the threshold stays
+/// in the parent species. `civ-species` mints the record from this predicate.
 #[must_use]
 pub fn should_speciate(a: &Dna, b: &Dna, class: &DnaClass) -> bool {
     speciation_distance(a, b) > class.speciation_threshold
@@ -236,7 +244,7 @@ mod tests {
     }
 
     /// Covers FR-CIV-GENETICS-010 — speciation triggers above the class threshold and
-    /// not below.
+    /// not below. Same gate as FR-CIV-SPECIES-300.
     #[test]
     fn speciation_trigger() {
         let class = DnaClass {
@@ -256,11 +264,17 @@ mod tests {
     }
 
     /// Covers FR-CIV-GENETICS-011 — speciation_distance is symmetric.
+    /// This is the FR-CIV-SPECIES-301 invariant.
     #[test]
     fn speciation_distance_is_symmetric() {
         let a = Dna(vec![1, 2, 3, 4, 5, 6, 7, 8]);
         let b = Dna(vec![1, 0, 3, 0, 5, 0, 7, 0]);
         assert_eq!(speciation_distance(&a, &b), speciation_distance(&b, &a));
+        // FR-CIV-SPECIES-301 — normalised to [0,1].
+        let d = speciation_distance(&a, &b);
+        assert!((0.0..=1.0).contains(&d), "distance {d} outside [0,1]");
+        // Identical genomes sit at the 0.0 endpoint.
+        assert_eq!(speciation_distance(&a, &a), 0.0);
     }
 
     /// Covers FR-CIV-GENETICS-012 — fitness against the same vector as DNA is 1.0.

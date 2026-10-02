@@ -444,3 +444,211 @@ def test_physics_substrate_ids_are_in_the_inventory() -> None:
 
 def test_covers_marker_recognises_lowercase_ids() -> None:
     assert gather.COVERS_RE.match("    /// Covers FR-PHYS-substrate-004 — ok")
+
+
+# --- rule 7: a self-minted alias hid five implemented requirements ---------
+#
+# `crates/species/src/speciation.rs` implements the whole Hamming-distance
+# speciation behaviour that `docs/design/species-sentience.md:120-124` defines as
+# FR-CIV-SPECIES-300..304, but the file tagged itself with an invented
+# digitless ID `FR-CIV-SPECIATION`. Consequences, both real:
+#
+#   * SPECIES-300..304 stayed SPEC-ONLY even though code and tests exist, so the
+#     matrix reported a spec gap that does not exist.
+#   * `FR-CIV-SPECIATION` would have been admitted by any digitless allowlist as
+#     a phantom row.
+#
+# The fix is to re-tag the code with the authoritative IDs, NOT to admit the
+# alias. The alias must stay out of the inventory entirely.
+
+
+def test_speciation_alias_is_not_admitted_as_an_id() -> None:
+    """`FR-CIV-SPECIATION` must never become a traceability row."""
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    if not inventory.exists():
+        pytest.skip("id inventory not generated")
+    import json
+
+    data = json.loads(inventory.read_text(encoding="utf-8"))
+    ids = {r["id"] for r in data.get("ids", [])}
+    assert "FR-CIV-SPECIATION" not in ids, "self-minted alias leaked into the inventory"
+
+
+def test_species_3xx_are_not_spec_only() -> None:
+    """Each SPECIES-3xx requirement has code plus tests, so none may be SPEC-ONLY."""
+    matrix = ROOT / "docs" / "audits" / "fr-matrix.json"
+    if not matrix.exists():
+        pytest.skip("fr matrix not generated")
+    import json
+
+    data = json.loads(matrix.read_text(encoding="utf-8"))
+    rows = {r["id"]: r for r in data.get("rows", [])}
+    for n in range(300, 305):
+        eid = f"FR-CIV-SPECIES-{n}"
+        assert eid in rows, f"{eid} missing from the matrix"
+        assert rows[eid]["status"] != "SPEC-ONLY", (
+            f"{eid} is implemented in crates/species/src/speciation.rs but reported SPEC-ONLY"
+        )
+
+
+@pytest.mark.parametrize(
+    "ref",
+    [
+        "crates/species/src/speciation.rs",
+        "crates/genetics/src/lib.rs",
+    ],
+)
+def test_speciation_implementation_cites_species_3xx(ref: str) -> None:
+    """The implementing files must cite the authoritative IDs, not the alias."""
+    text = (ROOT / ref).read_text(encoding="utf-8")
+    assert "FR-CIV-SPECIATION" not in text, (
+        f"{ref} still cites the self-minted alias FR-CIV-SPECIATION"
+    )
+    assert "FR-CIV-SPECIES-30" in text, f"{ref} cites no authoritative SPECIES-3xx ID"
+
+
+# --- rule 8: the coverage gate can pass on a stale inventory ---------------
+#
+# `gen-fr-audit.py` and `_build_matrix.py` both read
+# `docs/audits/_id_inventory_v3.json`. Neither regenerates it. `_gather_ids.py`
+# is a separate manual step, so `check-fr-coverage.py` happily rebuilt a matrix
+# from an inventory that predated the source under audit.
+#
+# Measured: after re-tagging `speciation.rs` with FR-CIV-SPECIES-300..304, the
+# gate ran green and reported all five still SPEC-ONLY, because the inventory on
+# disk was 14 minutes older than the edit. The gate passed on stale evidence.
+#
+# Detecting this by comparing artifacts is impossible in both directions. The
+# matrix is a pure function of the inventory, so an inventory-vs-matrix check
+# agrees even when both are stale; and both orderings write the inventory first,
+# so timestamps agree too. Only comparing the inventory against live source
+# discriminates, which is what the tests below do.
+
+
+def test_inventory_is_fresh_with_respect_to_source() -> None:
+    """The inventory must be rebuilt whenever source changes.
+
+    Comparing artifacts cannot work, and neither can comparing `path:line`
+    offsets. Three approaches were tried and each was verified vacuous:
+
+    * Inventory rows vs matrix rows — the matrix is a pure function of the
+      inventory, so rebuilding the matrix from stale data makes them agree again.
+    * mtime / `generated_at` — both the healthy and the stale orderings write the
+      inventory before the matrix, and `generated_at` is only day-granular.
+    * `path:line` still contains the ID — a stale inventory only fails this if the
+      source edit happened to move or drop the cited line. Re-tagging
+      `speciation.rs` kept every cited line intact, so the check passed anyway.
+
+    What does discriminate is recomputing the inventory from source and comparing
+    the result. That is the only check that cannot be satisfied by a stale file,
+    because it re-derives the evidence instead of trusting it.
+    """
+    inventory = ROOT / "docs" / "audits" / "_id_inventory_v3.json"
+    gather = ROOT / "docs" / "audits" / "_gather_ids.py"
+    if not inventory.exists() or not gather.exists():
+        pytest.skip("audit tooling not present")
+    import importlib.util
+    import io
+    import json
+    from contextlib import redirect_stdout, redirect_stderr
+
+    # Capture the bytes on disk BEFORE re-running the generator, because
+    # `main()` overwrites the file it scans.
+    before = json.loads(inventory.read_text(encoding="utf-8"))
+
+    spec = importlib.util.spec_from_file_location("fr_gather", gather)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["fr_gather"] = module
+    spec.loader.exec_module(module)
+
+    buf = io.StringIO()
+    with redirect_stdout(buf), redirect_stderr(buf):
+        module.main()
+
+    after = json.loads(module.OUT_JSON.read_text(encoding="utf-8"))
+
+    def fingerprint(doc: dict) -> dict:
+        # Ignore generated_at: it is day-granular and would mask a same-day
+        # rebuild.
+        return {r["id"]: {
+            "in_code": r.get("in_code"),
+            "in_tests": r.get("in_tests"),
+            "in_stub_tests": r.get("in_stub_tests"),
+            "in_specs": r.get("in_specs"),
+        } for r in (doc.get("ids") or [])}
+
+    old, new = fingerprint(before), fingerprint(after)
+    assert new, "recomputed inventory is empty"
+
+    only_old = sorted(set(old) - set(new))
+    only_new = sorted(set(new) - set(old))
+    drifted = sorted(k for k in set(old) & set(new) if old[k] != new[k])
+
+    assert not (only_old or only_new or drifted), (
+        f"{inventory.name} is stale with respect to source; re-run "
+        f"docs/audits/_gather_ids.py (then gen-fr-audit.py).\n"
+        f"  dropped IDs   : {len(only_old)} {only_old[:8]}\n"
+        f"  added IDs     : {len(only_new)} {only_new[:8]}\n"
+        f"  changed refs  : {len(drifted)} {drifted[:8]}"
+    )
+
+
+def test_coverage_gate_regenerates_the_inventory_before_the_matrix() -> None:
+    """The gate must rebuild the inventory, not grade a possibly stale one.
+
+    `gen-fr-audit.py` and `_build_matrix.py` both read the inventory and neither
+    regenerates it, so the gate has to do it or it silently grades source the
+    inventory predates.
+
+    Load the module and check execution order directly. Grepping the source text
+    is not enough: the first mention of each script is in the docstring, which
+    says the right thing while the code could still do the opposite.
+    """
+    gate = ROOT / "scripts" / "traceability" / "check-fr-coverage.py"
+    if not gate.exists():
+        pytest.skip("gate script not present")
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("fr_gate", gate)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["fr_gate"] = module
+    spec.loader.exec_module(module)
+
+    root = Path(module.ROOT)
+    gather = root / "docs" / "audits" / "_gather_ids.py"
+    assert gather.exists(), "inventory generator missing"
+
+    # Instrument subprocess.run so we record real execution order without
+    # actually running a 70-second rescan.
+    calls: list[str] = []
+    real_run = module.subprocess.run
+
+    def fake_run(cmd, *a, **kw):
+        # Record the bare filename; the caller passes a Path, so compare on
+        # Path(...).name rather than on the raw argument.
+        calls.append(Path(str(cmd[-1])).name)
+        return real_run(cmd, *a, **kw)
+
+    module.subprocess.run = fake_run
+    try:
+        module.regenerate_matrix()
+    finally:
+        module.subprocess.run = real_run
+
+    joined = " | ".join(calls)
+    assert gather.name in joined, f"gate never ran the inventory generator: {joined}"
+    assert "gen-fr-audit.py" in joined, f"gate never ran the matrix builder: {joined}"
+    assert calls.index(gather.name) < calls.index("gen-fr-audit.py"), (
+        f"gate builds the matrix before the inventory: {joined}"
+    )
+
+
+def test_matrix_declares_its_source_inventory() -> None:
+    """Provenance must be recorded, so staleness is detectable at all."""
+    matrix = ROOT / "docs" / "audits" / "fr-matrix.json"
+    if not matrix.exists():
+        pytest.skip("fr matrix not generated")
+    import json
+
+    data = json.loads(matrix.read_text(encoding="utf-8"))
+    assert data.get("source_inventory") == "docs/audits/_id_inventory_v3.json"

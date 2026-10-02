@@ -47,10 +47,26 @@ ABSOLUTE_CEILINGS = {
 
 
 def regenerate_matrix() -> dict:
-    """Run gen-fr-audit.py and load fr-matrix.json."""
+    """Rebuild the inventory, then the matrix that reads it, and load the matrix.
+
+    The inventory is NOT optional. `gen-fr-audit.py` and `_build_matrix.py` both
+    read `docs/audits/_id_inventory_v3.json` and neither regenerates it, so
+    running only the matrix builder lets the gate grade source that the inventory
+    predates. That happened once and the gate passed on stale evidence: after
+    re-tagging `crates/species/src/speciation.rs` with FR-CIV-SPECIES-300..304,
+    `gen-fr-audit.py` reported all five still SPEC-ONLY, exactly as before the
+    edit, because the inventory on disk was 14 minutes older than the change.
+
+    Regenerating both steps makes a green gate mean what it claims.
+    """
+    gather = ROOT / "docs" / "audits" / "_gather_ids.py"
     script = ROOT / "scripts" / "traceability" / "gen-fr-audit.py"
     if not script.exists():
         raise SystemExit(f"missing audit script: {script}")
+    if gather.exists():
+        subprocess.run([sys.executable, str(gather)], cwd=ROOT, check=True)
+    else:
+        print(f"warning: {gather} not found; matrix may be built on a stale inventory")
     subprocess.run([sys.executable, str(script)], cwd=ROOT, check=True)
     return json.loads(MATRIX.read_text(encoding="utf-8"))
 

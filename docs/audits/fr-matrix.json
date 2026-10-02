@@ -14,12 +14,12 @@
   "totals": {
     "rows": 1430,
     "by_status": {
-      "COVERED": 835,
+      "COVERED": 840,
       "SELF-TEST-ONLY": 228,
       "STUB-TEST-ONLY": 0,
       "TEST-NO-CODE-REF": 156,
       "IMPL-NO-TEST": 9,
-      "SPEC-ONLY": 202,
+      "SPEC-ONLY": 197,
       "CODE-ONLY-no-spec": 0
     },
     "by_epic": {
@@ -1563,12 +1563,12 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-SPECIES": {
-        "COVERED": 1,
+        "COVERED": 6,
         "SELF-TEST-ONLY": 12,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
-        "SPEC-ONLY": 35,
+        "SPEC-ONLY": 30,
         "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-TACTICS": {
@@ -10475,8 +10475,8 @@
       ],
       "code_refs": [
         "crates/genetics/src/seeds.rs:417",
-        "crates/genetics/src/seeds.rs:1162",
-        "crates/genetics/src/seeds.rs:1458"
+        "crates/genetics/src/seeds.rs:1211",
+        "crates/genetics/src/seeds.rs:1507"
       ],
       "test_refs": [
         "crates/civ-emergence-metrics/tests/fr_civ_emergence_tests.rs:1",
@@ -11514,10 +11514,10 @@
         "docs/traceability/fr-civ-genetics-000/fr-civ-genetics-000-plan.md:1"
       ],
       "code_refs": [
-        "crates/genetics/src/lib.rs:195"
+        "crates/genetics/src/lib.rs:203"
       ],
       "test_refs": [
-        "crates/genetics/src/lib.rs:195"
+        "crates/genetics/src/lib.rs:203"
       ],
       "stub_test_refs": []
     },
@@ -11541,10 +11541,10 @@
         "docs/traceability/fr-civ-genetics-001/fr-civ-genetics-001-plan.md:1"
       ],
       "code_refs": [
-        "crates/genetics/src/lib.rs:208"
+        "crates/genetics/src/lib.rs:216"
       ],
       "test_refs": [
-        "crates/genetics/src/lib.rs:208"
+        "crates/genetics/src/lib.rs:216"
       ],
       "stub_test_refs": []
     },
@@ -11566,10 +11566,10 @@
         "docs/traceability/fr-civ-genetics-002/fr-civ-genetics-002-plan.md:1"
       ],
       "code_refs": [
-        "crates/genetics/src/lib.rs:221"
+        "crates/genetics/src/lib.rs:229"
       ],
       "test_refs": [
-        "crates/genetics/src/lib.rs:221"
+        "crates/genetics/src/lib.rs:229"
       ],
       "stub_test_refs": []
     },
@@ -11591,10 +11591,10 @@
         "docs/traceability/fr-civ-genetics-010/fr-civ-genetics-010-plan.md:1"
       ],
       "code_refs": [
-        "crates/genetics/src/lib.rs:238"
+        "crates/genetics/src/lib.rs:246"
       ],
       "test_refs": [
-        "crates/genetics/src/lib.rs:238"
+        "crates/genetics/src/lib.rs:246"
       ],
       "stub_test_refs": []
     },
@@ -11613,10 +11613,10 @@
         "docs/traceability/fr-civ-genetics-011/fr-civ-genetics-011-plan.md:1"
       ],
       "code_refs": [
-        "crates/genetics/src/lib.rs:258"
+        "crates/genetics/src/lib.rs:266"
       ],
       "test_refs": [
-        "crates/genetics/src/lib.rs:258"
+        "crates/genetics/src/lib.rs:266"
       ],
       "stub_test_refs": []
     },
@@ -11635,10 +11635,10 @@
         "docs/traceability/fr-civ-genetics-012/fr-civ-genetics-012-plan.md:1"
       ],
       "code_refs": [
-        "crates/genetics/src/lib.rs:266"
+        "crates/genetics/src/lib.rs:280"
       ],
       "test_refs": [
-        "crates/genetics/src/lib.rs:266"
+        "crates/genetics/src/lib.rs:280"
       ],
       "stub_test_refs": []
     },
@@ -23017,7 +23017,7 @@
     },
     {
       "id": "FR-CIV-SPECIES-300",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/design/species-sentience.md:120",
@@ -23030,13 +23030,26 @@
         "docs/traceability/fr-civ-species-300/fr-civ-species-300-intent.md:15",
         "docs/traceability/fr-civ-species-300/fr-civ-species-300-plan.md:1"
       ],
-      "code_refs": [],
-      "test_refs": [],
+      "code_refs": [
+        "crates/genetics/src/lib.rs:173",
+        "crates/genetics/src/lib.rs:247",
+        "crates/species/src/speciation.rs:8",
+        "crates/species/src/speciation.rs:67",
+        "crates/species/src/speciation.rs:155",
+        "crates/species/src/speciation.rs:161",
+        "crates/species/src/speciation.rs:220"
+      ],
+      "test_refs": [
+        "crates/genetics/src/lib.rs:247",
+        "crates/species/src/speciation.rs:155",
+        "crates/species/src/speciation.rs:161",
+        "crates/species/src/speciation.rs:220"
+      ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-SPECIES-301",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/design/species-sentience.md:121",
@@ -23049,13 +23062,21 @@
         "docs/traceability/fr-civ-species-301/fr-civ-species-301-intent.md:15",
         "docs/traceability/fr-civ-species-301/fr-civ-species-301-plan.md:1"
       ],
-      "code_refs": [],
-      "test_refs": [],
+      "code_refs": [
+        "crates/genetics/src/lib.rs:158",
+        "crates/genetics/src/lib.rs:267",
+        "crates/genetics/src/lib.rs:273",
+        "crates/species/src/speciation.rs:11"
+      ],
+      "test_refs": [
+        "crates/genetics/src/lib.rs:267",
+        "crates/genetics/src/lib.rs:273"
+      ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-SPECIES-302",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/design/species-sentience.md:122",
@@ -23069,13 +23090,20 @@
         "docs/traceability/fr-civ-species-302/fr-civ-species-302-intent.md:15",
         "docs/traceability/fr-civ-species-302/fr-civ-species-302-plan.md:1"
       ],
-      "code_refs": [],
-      "test_refs": [],
+      "code_refs": [
+        "crates/species/src/speciation.rs:13",
+        "crates/species/src/speciation.rs:30",
+        "crates/species/src/speciation.rs:43",
+        "crates/species/src/speciation.rs:166"
+      ],
+      "test_refs": [
+        "crates/species/src/speciation.rs:166"
+      ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-SPECIES-303",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/design/species-sentience.md:123",
@@ -23088,13 +23116,20 @@
         "docs/traceability/fr-civ-species-303/fr-civ-species-303-intent.md:15",
         "docs/traceability/fr-civ-species-303/fr-civ-species-303-plan.md:1"
       ],
-      "code_refs": [],
-      "test_refs": [],
+      "code_refs": [
+        "crates/genetics/src/lib.rs:159",
+        "crates/species/src/speciation.rs:14",
+        "crates/species/src/speciation.rs:37",
+        "crates/species/src/speciation.rs:166"
+      ],
+      "test_refs": [
+        "crates/species/src/speciation.rs:166"
+      ],
       "stub_test_refs": []
     },
     {
       "id": "FR-CIV-SPECIES-304",
-      "status": "SPEC-ONLY",
+      "status": "COVERED",
       "epic": "FR-CIV-SPECIES",
       "spec_refs": [
         "docs/design/species-sentience.md:124",
@@ -23107,8 +23142,15 @@
         "docs/traceability/fr-civ-species-304/fr-civ-species-304-intent.md:15",
         "docs/traceability/fr-civ-species-304/fr-civ-species-304-plan.md:1"
       ],
-      "code_refs": [],
-      "test_refs": [],
+      "code_refs": [
+        "crates/species/src/speciation.rs:16",
+        "crates/species/src/speciation.rs:34",
+        "crates/species/src/speciation.rs:68",
+        "crates/species/src/speciation.rs:167"
+      ],
+      "test_refs": [
+        "crates/species/src/speciation.rs:167"
+      ],
       "stub_test_refs": []
     },
     {

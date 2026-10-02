@@ -9022,8 +9022,8 @@
       ],
       "in_code": [
         "crates/genetics/src/seeds.rs:417",
-        "crates/genetics/src/seeds.rs:1162",
-        "crates/genetics/src/seeds.rs:1458"
+        "crates/genetics/src/seeds.rs:1211",
+        "crates/genetics/src/seeds.rs:1507"
       ],
       "in_tests": [
         "crates/civ-emergence-metrics/tests/fr_civ_emergence_tests.rs:1",
@@ -10193,10 +10193,10 @@
         "docs/traceability/fr-civ-genetics-000/fr-civ-genetics-000-plan.md:1"
       ],
       "in_code": [
-        "crates/genetics/src/lib.rs:195"
+        "crates/genetics/src/lib.rs:203"
       ],
       "in_tests": [
-        "crates/genetics/src/lib.rs:195"
+        "crates/genetics/src/lib.rs:203"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -10223,10 +10223,10 @@
         "docs/traceability/fr-civ-genetics-001/fr-civ-genetics-001-plan.md:1"
       ],
       "in_code": [
-        "crates/genetics/src/lib.rs:208"
+        "crates/genetics/src/lib.rs:216"
       ],
       "in_tests": [
-        "crates/genetics/src/lib.rs:208"
+        "crates/genetics/src/lib.rs:216"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -10251,10 +10251,10 @@
         "docs/traceability/fr-civ-genetics-002/fr-civ-genetics-002-plan.md:1"
       ],
       "in_code": [
-        "crates/genetics/src/lib.rs:221"
+        "crates/genetics/src/lib.rs:229"
       ],
       "in_tests": [
-        "crates/genetics/src/lib.rs:221"
+        "crates/genetics/src/lib.rs:229"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -10279,10 +10279,10 @@
         "docs/traceability/fr-civ-genetics-010/fr-civ-genetics-010-plan.md:1"
       ],
       "in_code": [
-        "crates/genetics/src/lib.rs:238"
+        "crates/genetics/src/lib.rs:246"
       ],
       "in_tests": [
-        "crates/genetics/src/lib.rs:238"
+        "crates/genetics/src/lib.rs:246"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -10303,10 +10303,10 @@
         "docs/traceability/fr-civ-genetics-011/fr-civ-genetics-011-plan.md:1"
       ],
       "in_code": [
-        "crates/genetics/src/lib.rs:258"
+        "crates/genetics/src/lib.rs:266"
       ],
       "in_tests": [
-        "crates/genetics/src/lib.rs:258"
+        "crates/genetics/src/lib.rs:266"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -10327,10 +10327,10 @@
         "docs/traceability/fr-civ-genetics-012/fr-civ-genetics-012-plan.md:1"
       ],
       "in_code": [
-        "crates/genetics/src/lib.rs:266"
+        "crates/genetics/src/lib.rs:280"
       ],
       "in_tests": [
-        "crates/genetics/src/lib.rs:266"
+        "crates/genetics/src/lib.rs:280"
       ],
       "in_stub_tests": [],
       "self_test_only": true
@@ -22881,8 +22881,21 @@
         "docs/traceability/fr-civ-species-300/fr-civ-species-300-intent.md:15",
         "docs/traceability/fr-civ-species-300/fr-civ-species-300-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/genetics/src/lib.rs:173",
+        "crates/genetics/src/lib.rs:247",
+        "crates/species/src/speciation.rs:8",
+        "crates/species/src/speciation.rs:67",
+        "crates/species/src/speciation.rs:155",
+        "crates/species/src/speciation.rs:161",
+        "crates/species/src/speciation.rs:220"
+      ],
+      "in_tests": [
+        "crates/genetics/src/lib.rs:247",
+        "crates/species/src/speciation.rs:155",
+        "crates/species/src/speciation.rs:161",
+        "crates/species/src/speciation.rs:220"
+      ],
       "in_stub_tests": [],
       "self_test_only": false
     },
@@ -22903,8 +22916,16 @@
         "docs/traceability/fr-civ-species-301/fr-civ-species-301-intent.md:15",
         "docs/traceability/fr-civ-species-301/fr-civ-species-301-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/genetics/src/lib.rs:158",
+        "crates/genetics/src/lib.rs:267",
+        "crates/genetics/src/lib.rs:273",
+        "crates/species/src/speciation.rs:11"
+      ],
+      "in_tests": [
+        "crates/genetics/src/lib.rs:267",
+        "crates/genetics/src/lib.rs:273"
+      ],
       "in_stub_tests": [],
       "self_test_only": false
     },
@@ -22926,8 +22947,15 @@
         "docs/traceability/fr-civ-species-302/fr-civ-species-302-intent.md:15",
         "docs/traceability/fr-civ-species-302/fr-civ-species-302-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/species/src/speciation.rs:13",
+        "crates/species/src/speciation.rs:30",
+        "crates/species/src/speciation.rs:43",
+        "crates/species/src/speciation.rs:166"
+      ],
+      "in_tests": [
+        "crates/species/src/speciation.rs:166"
+      ],
       "in_stub_tests": [],
       "self_test_only": false
     },
@@ -22948,8 +22976,15 @@
         "docs/traceability/fr-civ-species-303/fr-civ-species-303-intent.md:15",
         "docs/traceability/fr-civ-species-303/fr-civ-species-303-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/genetics/src/lib.rs:159",
+        "crates/species/src/speciation.rs:14",
+        "crates/species/src/speciation.rs:37",
+        "crates/species/src/speciation.rs:166"
+      ],
+      "in_tests": [
+        "crates/species/src/speciation.rs:166"
+      ],
       "in_stub_tests": [],
       "self_test_only": false
     },
@@ -22970,8 +23005,15 @@
         "docs/traceability/fr-civ-species-304/fr-civ-species-304-intent.md:15",
         "docs/traceability/fr-civ-species-304/fr-civ-species-304-plan.md:1"
       ],
-      "in_code": [],
-      "in_tests": [],
+      "in_code": [
+        "crates/species/src/speciation.rs:16",
+        "crates/species/src/speciation.rs:34",
+        "crates/species/src/speciation.rs:68",
+        "crates/species/src/speciation.rs:167"
+      ],
+      "in_tests": [
+        "crates/species/src/speciation.rs:167"
+      ],
       "in_stub_tests": [],
       "self_test_only": false
     },

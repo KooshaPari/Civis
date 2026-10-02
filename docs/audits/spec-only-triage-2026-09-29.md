@@ -282,6 +282,85 @@ though the shorthand is itself a traceability hazard.
 
 ---
 
+## Detector fix applied 2026-10-02 (gate-driven)
+
+Found by finally running the repo's own gate, `scripts/traceability/check-fr-coverage.py`,
+which had never been run during this audit:
+
+```
+CODE-ONLY-no-spec: 9 exceeds absolute ceiling 5
+```
+
+Both causes were defects in the audit tooling, not in the product. Together they
+accounted for all 9 rows in that bucket.
+
+### Fix 4: `CODE-ONLY-no-spec` was the wrong bucket for self-minted IDs
+
+`FR-PHYS-substrate-000..007` exist **only** as `/// FR-PHYS-substrate-00N` doc
+comments on unit tests inside `crates/physics-substrate/src/lib.rs:780-1023`
+(e.g. line 780 `/// FR-PHYS-substrate-000 — schema version stub`). No spec, no
+traceability doc, no other mention anywhere in the repo. The eight tests are
+real tests of real behaviour; the eight *IDs* were invented by those tests, and
+`lib.rs:780-782` says so outright: "Mirrors the convention every other `civ-*`
+crate follows so the substrate slots into the existing traceability matrix".
+
+`classify()` in `gen-fr-audit.py` gated the self-test branch on `has_spec`, so
+these fell through to the final `return "CODE-ONLY-no-spec"`. That reads as
+*"code exists, but nobody ever wrote the requirement"*, which is exactly
+backwards: the ID was minted by the test, so no requirement was ever missing.
+The branch is now ungated — `if self_test_only:` — so they report as
+`SELF-TEST-ONLY`, alongside the other 220 self-assertions.
+
+### Fix 5: `FR-CIV-MOD-00` was a phantom ID born from a quoted grep glob
+
+The ninth row was not real. `crates/mod-host/src/lib.rs:82` is a long audit
+comment that quotes a shell command:
+
+```
+// [unbound] FR-CIV-MOD-000: DATA-SHAPE-ONLY. ... (1) The CIV-0700 series does
+// not define -000 at all: `git grep -n "FR-CIV-MOD-00" -- docs/specs/CIV-0700-
+// modding-api-spec.md` returns FR-CIV-MOD-001 through -020 and no -000 ...
+```
+
+`ID_RE` matched the truncated prefix `FR-CIV-MOD-00` out of the quoted glob and
+invented a requirement row for it. The real IDs on that line are `FR-CIV-MOD-000`
+and `FR-CIV-MOD-001`. `FR-CIV-MOD-000` was already in the inventory, so this
+added a pure phantom with no spec, no test, and a code ref pointing at a comment
+that disowns it.
+
+Fixing this took three attempts, and the first two were wrong in instructive
+ways. Recorded here so they are not retried:
+
+| Attempt | Result | Why it failed |
+|---|---|---|
+| Drop trailing `\b`, add `(?!\d*[`'"])` | 3 phantom protections broke | `FR-CIV-INSPECT-9xx` started harvesting `FR-CIV-INSPECT-9`; `FR-CIV-LIFE-014a` started harvesting `FR-CIV-LIFE-014`. The `\b` is load-bearing. |
+| `(?!\d+[`'"])` | 12 real rows deleted | `\d*`/`\d+` cannot tell a *truncated* prefix from a *complete* quoted ID. Complete IDs are constantly quoted in prose and spec tables, so `NFR-CIV-001..012` vanished from the matrix entirely. A row disappearing is far worse than a row changing status. |
+| Sibling-prefix filter (`is_truncated_glob`) | accepted | Uses the signal that actually separates them: the match must end in a digit, be followed by a quote/glob marker, **and** have a strictly longer match of the same ID family elsewhere on the same line. That is exactly the `mod-host:82` shape. |
+
+### What actually changed in the matrix
+
+Row-level diff against `91b2fa39` (1431 -> 1430 rows):
+
+- `FR-CIV-MOD-00` removed (phantom).
+- `FR-PHYS-substrate-000..007`: `CODE-ONLY-no-spec` -> `SELF-TEST-ONLY` (8 rows).
+- Nothing else changed. No other ID was added, removed, or restatused.
+
+The two intermediate failed attempts are why this section exists: the first
+would have silently admitted 3 phantom rows, the second would have silently
+**deleted 12 real requirements**. Neither was visible in a status count; only
+the row-level diff against the committed matrix exposed them.
+
+### Correction to the 2026-10-01 entry
+
+The earlier revision of this document reported the gate as passing and treated
+`CODE-ONLY-no-spec: 9` as acceptable. It was never run. `docs/audits/.fr-snapshot.json`
+had been sitting at `COVERED: 1060` since the snapshot was last written, and the
+gate compares against that stale baseline rather than against the matrix's
+previous state, so its verdict for the earlier commits was never evidence of
+anything.
+
+---
+
 ## Appendix: full ledger
 
 ### `REAL-GAP` (121)

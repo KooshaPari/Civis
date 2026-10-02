@@ -50,7 +50,10 @@ STATUS_LEGEND = {
         "Every code reference for this ID sits inside a `#[cfg(test)]` "
         "block, so the ID has no implementation reference outside test code. "
         "Reported separately instead of COVERED, because a self-assertion is "
-        "not evidence that anything implements the requirement. Note this is "
+        "not evidence that anything implements the requirement. An ID with no "
+        "spec/traceability reference at all lands here too: its only evidence "
+        "is the doc comment on its own unit test, so the test minted the ID "
+        "rather than implementing a pre-existing requirement. Note this is "
         "NOT the dead-substrate case: a symbol that is defined, re-exported "
         "and self-tested still has a non-test ref and stays here-adjacent. "
         "Detecting that needs call-graph analysis, which this scanner does "
@@ -97,9 +100,17 @@ def classify(row: dict) -> str:
     # implementation reference outside test code.
     self_test_only = bool(row.get("self_test_only"))
 
-    if self_test_only and has_spec:
+    if self_test_only:
         # Checked before COVERED: an ID whose only "code" evidence is its own
         # test block must not be reported as covered.
+        #
+        # Deliberately NOT gated on has_spec. When an ID has no spec reference
+        # at all, its only evidence is the `/// FR-...` doc comment on its own
+        # unit test, which means the test minted the ID rather than
+        # implementing a requirement that already existed. Bucketing those as
+        # CODE-ONLY-no-spec reads as "code exists, the requirement was never
+        # written", which is backwards and pushed that bucket over its gate
+        # ceiling with FR-PHYS-substrate-000..007.
         return "SELF-TEST-ONLY"
     if has_spec and has_code and has_test:
         return "COVERED"

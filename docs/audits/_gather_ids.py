@@ -180,10 +180,65 @@ DOC_DIR_PREFIXES = (
 # fragments of an already-numbered ID rather than IDs of their own.
 #
 # A match therefore always ends in a letter or digit, never a hyphen.
+#
+# The trailing `\b` is load-bearing and must be kept. Dropping it lets the
+# pattern match the leading digits of a placeholder wildcard, so
+# `FR-CIV-INSPECT-9xx` harvested `FR-CIV-INSPECT-9` and `FR-CIV-LIFE-014a`
+# harvested `FR-CIV-LIFE-014`. Both phantom-row protections depend on it.
+#
+# A quoted shell glob is NOT an ID. A comment reading
+# `git grep -n "FR-CIV-MOD-00" -- docs/specs/CIV-0700.md` quotes a search
+# pattern, and harvesting the truncated prefix minted the phantom row
+# FR-CIV-MOD-00. Quoting alone cannot distinguish that from a *complete* ID
+# that happens to be quoted ("`NFR-CIV-001` needs a budget"), which is why the
+# previous attempts failed: a `\d*` tail deleted 12 real NFR rows outright, and
+# a `\d+` tail let the phantom straight back in.
+#
+# The signal that actually separates them is a longer sibling on the same line.
+# crates/mod-host/src/lib.rs:82 carries FR-CIV-MOD-000, FR-CIV-MOD-00 and
+# FR-CIV-MOD-001 together: the short one is a grep prefix for the other two.
+# A quoted/glob numeric tail is only rejected when the same line also yields a
+# strictly longer match of the same ID family. See `is_truncated_glob`.
 ID_RE = re.compile(
     r"\b(FR|NFR)-(?:[A-Za-z]+-)?[A-Za-z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*\b"
 )
-COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Za-z]+-)?[A-Za-z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*)")
+
+# A numeric tail immediately followed by a quote/glob marker is a candidate
+# truncation. A bare ID with no marker (`FR-CIV-LIFE-004`) is still valid.
+GLOB_TAIL_RE = re.compile(r"\d(?=[`'\"])")
+
+
+def is_truncated_glob(text: str, start: int, end: int, matched: str) -> bool:
+    """True when `matched` is a grep-style prefix of a longer ID on the line.
+
+    Requires all three signals so a genuinely quoted complete ID is untouched:
+      1. the character right after the match is a quote/glob marker,
+      2. the match ends in a digit, and
+      3. some other match on the same line shares this ID's family
+         (same `FR-`/`NFR-` + alphabetic prefix) and is strictly longer.
+    """
+    if end >= len(text) or text[end] not in "`'\"":
+        return False
+    if not matched[-1].isdigit():
+        return False
+    head = _family(matched)
+    for m in ID_RE.finditer(text):
+        if m.start() == start and m.end() == end:
+            continue
+        other = m.group(0)
+        if _family(other) == head and len(other) > len(matched):
+            return True
+    return False
+
+
+def _family(eid: str) -> str:
+    """`FR-CIV-MOD-00` and `FR-CIV-MOD-000` share the family `FR-CIV-MOD-`."""
+    head = re.match(r"(?:FR|NFR)-[A-Za-z]+(?:-[A-Za-z]+)*", eid)
+    return head.group(0) if head else eid
+
+COVERS_RE = re.compile(
+    r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Za-z]+-)?[A-Za-z]+[-A-Z0-9]*\d+(?:-?[A-Z]+\d*)*\b)"
+)
 
 
 def is_self_ref(rel: str) -> bool:
@@ -367,6 +422,10 @@ def main():
 
         has_cfg_test_attr = "#[cfg(test)]" in text
         for m in ID_RE.finditer(text):
+            if is_truncated_glob(text, m.start(), m.end(), m.group(0)):
+                # A grep-style prefix of a longer ID on the same line, e.g. the
+                # `git grep -n "FR-CIV-MOD-00"` quoted inside a code comment.
+                continue
             line_no = text.count("\n", 0, m.start()) + 1
             eid = m.group(0)
             # Strip range suffix "...001..005" -> keep the start "FR-...-001"

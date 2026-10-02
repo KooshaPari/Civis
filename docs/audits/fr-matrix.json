@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-10-01",
+  "generated_at": "2026-10-02",
   "source_inventory": "docs/audits/_id_inventory_v3.json",
   "status_legend": {
     "COVERED": "spec/trace + code + real test all present",
-    "SELF-TEST-ONLY": "Every code reference for this ID sits inside a `#[cfg(test)]` block, so the ID has no implementation reference outside test code. Reported separately instead of COVERED, because a self-assertion is not evidence that anything implements the requirement. Note this is NOT the dead-substrate case: a symbol that is defined, re-exported and self-tested still has a non-test ref and stays here-adjacent. Detecting that needs call-graph analysis, which this scanner does not attempt.",
+    "SELF-TEST-ONLY": "Every code reference for this ID sits inside a `#[cfg(test)]` block, so the ID has no implementation reference outside test code. Reported separately instead of COVERED, because a self-assertion is not evidence that anything implements the requirement. An ID with no spec/traceability reference at all lands here too: its only evidence is the doc comment on its own unit test, so the test minted the ID rather than implementing a pre-existing requirement. Note this is NOT the dead-substrate case: a symbol that is defined, re-exported and self-tested still has a non-test ref and stays here-adjacent. Detecting that needs call-graph analysis, which this scanner does not attempt.",
     "STUB-TEST-ONLY": "spec/trace + code present, but the only test reference is a placeholder (TDD-red stub or legacy 'Epic: auto-generated'). The test file exists but does not exercise anything FR-specific, so treat coverage as unverified. Fan-out agents target this bucket.",
     "TEST-NO-CODE-REF": "spec/trace + real test present, but no ID-tagged code reference. A test exercises the requirement yet no source file carries the ID, so the implementation cannot be located from the ID alone.",
     "IMPL-NO-TEST": "spec/trace + code present, no test reference",
@@ -12,15 +12,15 @@
     "CODE-ONLY-no-spec": "code present, no spec/traceability reference"
   },
   "totals": {
-    "rows": 1431,
+    "rows": 1430,
     "by_status": {
       "COVERED": 835,
-      "SELF-TEST-ONLY": 220,
+      "SELF-TEST-ONLY": 228,
       "STUB-TEST-ONLY": 0,
       "TEST-NO-CODE-REF": 156,
       "IMPL-NO-TEST": 9,
       "SPEC-ONLY": 202,
-      "CODE-ONLY-no-spec": 9
+      "CODE-ONLY-no-spec": 0
     },
     "by_epic": {
       "FR-AI": 7,
@@ -131,7 +131,7 @@
       "FR-CIV-METRICS": 1,
       "FR-CIV-METRICS-001-TIMESERIES": 1,
       "FR-CIV-MIGRATION": 5,
-      "FR-CIV-MOD": 22,
+      "FR-CIV-MOD": 21,
       "FR-CIV-NEEDS-DECAY": 1,
       "FR-CIV-NOTIFY": 6,
       "FR-CIV-PBR": 11,
@@ -1236,7 +1236,7 @@
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
-        "CODE-ONLY-no-spec": 1
+        "CODE-ONLY-no-spec": 0
       },
       "FR-CIV-NEEDS-DECAY": {
         "COVERED": 1,
@@ -1933,12 +1933,12 @@
       },
       "FR-PHYS-substrate": {
         "COVERED": 0,
-        "SELF-TEST-ONLY": 0,
+        "SELF-TEST-ONLY": 8,
         "STUB-TEST-ONLY": 0,
         "TEST-NO-CODE-REF": 0,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
-        "CODE-ONLY-no-spec": 8
+        "CODE-ONLY-no-spec": 0
       },
       "FR-PROT": {
         "COVERED": 5,
@@ -4782,8 +4782,7 @@
       "epic": "FR-CIV-ARCH",
       "spec_refs": [
         "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:1",
-        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4",
-        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:9"
+        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4"
       ],
       "code_refs": [
         "crates/engine/src/building_emergence.rs:134"
@@ -9430,9 +9429,9 @@
         "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:24",
         "agileplus-specs/civ-009-culture-diffusion/spec.md:38",
         "agileplus-specs/civ-011-bevy-primary-client/spec.md:45",
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:214",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:282",
+        "PLAN.md:207",
         "docs/traceability/fr-civ-diplo-001/fr-civ-diplo-001-adr.md:1",
         "docs/traceability/fr-civ-diplo-001/fr-civ-diplo-001-adr.md:6",
         "docs/traceability/fr-civ-diplo-001/fr-civ-diplo-001-adr.md:11",
@@ -9447,18 +9446,17 @@
         "crates/diplomacy/civ-diplomacy.cdx.json:20",
         "crates/diplomacy/src/lib.rs:1",
         "crates/diplomacy/src/lib.rs:15",
-        "crates/diplomacy/src/lib.rs:502",
-        "crates/diplomacy/src/lib.rs:504",
-        "crates/diplomacy/src/lib.rs:627",
-        "crates/diplomacy/src/lib.rs:643"
+        "crates/diplomacy/src/lib.rs:1110",
+        "crates/diplomacy/src/lib.rs:1168",
+        "crates/diplomacy/src/lib.rs:1384",
+        "crates/diplomacy/src/lib.rs:1435"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1110",
         "crates/diplomacy/src/lib.rs:1168",
         "crates/diplomacy/src/lib.rs:1384",
         "crates/diplomacy/src/lib.rs:1435",
-        "crates/diplomacy/src/lib.rs:1461",
-        "crates/diplomacy/src/lib.rs:1670"
+        "crates/diplomacy/src/lib.rs:1461"
       ],
       "stub_test_refs": []
     },
@@ -9495,7 +9493,6 @@
         "FUNCTIONAL_REQUIREMENTS.md",
         "agileplus-specs/civ-007-diplomacy-laws-government/plan.md:18",
         "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:25",
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:215",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:283",
         "PLAN.md:209",
@@ -9577,9 +9574,9 @@
         "crates/diplomacy/src/concession_rounds.rs:97",
         "crates/diplomacy/src/concession_rounds.rs:117",
         "crates/diplomacy/src/lib.rs:17",
-        "crates/diplomacy/src/lib.rs:573",
-        "crates/diplomacy/src/lib.rs:1002",
-        "crates/diplomacy/src/lib.rs:1059"
+        "crates/diplomacy/src/lib.rs:1059",
+        "crates/diplomacy/src/lib.rs:1076",
+        "crates/diplomacy/src/lib.rs:1183"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1183",
@@ -9834,17 +9831,14 @@
         "crates/diplomacy/src/lib.rs:285",
         "crates/diplomacy/src/lib.rs:308",
         "crates/diplomacy/src/lib.rs:331",
-        "crates/diplomacy/src/lib.rs:491",
-        "crates/diplomacy/src/lib.rs:534"
+        "crates/diplomacy/src/lib.rs:534",
+        "crates/diplomacy/src/lib.rs:565"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1527",
         "crates/diplomacy/src/lib.rs:1529",
         "crates/diplomacy/src/lib.rs:1545",
-        "crates/diplomacy/src/lib.rs:1556",
-        "crates/diplomacy/src/lib.rs:1568",
-        "crates/diplomacy/src/lib.rs:1842",
-        "crates/diplomacy/src/lib.rs:1844"
+        "crates/diplomacy/src/lib.rs:1568"
       ],
       "stub_test_refs": []
     },
@@ -9890,13 +9884,13 @@
       ],
       "code_refs": [
         "crates/diplomacy/src/concession_rounds.rs:8",
-        "crates/diplomacy/src/lib.rs:333",
-        "crates/diplomacy/src/lib.rs:502",
-        "crates/diplomacy/src/lib.rs:516",
-        "crates/diplomacy/src/lib.rs:646",
         "crates/diplomacy/src/lib.rs:1664",
         "crates/diplomacy/src/lib.rs:1666",
-        "crates/diplomacy/src/lib.rs:1675"
+        "crates/diplomacy/src/lib.rs:1675",
+        "crates/diplomacy/src/lib.rs:1697",
+        "crates/diplomacy/src/lib.rs:1716",
+        "crates/diplomacy/src/lib.rs:1742",
+        "crates/diplomacy/src/lib.rs:1777"
       ],
       "test_refs": [
         "crates/diplomacy/src/lib.rs:1664",
@@ -9953,7 +9947,6 @@
       "status": "COVERED",
       "epic": "FR-CIV-ECON",
       "spec_refs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:68",
         "docs/AGILE_WORKSTREAM.md:65",
         "docs/AGILE_WORKSTREAM.md:106",
         "docs/AGILE_WORKSTREAM.md:168",
@@ -9961,6 +9954,7 @@
         "docs/AGILE_WORKSTREAM.md:177",
         "docs/AGILE_WORKSTREAM.md:378",
         "docs/design/ECONOMY_EMERGENCE.md:25",
+        "docs/guides/COPILOT_L3_AGENTS.md:39",
         "docs/traceability/civis-tracelinks.md:153",
         "docs/traceability/fr-civ-econ-001/fr-civ-econ-001-adr.md:1",
         "docs/traceability/fr-civ-econ-001/fr-civ-econ-001-adr.md:6",
@@ -10026,13 +10020,13 @@
       "epic": "FR-CIV-ECON",
       "spec_refs": [
         "agileplus-specs/civ-021-recovered-requirements/plan.md:39",
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:73",
         "docs/guides/COPILOT_L3_AGENTS.md:92",
         "docs/guides/COPILOT_L3_AGENTS.md:93",
         "docs/guides/COPILOT_L3_AGENTS.md:271",
         "docs/guides/COPILOT_L3_AGENTS.md:474",
         "docs/guides/COPILOT_L3_AGENTS.md:476",
         "docs/reference/FR_TRACKER.md:8",
+        "docs/reports/STATUS_REPORT.md:90",
         "docs/traceability/fr-civ-econ-002/fr-civ-econ-002-adr.md:1",
         "docs/traceability/fr-civ-econ-002/fr-civ-econ-002-adr.md:6",
         "docs/traceability/fr-civ-econ-002/fr-civ-econ-002-adr.md:11",
@@ -16091,7 +16085,6 @@
       "status": "COVERED",
       "epic": "FR-CIV-METRICS",
       "spec_refs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:216",
         "PLAN.md:151",
         "PLAN.md:152",
         "docs/traceability/fr-civ-metrics-001/fr-civ-metrics-001-adr.md:1",
@@ -16232,17 +16225,6 @@
       "test_refs": [
         "crates/emergence-migration/src/lib.rs:647"
       ],
-      "stub_test_refs": []
-    },
-    {
-      "id": "FR-CIV-MOD-00",
-      "status": "CODE-ONLY-no-spec",
-      "epic": "FR-CIV-MOD",
-      "spec_refs": [],
-      "code_refs": [
-        "crates/mod-host/src/lib.rs:82"
-      ],
-      "test_refs": [],
       "stub_test_refs": []
     },
     {
@@ -20662,7 +20644,6 @@
       "status": "COVERED",
       "epic": "FR-CIV-RESEARCH",
       "spec_refs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:218",
         "docs/development-guide/fr-3d-additions.md:77",
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2106",
         "docs/traceability/fr-3d-matrix.md:96",
@@ -22165,7 +22146,6 @@
       "status": "COVERED",
       "epic": "FR-CIV-SERVER",
       "spec_refs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:221",
         "PLAN.md:174",
         "PLAN.md:175",
         "docs/traceability/fr-civ-server-001/fr-civ-server-001-adr.md:1",
@@ -22224,7 +22204,6 @@
       "status": "COVERED",
       "epic": "FR-CIV-SERVER",
       "spec_refs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:223",
         "PLAN.md:176",
         "PLAN.md:177",
         "docs/traceability/fr-civ-server-002/fr-civ-server-002-adr.md:1",
@@ -31769,7 +31748,7 @@
     },
     {
       "id": "FR-PHYS-substrate-000",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31782,7 +31761,7 @@
     },
     {
       "id": "FR-PHYS-substrate-001",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31795,7 +31774,7 @@
     },
     {
       "id": "FR-PHYS-substrate-002",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31808,7 +31787,7 @@
     },
     {
       "id": "FR-PHYS-substrate-003",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31821,7 +31800,7 @@
     },
     {
       "id": "FR-PHYS-substrate-004",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31834,7 +31813,7 @@
     },
     {
       "id": "FR-PHYS-substrate-005",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31847,7 +31826,7 @@
     },
     {
       "id": "FR-PHYS-substrate-006",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [
@@ -31860,7 +31839,7 @@
     },
     {
       "id": "FR-PHYS-substrate-007",
-      "status": "CODE-ONLY-no-spec",
+      "status": "SELF-TEST-ONLY",
       "epic": "FR-PHYS-substrate",
       "spec_refs": [],
       "code_refs": [

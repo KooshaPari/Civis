@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-10-01",
+  "generated_at": "2026-10-02",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -2705,8 +2705,7 @@
       "in_func_req": null,
       "in_traceability": [
         "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:1",
-        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4",
-        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:9"
+        "docs/traceability/fr-civ-arch-00/fr-civ-arch-00-intent.md:4"
       ],
       "in_code": [
         "crates/engine/src/building_emergence.rs:134"
@@ -7862,9 +7861,9 @@
         "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:24",
         "agileplus-specs/civ-009-culture-diffusion/spec.md:38",
         "agileplus-specs/civ-011-bevy-primary-client/spec.md:45",
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:214",
         "docs/reference/agileplus-artifacts-index.md:137",
-        "docs/reference/agileplus-artifacts-index.md:282"
+        "docs/reference/agileplus-artifacts-index.md:282",
+        "PLAN.md:207"
       ],
       "in_meta": [
         "agileplus-specs/civ-007-diplomacy-laws-government/meta.json:9"
@@ -7885,18 +7884,17 @@
         "crates/diplomacy/civ-diplomacy.cdx.json:20",
         "crates/diplomacy/src/lib.rs:1",
         "crates/diplomacy/src/lib.rs:15",
-        "crates/diplomacy/src/lib.rs:502",
-        "crates/diplomacy/src/lib.rs:504",
-        "crates/diplomacy/src/lib.rs:627",
-        "crates/diplomacy/src/lib.rs:643"
+        "crates/diplomacy/src/lib.rs:1110",
+        "crates/diplomacy/src/lib.rs:1168",
+        "crates/diplomacy/src/lib.rs:1384",
+        "crates/diplomacy/src/lib.rs:1435"
       ],
       "in_tests": [
         "crates/diplomacy/src/lib.rs:1110",
         "crates/diplomacy/src/lib.rs:1168",
         "crates/diplomacy/src/lib.rs:1384",
         "crates/diplomacy/src/lib.rs:1435",
-        "crates/diplomacy/src/lib.rs:1461",
-        "crates/diplomacy/src/lib.rs:1670"
+        "crates/diplomacy/src/lib.rs:1461"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -7934,7 +7932,6 @@
       "in_specs": [
         "agileplus-specs/civ-007-diplomacy-laws-government/plan.md:18",
         "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:25",
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:215",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:283",
         "PLAN.md:209",
@@ -8029,9 +8026,9 @@
         "crates/diplomacy/src/concession_rounds.rs:97",
         "crates/diplomacy/src/concession_rounds.rs:117",
         "crates/diplomacy/src/lib.rs:17",
-        "crates/diplomacy/src/lib.rs:573",
-        "crates/diplomacy/src/lib.rs:1002",
-        "crates/diplomacy/src/lib.rs:1059"
+        "crates/diplomacy/src/lib.rs:1059",
+        "crates/diplomacy/src/lib.rs:1076",
+        "crates/diplomacy/src/lib.rs:1183"
       ],
       "in_tests": [
         "crates/diplomacy/src/lib.rs:1183",
@@ -8305,17 +8302,14 @@
         "crates/diplomacy/src/lib.rs:285",
         "crates/diplomacy/src/lib.rs:308",
         "crates/diplomacy/src/lib.rs:331",
-        "crates/diplomacy/src/lib.rs:491",
-        "crates/diplomacy/src/lib.rs:534"
+        "crates/diplomacy/src/lib.rs:534",
+        "crates/diplomacy/src/lib.rs:565"
       ],
       "in_tests": [
         "crates/diplomacy/src/lib.rs:1527",
         "crates/diplomacy/src/lib.rs:1529",
         "crates/diplomacy/src/lib.rs:1545",
-        "crates/diplomacy/src/lib.rs:1556",
-        "crates/diplomacy/src/lib.rs:1568",
-        "crates/diplomacy/src/lib.rs:1842",
-        "crates/diplomacy/src/lib.rs:1844"
+        "crates/diplomacy/src/lib.rs:1568"
       ],
       "in_stub_tests": [],
       "self_test_only": false
@@ -8363,13 +8357,13 @@
       ],
       "in_code": [
         "crates/diplomacy/src/concession_rounds.rs:8",
-        "crates/diplomacy/src/lib.rs:333",
-        "crates/diplomacy/src/lib.rs:502",
-        "crates/diplomacy/src/lib.rs:516",
-        "crates/diplomacy/src/lib.rs:646",
         "crates/diplomacy/src/lib.rs:1664",
         "crates/diplomacy/src/lib.rs:1666",
-        "crates/diplomacy/src/lib.rs:1675"
+        "crates/diplomacy/src/lib.rs:1675",
+        "crates/diplomacy/src/lib.rs:1697",
+        "crates/diplomacy/src/lib.rs:1716",
+        "crates/diplomacy/src/lib.rs:1742",
+        "crates/diplomacy/src/lib.rs:1777"
       ],
       "in_tests": [
         "crates/diplomacy/src/lib.rs:1664",
@@ -8429,14 +8423,14 @@
     {
       "id": "FR-CIV-ECON-001",
       "in_specs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:68",
         "docs/AGILE_WORKSTREAM.md:65",
         "docs/AGILE_WORKSTREAM.md:106",
         "docs/AGILE_WORKSTREAM.md:168",
         "docs/AGILE_WORKSTREAM.md:170",
         "docs/AGILE_WORKSTREAM.md:177",
         "docs/AGILE_WORKSTREAM.md:378",
-        "docs/design/ECONOMY_EMERGENCE.md:25"
+        "docs/design/ECONOMY_EMERGENCE.md:25",
+        "docs/guides/COPILOT_L3_AGENTS.md:39"
       ],
       "in_meta": [],
       "in_func_req": null,
@@ -8510,13 +8504,13 @@
       "id": "FR-CIV-ECON-002",
       "in_specs": [
         "agileplus-specs/civ-021-recovered-requirements/plan.md:39",
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:73",
         "docs/guides/COPILOT_L3_AGENTS.md:92",
         "docs/guides/COPILOT_L3_AGENTS.md:93",
         "docs/guides/COPILOT_L3_AGENTS.md:271",
         "docs/guides/COPILOT_L3_AGENTS.md:474",
         "docs/guides/COPILOT_L3_AGENTS.md:476",
-        "docs/reference/FR_TRACKER.md:8"
+        "docs/reference/FR_TRACKER.md:8",
+        "docs/reports/STATUS_REPORT.md:90"
       ],
       "in_meta": [],
       "in_func_req": null,
@@ -8610,9 +8604,7 @@
         "docs/reference/FR_TRACKER.md:10",
         "docs/reports/STATUS_REPORT.md:92"
       ],
-      "in_meta": [
-        "agileplus-specs/civ-021-recovered-requirements/meta.json:17"
-      ],
+      "in_meta": [],
       "in_func_req": null,
       "in_traceability": [
         "docs/traceability/fr-civ-econ-004/fr-civ-econ-004-adr.md:1",
@@ -15212,7 +15204,6 @@
     {
       "id": "FR-CIV-METRICS-001",
       "in_specs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:216",
         "PLAN.md:151",
         "PLAN.md:152"
       ],
@@ -15370,19 +15361,6 @@
       "in_tests": [
         "crates/emergence-migration/src/lib.rs:647"
       ],
-      "in_stub_tests": [],
-      "self_test_only": false
-    },
-    {
-      "id": "FR-CIV-MOD-00",
-      "in_specs": [],
-      "in_meta": [],
-      "in_func_req": null,
-      "in_traceability": [],
-      "in_code": [
-        "crates/mod-host/src/lib.rs:82"
-      ],
-      "in_tests": [],
       "in_stub_tests": [],
       "self_test_only": false
     },
@@ -20270,7 +20248,6 @@
     {
       "id": "FR-CIV-RESEARCH-001",
       "in_specs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:218",
         "docs/development-guide/fr-3d-additions.md:77",
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2106",
         "docs/traceability/fr-3d-matrix.md:96",
@@ -21920,7 +21897,6 @@
     {
       "id": "FR-CIV-SERVER-001",
       "in_specs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:221",
         "PLAN.md:174",
         "PLAN.md:175"
       ],
@@ -21985,7 +21961,6 @@
     {
       "id": "FR-CIV-SERVER-002",
       "in_specs": [
-        "agileplus-specs/civ-021-recovered-requirements/spec.md:223",
         "PLAN.md:176",
         "PLAN.md:177"
       ],

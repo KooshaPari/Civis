@@ -92,6 +92,16 @@ def _ids_in(text: str) -> list[str]:
     return [m.group(0) for m in gather.ID_RE.finditer(text)]
 
 
+def _harvested(text: str) -> list[str]:
+    """IDs the scanner actually keeps, applying the truncation filter."""
+    out = []
+    for m in gather.ID_RE.finditer(text):
+        if gather.is_truncated_glob(text, m.start(), m.end(), m.group(0)):
+            continue
+        out.append(m.group(0))
+    return out
+
+
 @pytest.mark.parametrize(
     "text,expected",
     [
@@ -185,6 +195,116 @@ def test_classify_self_test_only_is_not_covered() -> None:
         "self_test_only": True,
     }
     assert audit.classify(row) == "SELF-TEST-ONLY"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Real shape, from crates/mod-host/src/lib.rs:82: the same line carries
+        # FR-CIV-MOD-000 and FR-CIV-MOD-001, so the quoted short form is a grep
+        # prefix for them and must not become a row of its own.
+        '// [unbound] FR-CIV-MOD-000: x. `git grep -n "FR-CIV-MOD-00" -- '
+        'docs/specs/CIV-0700-modding-api-spec.md` returns FR-CIV-MOD-001 through -020',
+        '```git grep -n "FR-CIV-MOD-00"``` FR-CIV-MOD-000 FR-CIV-MOD-001',
+    ],
+)
+def test_quoted_truncated_prefix_is_not_an_id(text: str) -> None:
+    """`FR-CIV-MOD-00` is a quoted grep prefix, not a requirement.
+
+    It existed as an inventory row purely because a comment quoted the shell
+    glob `git grep -n "FR-CIV-MOD-00"`. The real ID on that same line is
+    FR-CIV-MOD-000. A truncating prefix followed by a quote must not be
+    harvested when a longer sibling on the same line proves it is a prefix.
+    """
+    got = _harvested(text)
+    assert "FR-CIV-MOD-00" not in got, f"{text!r} admitted the phantom {got!r}"
+    assert "FR-CIV-MOD-000" in got, f"{text!r} lost the real ID, got {got!r}"
+
+
+def test_truncation_filter_needs_a_longer_sibling() -> None:
+    """A quoted complete ID with no longer sibling must survive.
+
+    This is the case that killed the two regex-only attempts: `FR-CIV-MOD-00`
+    alone cannot be distinguished from a real truncated-looking ID by quoting
+    alone, so the filter additionally requires a strictly longer match of the
+    same family somewhere on the same line.
+    """
+    assert _harvested('See "FR-CIV-MOD-00" for details') == ["FR-CIV-MOD-00"]
+    assert _harvested(
+        'FR-CIV-MOD-000: x, `git grep -n "FR-CIV-MOD-00"` returns FR-CIV-MOD-001'
+    ) == ["FR-CIV-MOD-000", "FR-CIV-MOD-001"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # A *complete* ID is routinely quoted in prose and spec tables. It must
+        # still be harvested; only a *truncated* prefix followed by more digits
+        # is a glob.
+        '`NFR-CIV-001` needs a budget',
+        '"FR-CIV-ARCH-003" is a stub',
+        "See FR-CIV-INFRA-070 for details.",
+        "| FR-ASSET-001 | ... |",
+    ],
+)
+def test_quoted_complete_ids_are_still_harvested(text: str) -> None:
+    """Regression: `\d*` in the lookahead deleted 12 real NFR-CIV rows.
+
+    Allowing zero digits made the lookahead fire on any quoted ID, so
+    NFR-CIV-001..012 vanished from the matrix entirely rather than changing
+    status. The tail must require at least one digit.
+    """
+    got = _harvested(text)
+    assert got, f"{text!r} should still harvest a complete quoted ID, got {got!r}"
+
+
+def test_real_mod_000_id_is_still_recognised() -> None:
+    """The fix must not remove the genuine FR-CIV-MOD-000."""
+    assert _ids_in("// [unbound] FR-CIV-MOD-000: DATA-SHAPE-ONLY.") == ["FR-CIV-MOD-000"]
+
+
+def test_classify_self_test_only_with_no_spec_is_not_covered() -> None:
+    """A self-test-only ID with no spec is a self-assertion with no requirement.
+
+    `has_spec` used to gate this branch, so an ID with no spec/traceability
+    reference fell through to CODE-ONLY-no-spec. That reads as "there is code
+    but nobody wrote the requirement", which is the opposite of what a lone
+    `/// FR-...-000` doc comment on a unit test actually is: the ID was minted
+    by the test itself and never existed anywhere else.
+    """
+    row = {
+        "in_specs": [],
+        "in_traceability": [],
+        "in_func_req": None,
+        "in_code": ["crates/physics-substrate/src/lib.rs:780"],
+        "in_tests": ["crates/physics-substrate/src/lib.rs:780"],
+        "self_test_only": True,
+    }
+    assert audit.classify(row) == "SELF-TEST-ONLY"
+
+
+def test_classify_self_test_only_with_no_spec_is_not_code_only() -> None:
+    """The 8 FR-PHYS-substrate rows must not read as real requirements."""
+    row = {
+        "in_specs": [],
+        "in_code": ["crates/physics-substrate/src/lib.rs:792"],
+        "in_tests": ["crates/physics-substrate/src/lib.rs:792"],
+        "self_test_only": True,
+    }
+    assert audit.classify(row) != "CODE-ONLY-no-spec"
+
+
+def test_classify_code_only_without_self_test_stays_code_only() -> None:
+    """Guard the fix: a genuine code-only ID with real code must still bucket."""
+    row = {
+        "in_specs": [],
+        "in_traceability": [],
+        "in_func_req": None,
+        "in_code": ["crates/mod-host/src/lib.rs:120"],
+        "in_tests": [],
+        "self_test_only": False,
+    }
+    assert audit.classify(row) == "CODE-ONLY-no-spec"
 
 
 def test_classify_real_impl_ref_stays_covered() -> None:

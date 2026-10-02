@@ -16,6 +16,7 @@ Run with:  python -m pytest scripts/traceability/test_fr_audit_classification.py
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
@@ -656,6 +657,333 @@ def test_traceability_templates_are_identifiable() -> None:
         "fr-civ-tech-003-adr.md no longer contains the template placeholder; if it was "
         "genuinely authored, update docs/audits/digitless-code-ids-2026-10-02.md, which "
         "records this file as template-filled"
+    )
+
+
+# --- rule 12: the spec_refs a row rests on, not the count of them ----------
+#
+# `has_spec` is a boolean (gen-fr-audit.py:95), so padding spec_refs with template
+# files cannot buy coverage. That is the reassuring direction, and it is only
+# half the story: the other half is that deleting the whole channel is NOT free.
+#
+# Measured on the committed inventory with the committed generator:
+#   stripping in_traceability from 1408 entries (10179 refs) moves 180 statuses,
+#   COVERED 840 -> 728, and would mint 180 unsupported CODE-ONLY-no-spec rows.
+# So traceability docs are load-bearing spec evidence, not padding.
+#
+# Two claims are asserted here, and both were false before this audit:
+#   * no row is COVERED on boilerplate alone (the earlier estimate was 112)
+#   * no classifier of "authored vs template" may be derived from similarity
+# See docs/audits/traceability-template-credit-2026-10-02.md.
+
+PLACEHOLDER_TEXT = (
+    "TBD -- The architectural decision for",
+    "> _To be implemented._",
+    "needs to be finalized based on implementation exploration",
+    "> _No test coverage yet._",
+)
+
+# Six rows that are implemented and tested against a spec that only restates the
+# epic name. Their `Covers` lines and test names are real; their intent docs are
+# generator output. Recorded as documentation gaps, not implementation gaps.
+DOC_GAP_ROWS = (
+    "FR-CIV-ENGINE-INT-001",
+    "FR-CIV-ENGINE-INT-005",
+    "FR-CIV-ENGINE-INT-011",
+    "FR-CIV-ENGINE-INT-014",
+    "FR-CIV-ENGINE-REPLAY-003",
+    "FR-CIV-LIFE-035",
+)
+
+
+def _inventory() -> dict:
+    inv = ROOT / "docs/audits/_id_inventory_v3.json"
+    if not inv.exists():
+        pytest.skip("id inventory not present")
+    return {e["id"]: e for e in json.loads(inv.read_text(encoding="utf-8"))["ids"]}
+
+
+def _matrix_status() -> dict:
+    m = ROOT / "docs/audits/fr-matrix.json"
+    if not m.exists():
+        pytest.skip("fr-matrix not present")
+    return {r["id"]: r["status"] for r in json.loads(m.read_text(encoding="utf-8"))["rows"]}
+
+
+def _is_placeholder(path: str) -> bool:
+    p = ROOT / path
+    if not p.exists():
+        return False
+    text = p.read_text(encoding="utf-8", errors="replace")
+    return any(h in text for h in PLACEHOLDER_TEXT)
+
+
+def test_no_row_is_covered_by_boilerplate_alone() -> None:
+    """No COVERED row has every one of its spec refs in a placeholder file.
+
+    This is the guard on the audit's headline claim. `has_spec` being a boolean
+    is what makes it true; if that ever becomes a count, this test fails.
+    """
+    inv, status = _inventory(), _matrix_status()
+    offenders = []
+    for eid, e in inv.items():
+        refs = [r.split(":")[0] for r in (e.get("in_traceability") or [])]
+        if not refs:
+            continue
+        if status.get(eid) != "COVERED":
+            continue
+        if e.get("in_specs") or e.get("in_func_req"):
+            continue
+        if all(_is_placeholder(p) for p in refs):
+            offenders.append(eid)
+    assert not offenders, (
+        "these COVERED rows rest entirely on placeholder traceability docs, which "
+        "means their coverage is credited to boilerplate: " + ", ".join(sorted(offenders))
+    )
+
+
+def test_has_spec_is_a_boolean_not_a_count() -> None:
+    """`has_spec` must stay a boolean or a single template ref could outweigh spec.
+
+    A regression guard on the exact expression that made rule 12's claim hold.
+    """
+    src = (ROOT / "scripts/traceability/gen-fr-audit.py").read_text(encoding="utf-8")
+    m = re.search(r"^\s*has_spec\s*=.*$", src, re.M)
+    assert m, "gen-fr-audit.py no longer defines has_spec"
+    line = m.group(0)
+    assert "bool(" in line, f"has_spec is no longer wrapped in bool(): {line.strip()!r}"
+    assert "len(" not in line, (
+        f"has_spec now counts references instead of testing truthiness: {line.strip()!r}. "
+        "That would let template padding buy coverage."
+    )
+
+
+@pytest.mark.parametrize("eid", DOC_GAP_ROWS)
+def test_doc_gap_rows_carry_real_code_and_tests(eid: str) -> None:
+    """The six doc-gap rows must keep real implementation evidence.
+
+    Their specification is generator boilerplate, so the only thing separating
+    them from `CODE-ONLY-no-spec` is genuine code and a genuine test. If someone
+    deletes the code and leaves the tags, this fails.
+    """
+    inv = _inventory()
+    e = inv.get(eid)
+    assert e is not None, f"{eid} vanished from the inventory"
+
+    code = [r for r in (e.get("in_code") or [])]
+    tests = [r for r in (e.get("in_tests") or [])]
+    assert code, f"{eid} has no code refs but is recorded as a documentation gap"
+    assert tests, f"{eid} has no test refs but is recorded as a documentation gap"
+
+    # Every cited file:line must resolve to a non-empty line. A tag pointing at
+    # a moved or deleted line is exactly how these rows become phantom.
+    for ref in code + tests:
+        path, _, line = ref.partition(":")
+        p = ROOT / path
+        assert p.exists(), f"{eid} cites missing file {path}"
+        assert line.isdigit(), f"{eid} cites a non-numeric line: {ref!r}"
+        lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+        n = int(line)
+        assert 1 <= n <= len(lines), f"{eid} cites out-of-range {ref} (file has {len(lines)})"
+        assert lines[n - 1].strip(), f"{eid} cites a blank line: {ref}"
+
+
+@pytest.mark.parametrize("eid", DOC_GAP_ROWS)
+def test_doc_gap_rows_still_credit_boilerplate(eid: str) -> None:
+    """Pin the defect class: these specs really are placeholders.
+
+    If someone writes the requirements for these six, this test fails and that
+    is the correct signal -- remove the ID from DOC_GAP_ROWS at that point, and
+    the finding doc can be updated. Silently rewriting the doc instead would
+    hide that the generator had been credited for real requirements.
+    """
+    d = ROOT / "docs/traceability" / eid.lower()
+    if not d.is_dir():
+        pytest.skip(f"{eid} traceability dir not present")
+    refs = sorted({p.name for p in d.glob("*.md")})
+    assert refs, f"{eid} has no traceability docs at all"
+    assert any(_is_placeholder(f"docs/traceability/{eid.lower()}/{n}") for n in refs), (
+        f"{eid}'s traceability docs no longer contain placeholder text; they may now be "
+        "genuine requirements. Remove the ID from DOC_GAP_ROWS and update "
+        "docs/audits/traceability-template-credit-2026-10-02.md."
+    )
+
+
+def test_shared_traceability_credits_are_not_phantom() -> None:
+    """47 rows cite a shared matrix instead of a per-ID dir. All must name their ID.
+
+    A shared matrix that mentions an ID in passing is not a spec reference. This
+    checks the reference resolves to the ID actually being credited.
+    """
+    shared = {
+        "docs/traceability/emergent-systems-tracelinks.md",
+        "docs/traceability/fr-emergence-matrix.md",
+        "docs/traceability/nfr-matrix.md",
+    }
+    inv, status = _inventory(), _matrix_status()
+    cache: dict[str, str] = {}
+    bad = []
+    checked = 0
+    for eid, e in inv.items():
+        for ref in (e.get("in_traceability") or []):
+            path = ref.split(":")[0]
+            if path not in shared:
+                continue
+            checked += 1
+            if path not in cache:
+                p = ROOT / path
+                if not p.exists():
+                    bad.append(f"{eid} -> missing {path}")
+                    break
+                cache[path] = p.read_text(encoding="utf-8", errors="replace")
+            if eid not in cache[path]:
+                bad.append(f"{eid} credited by {path} but absent from it")
+    assert checked, "no shared-matrix references found; the count changed"
+    assert not bad, "phantom shared-matrix credits: " + "; ".join(sorted(set(bad))[:10])
+
+
+def test_reserved_nfr_rows_are_reported_spec_only() -> None:
+    """`nfr-matrix.md` rows read 'Reserved ... tbd' and have no code or tests.
+
+    That is a placeholder, and SPEC-ONLY is the honest verdict for one. If they
+    ever gain code refs, SPEC-ONLY becomes wrong and this fails.
+    """
+    path = ROOT / "docs/traceability/nfr-matrix.md"
+    if not path.exists():
+        pytest.skip("nfr-matrix.md not present")
+    text = path.read_text(encoding="utf-8", errors="replace")
+    reserved = set(re.findall(r"`(NFR-CIV-\d{3})`[^|\n]*\|[^|\n]*\|[^|\n]*\|\s*planned", text))
+    reserved |= set(re.findall(r"`(NFR-CIV-\d{3})`[^|\n]*\|\s*tbd", text))
+    if not reserved:
+        pytest.skip("no reserved rows found; the table format changed")
+
+    inv, status = _inventory(), _matrix_status()
+    for eid in sorted(reserved):
+        if eid not in inv:
+            continue
+        e = inv[eid]
+        assert status.get(eid) == "SPEC-ONLY", (
+            f"{eid} is a reserved 'tbd' row but is reported {status.get(eid)}"
+        )
+        assert not (e.get("in_code") or []), f"{eid} is reserved but has code refs"
+        assert not (e.get("in_tests") or []), f"{eid} is reserved but has test refs"
+
+
+def _spec_refs(entry: dict) -> list[str]:
+    """Every spec-side ref of an entry.
+
+    The inventory stores some `in_*` values as a bare string rather than a list.
+    Iterating such a value directly yields single characters, which is a bug that
+    once inflated this audit's "unresolved citations" count to 3354. Normalise
+    first, so this helper can never reintroduce it.
+    """
+    out: list[str] = []
+    for key in ("in_specs", "in_traceability", "in_func_req"):
+        v = entry.get(key)
+        if isinstance(v, str):
+            out.append(v)
+        else:
+            out.extend(v or [])
+    return out
+
+
+def test_every_spec_citation_resolves_to_a_real_line() -> None:
+    """No spec citation may point at a missing file or an out-of-range line.
+
+    This is the audit's largest claim: all 12648 spec-side references in the
+    committed inventory resolve. A phantom `file:line` credit would be a defect
+    of the same family as a phantom ID, and it is cheap to detect.
+
+    A reference may legitimately omit the line number. 129 entries cite the root
+    `FUNCTIONAL_REQUIREMENTS.md` with no line at all, so absence of `:` is a
+    valid shape and only the file must exist. `docs/audits/_id_inventory_v3.json`
+    stores those as bare strings rather than one-element lists, which is why
+    `_spec_refs` normalises first.
+    """
+    inv = _inventory()
+    bad: list[str] = []
+    total = 0
+    with_line = 0
+    for eid, e in inv.items():
+        for ref in _spec_refs(e):
+            total += 1
+            path, sep, tail = ref.rpartition(":")
+            if not sep or not tail.isdigit():
+                # file-level reference: the path itself must exist
+                if (ROOT / ref).exists():
+                    continue
+                bad.append(f"{eid}: missing file {ref!r}")
+                continue
+            p = ROOT / path
+            if not p.exists():
+                bad.append(f"{eid}: missing file {path}")
+                continue
+            n = int(tail)
+            nlines = len(p.read_text(encoding="utf-8", errors="replace").splitlines())
+            if not (1 <= n <= nlines):
+                bad.append(f"{eid}: {ref} out of range (file has {nlines} lines)")
+            else:
+                with_line += 1
+    assert total > 10000, f"only {total} spec refs examined; inventory shape changed"
+    assert with_line > 10000, (
+        f"only {with_line} line-level refs examined; inventory shape changed"
+    )
+    assert not bad, (
+        f"{len(bad)} spec citations do not resolve, first few: "
+        + "; ".join(bad[:8])
+    )
+
+
+def test_no_row_rests_only_on_id_restatement() -> None:
+    """No row's entire spec evidence is a line that merely repeats the ID.
+
+    A cited line is treated as carrying no evidence of its own when, after
+    deleting the ID and every other FR-/NFR- token plus markdown decoration and
+    the generator's fixed labels, nothing is left. Title lines and `> Epic:`
+    frontmatter qualify. A row whose every citation is such a line is crediting
+    the ID with the ID.
+    """
+    labels = re.compile(
+        r"(?i)\b(intent|adr|spec|plan|research|date|status|deciders|epic|"
+        r"relates to|traceability id|implementing crate)\b\s*:?")
+    cache: dict[str, list[str]] = {}
+
+    def residue(line: str, eid: str) -> str:
+        s = line.replace(eid, " ")
+        s = re.sub(r"(?i)\b(fr|nfr)-[a-z0-9-]*\b", " ", s)
+        s = re.sub(r"(?i)^#+\s*", " ", s)
+        s = re.sub(r"(?i)^>\s*", " ", s)
+        s = labels.sub(" ", s)
+        return re.sub(r"[\s#>*|`\-:=\[\](){}.,]+", " ", s).strip()
+
+    inv = _inventory()
+    offenders = []
+    for eid, e in inv.items():
+        refs = _spec_refs(e)
+        if not refs:
+            continue
+        states = []
+        for ref in refs:
+            path, sep, tail = ref.rpartition(":")
+            if not sep or not tail.isdigit():
+                states.append("unknown")
+                continue
+            if path not in cache:
+                p = ROOT / path
+                cache[path] = (p.read_text(encoding="utf-8", errors="replace").splitlines()
+                               if p.exists() else [])
+            lines = cache[path]
+            n = int(tail)
+            if not (1 <= n <= len(lines)):
+                states.append("unknown")
+                continue
+            states.append("empty" if not residue(lines[n - 1], eid) else "content")
+        if states and all(s == "empty" for s in states):
+            offenders.append(eid)
+
+    assert not offenders, (
+        "these rows cite only lines that restate their own ID, so their spec "
+        "evidence is circular: " + ", ".join(sorted(offenders)[:12])
     )
 
 

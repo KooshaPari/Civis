@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-10-02",
+  "generated_at": "2026-10-05",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -466,16 +466,15 @@
         "docs/traceability/fr-asset-003/fr-asset-003-intent.md:15",
         "docs/traceability/fr-asset-003/fr-asset-003-plan.md:1"
       ],
-      "in_code": [
-        "crates/render/src/atlas.rs:20",
-        "crates/render/src/atlas.rs:271"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/render/tests/atlas_build_events.rs:2"
       ],
       "in_stub_tests": [],
       "self_test_only": false,
-      "unbound_refs": []
+      "unbound_refs": [
+        "crates/render/src/atlas.rs:19"
+      ]
     },
     {
       "id": "FR-ASSET-004",

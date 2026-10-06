@@ -16,13 +16,13 @@
 //! hash of the SVG body, so the same source always yields the same pixels. The
 //! real renderer swaps in `resvg`/`tiny-skia` behind the same signature.
 //!
-//! NOTE: this module previously carried `FR-ASSET-001`, `FR-ASSET-002`, and
-//! `FR-ASSET-003` tags. No authoritative spec defines those ids; their only
-//! definition was a table in `docs/traceability/TRACEABILITY_MATRIX.md`
-//! claiming source spec `docs/specs/CIV-0600-2d-assets.md`, which does not
+//! NOTE: this module previously carried `FR-ASSET-001`, `FR-ASSET-002` and `FR-ASSET-003` tags.
+//! No authoritative spec defines those ids; their only definition was a table in
+//! `docs/traceability/TRACEABILITY_MATRIX.md` claiming source spec
+//! `docs/specs/CIV-0600-2d-assets.md`, which does not
 //! exist (the real file is `CIV-0600-2d-asset-pipeline-spec.md`, and it
 //! numbers its requirements `FR-CIV-ASSET-001..`). The tags were removed
-//! rather than rebound. The 60 fps hex-grid constraint that genuinely does
+//! rather than rebound. The build performance gate that genuinely does
 //! apply here is `FR-CIV-ASSET-011`, defined in
 //! `docs/specs/CIV-0600-2d-asset-pipeline-spec.md`.
 
@@ -268,7 +268,7 @@ pub fn pack_atlas_per_lod(sprites: &[RasterSprite]) -> Result<Vec<TextureAtlas>,
     Ok(atlases)
 }
 
-/// Build the event payload for an atlas build attempt (FR-ASSET-003).
+/// Build the event payload for an atlas build attempt.
 ///
 /// Emits [`EVENT_ATLAS_BUILT`] on success (with the LOD levels produced) or
 /// [`EVENT_GENERATION_FAILED`] on error (with the failure code).

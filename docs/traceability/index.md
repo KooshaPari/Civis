@@ -1,6 +1,6 @@
 # FR Traceability Index
 
-Index of 1362 per-ID documentation directories under `docs/traceability/`, grouped by epic. 1362 have at least one artefact on disk. Generated 2026-10-02 by `scripts/traceability/gen-traceability-index.py`.
+Index of 1362 per-ID documentation directories under `docs/traceability/`, grouped by epic. 1362 have at least one artefact on disk. Generated 2026-10-05 by `scripts/traceability/gen-traceability-index.py`.
 
 ## Coverage status is deliberately not in this file
 

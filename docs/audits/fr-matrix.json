@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-10-02",
+  "generated_at": "2026-10-05",
   "source_inventory": "docs/audits/_id_inventory_v3.json",
   "status_legend": {
     "COVERED": "spec/trace + code + real test all present",
@@ -14,10 +14,10 @@
   "totals": {
     "rows": 1430,
     "by_status": {
-      "COVERED": 661,
+      "COVERED": 660,
       "SELF-TEST-ONLY": 229,
       "STUB-TEST-ONLY": 0,
-      "TEST-NO-CODE-REF": 334,
+      "TEST-NO-CODE-REF": 335,
       "IMPL-NO-TEST": 9,
       "SPEC-ONLY": 197,
       "CODE-ONLY-no-spec": 0
@@ -276,10 +276,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-ASSET": {
-        "COVERED": 2,
+        "COVERED": 1,
         "SELF-TEST-ONLY": 0,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 2,
+        "TEST-NO-CODE-REF": 3,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -2728,7 +2728,7 @@
     },
     {
       "id": "FR-ASSET-003",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-ASSET",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:221",
@@ -2741,10 +2741,7 @@
         "docs/traceability/fr-asset-003/fr-asset-003-intent.md:15",
         "docs/traceability/fr-asset-003/fr-asset-003-plan.md:1"
       ],
-      "code_refs": [
-        "crates/render/src/atlas.rs:20",
-        "crates/render/src/atlas.rs:271"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/render/tests/atlas_build_events.rs:2"
       ],

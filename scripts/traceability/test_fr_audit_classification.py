@@ -2003,3 +2003,223 @@ def test_no_committed_code_ref_sits_inside_a_removal_block() -> None:
         f"{len(offenders)} in_code refs sit inside a removal-rationale block, "
         f"e.g. {offenders[:5]}"
     )
+
+
+# --- rule 14: a withdrawn id must not be credited as implementation ---------
+#
+# `withdrawn_ids` is line-scoped on purpose: a provenance header names both the
+# ids it withdrew and the one real requirement that survived, so block-scanning
+# the comment would withdraw the survivors too. `test_provenance_scan_is_line_
+# scoped_not_block_scoped` pins that.
+#
+# The residual is the leak this rule pins. A withdrawal only takes effect if the
+# id lands on the header-BEARING line. When a header wraps its id list across
+# two lines, the ids on the continuation line are never harvested, so
+# references to them are credited as ordinary `in_code` evidence and the audit
+# reports COVERED for requirements that no authoritative spec defines.
+#
+# `crates/render/src/atlas.rs` had exactly that. Its NOTE said it previously
+# carried `FR-ASSET-001`, `FR-ASSET-002`, and `FR-ASSET-003`; the list wrapped
+# after the second, so only the first two were withdrawn. FR-ASSET-003 then
+# collected two `in_code` references -- the header's own continuation line and
+# `atlas_build_event`'s doc comment 250 lines later -- and reported COVERED for
+# an id whose only definition was a TRACEABILITY_MATRIX row pointing at
+# `docs/specs/CIV-0600-2d-assets.md`, a file that does not exist.
+#
+# The fix was to the source, not the gatherer: the ids the header already
+# withdraws now sit on the header-bearing line, and the stale citation is gone.
+# `withdrawn_ids` is unchanged.
+#
+# What this test asserts, and why not more. The tempting stronger invariant is
+# "no file may mention a withdrawn id outside its header". That is false, and
+# was measured against this tree: 12 such mentions exist and are all correct.
+# Several are header prose naming the ids being withdrawn (`render/src/lib.rs:29`
+# lists `FR-UX-001..005` to explain the collision), several are disclaimers
+# (`render/src/frame.rs:1` says "no FR-PERF-003 id"), and the rest are doc
+# comments on real functions citing an id that `withdrawn_ids` has already
+# re-routed to `unbound_refs`. The gatherer handles every one of them correctly.
+# Asserting that invariant would demand source changes nobody asked for and
+# would have failed against a tree that is not broken.
+#
+# The invariant that IS true is narrower and is the false claim itself: a
+# withdrawn id must never be credited as IMPLEMENTATION evidence. `in_code` is
+# the bucket the classifier turns into COVERED.
+#
+# Known pre-existing failures, deliberately NOT fixed here. The sweep below is
+# repo-wide, and it finds three ids that this change did not introduce and does
+# not authorize changing:
+#
+#   FR-ASSET-001, FR-AUD-001, FR-PERF-003  (all from `crates/render/src/lib.rs:26`)
+#
+# `render/src/lib.rs` has the identical continuation-line leak: its header
+# bearing line is 25, and line 26 names `FR-ASSET-001..004`, `FR-AUD-001..003`
+# and `FR-PERF-003`. Fixing it is the same one-line move applied to atlas.rs,
+# but it touches a second crate and changes four more audit rows, so it is a
+# separate change. They are listed explicitly so the gap is visible rather than
+# silently tolerated, and so removing any entry fails this test loudly.
+
+_PREEXISTING_WRONG_IN_CODE = {
+    "FR-ASSET-001": "crates/render/src/lib.rs:26",
+    "FR-AUD-001": "crates/render/src/lib.rs:26",
+    "FR-PERF-003": "crates/render/src/lib.rs:26",
+}
+
+
+def _scanned_code_files() -> list[str]:
+    """Repo-relative paths of every file the gatherer scans as code.
+
+    Mirrors the gatherer's own traversal (`SCAN_DIRS` + `SCAN_FILES`, minus
+    skips, minus self-reference) so this walk sees exactly what the audit sees
+    and cannot silently drift away from it.
+    """
+    out: list[str] = []
+    for d in gather.SCAN_DIRS:
+        base = ROOT / d
+        if not base.exists():
+            continue
+        for p in sorted(base.rglob("*")):
+            if not p.is_file() or gather.should_skip(p):
+                continue
+            rel = p.relative_to(ROOT).as_posix()
+            if not gather.is_self_ref(rel) and gather.classify(rel) == "code":
+                out.append(rel)
+    for fname in gather.SCAN_FILES:
+        p = ROOT / fname
+        if not p.is_file() or gather.should_skip(p):
+            continue
+        rel = p.relative_to(ROOT).as_posix()
+        if not gather.is_self_ref(rel) and gather.classify(rel) == "code":
+            out.append(rel)
+    return sorted(set(out))
+
+
+def _withdrawn_in_source() -> set[str]:
+    """Every id withdrawn by some file's own header, harvested live from source."""
+    out: set[str] = set()
+    for rel in _scanned_code_files():
+        try:
+            lines = (ROOT / rel).read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        out |= gather.withdrawn_ids(lines)
+    return out
+
+
+def test_no_withdrawn_id_is_credited_as_implementation_evidence() -> None:
+    """No withdrawn id is credited in `in_code`, so none reports false COVERED.
+
+    Scoped to `in_code` on purpose. Withdrawn ids legitimately keep `in_specs`
+    and `in_tests` references -- the TRACEABILITY_MATRIX row records them, and
+    test files repeat the provenance note -- and those references are how the
+    matrix reports the row at all. `in_code` alone is the bucket the classifier
+    turns into COVERED, so it is the only bucket where crediting a withdrawn id
+    is a false claim rather than a record.
+
+    Before the fix FR-ASSET-003 carried
+    `in_code = ['crates/render/src/atlas.rs:20', 'crates/render/src/atlas.rs:271']`
+    and reported COVERED. Reintroduce either reference and this fails by name.
+    """
+    withdrawn = _withdrawn_in_source()
+
+    # Population guard: if the header detector stopped matching, the offender
+    # check below would pass for the wrong reason.
+    assert len(withdrawn) >= 5, (
+        f"only {len(withdrawn)} withdrawn ids were found in source; the measured "
+        f"count is 12, so this check would pass vacuously: {sorted(withdrawn)}"
+    )
+
+    inv = _inventory()
+    offenders = []
+    for eid in sorted(withdrawn & set(inv)):
+        if eid in _PREEXISTING_WRONG_IN_CODE:
+            continue
+        refs = inv[eid].get("in_code") or []
+        if isinstance(refs, str):
+            refs = [refs]
+        if refs:
+            offenders.append(f"{eid} in_code={refs}")
+
+    assert not offenders, (
+        f"{len(offenders)} withdrawn id(s) are credited as implementation "
+        "evidence and so report COVERED for requirements no authoritative spec "
+        "defines:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_pre_existing_wrong_in_code_baseline_is_still_accurate() -> None:
+    """Pin the three known failures, so fixing them is a visible change.
+
+    They are pre-existing on `main` and out of scope for this fix. Listing them
+    in `_PREEXISTING_WRONG_IN_CODE` is only honest while they are still wrong, so
+    this test fails the moment someone fixes one, forcing the entry to be
+    removed. The alternative -- leaving them silently -- is what lets a known
+    false-COVERED row sit unnoticed.
+    """
+    inv = _inventory()
+    resolved = []
+    wrong = []
+    for eid, ref in sorted(_PREEXISTING_WRONG_IN_CODE.items()):
+        row = inv.get(eid) or {}
+        refs = row.get("in_code") or []
+        if isinstance(refs, str):
+            refs = [refs]
+        if refs and ref in refs:
+            wrong.append(f"{eid} still credited at {ref}")
+        else:
+            resolved.append(eid)
+
+    assert not resolved, (
+        "these ids are in _PREEXISTING_WRONG_IN_CODE but are no longer credited "
+        f"as implementation evidence: {resolved}. Remove them from the allowlist "
+        "so the sweep covers them again."
+    )
+    assert len(wrong) == len(_PREEXISTING_WRONG_IN_CODE), (
+        "the known-bad baseline does not match reality, so some id is credited "
+        f"at an unexpected location: {wrong}"
+    )
+
+
+def test_fr_asset_003_is_not_credited_and_was_deleted_not_rebound() -> None:
+    """The specific defect, pinned so it cannot come back by accident.
+
+    No spec anywhere under `docs/specs/` numbers `FR-ASSET-003`. The real
+    CIV-0600 file is `CIV-0600-2d-asset-pipeline-spec.md` and it numbers its
+    requirements `FR-CIV-ASSET-001..020`, none of which covers emitting an atlas
+    build event. `FR-CIV-ASSET-011` is the 102-sprite render batch under 30 s
+    gate, and `FR-CIV-ASSET-001` is SVG template rendering; rebinding to either
+    would repeat the defect with better paperwork, which
+    `docs/audits/id-provenance-corrections.md` explicitly rules out ("IDs were
+    removed rather than rebound wherever no authoritative requirement describes
+    the behavior"). This asserts both halves: the id is gone from `in_code`, and
+    it is not simply re-pointed at a substitute.
+    """
+    inv = _inventory()
+    row = inv.get("FR-ASSET-003")
+    assert row is not None, "FR-ASSET-003 vanished from the inventory entirely"
+
+    code = row.get("in_code") or []
+    if isinstance(code, str):
+        code = [code]
+    assert not code, (
+        f"FR-ASSET-003 is credited as implementation evidence again: {code}. "
+        "No authoritative spec defines this id."
+    )
+
+    assert _matrix_status().get("FR-ASSET-003") != "COVERED", (
+        "FR-ASSET-003 reports COVERED, but no spec defines it and "
+        "crates/render/src/atlas.rs:19 says so"
+    )
+
+    src = (ROOT / "crates/render/src/atlas.rs").read_text(encoding="utf-8")
+    doc = [
+        ln for ln in src.splitlines()
+        if "Build the event payload for an atlas build attempt" in ln
+    ]
+    assert len(doc) == 1, f"expected one atlas_build_event doc line, got {doc}"
+    assert not re.search(r"FR-[A-Z]", doc[0]), (
+        f"atlas.rs carries a stale withdrawn citation: {doc[0]!r}"
+    )
+    assert "pub fn atlas_build_event" in src, (
+        "atlas_build_event was removed; it is a real implementation whose doc "
+        "comment must survive this fix"
+    )

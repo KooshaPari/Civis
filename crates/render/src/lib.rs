@@ -22,8 +22,8 @@
 //!
 //! ## Traceability provenance
 //!
-//! This crate previously advertised implementations of `FR-UX-001..005`,
-//! `FR-ASSET-001..004`, `FR-AUD-001..003`, and `FR-PERF-003`. None of those
+//! This crate previously advertised implementations of `FR-UX-001`..`005`,
+//! and previously advertised `FR-ASSET-001`, `FR-ASSET-002`, `FR-ASSET-003`, `FR-ASSET-004`, `FR-AUD-001`, `FR-AUD-002`, `FR-AUD-003`, and `FR-PERF-003`. None of those
 //! ids is defined by any authoritative spec: their only definition was a
 //! table in `docs/traceability/TRACEABILITY_MATRIX.md` that cited three
 //! nonexistent spec files. Several of them (`FR-UX-001..005`) collide with

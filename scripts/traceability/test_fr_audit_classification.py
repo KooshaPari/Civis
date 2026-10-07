@@ -2045,23 +2045,21 @@ def test_no_committed_code_ref_sits_inside_a_removal_block() -> None:
 # withdrawn id must never be credited as IMPLEMENTATION evidence. `in_code` is
 # the bucket the classifier turns into COVERED.
 #
-# Known pre-existing failures, deliberately NOT fixed here. The sweep below is
-# repo-wide, and it finds three ids that this change did not introduce and does
-# not authorize changing:
+# Known pre-existing failure, deliberately NOT fixed here. The sweep below is
+# repo-wide, and it finds one id whose continuation-line leak survives in a
+# different file and is fixed by a separate commit:
 #
-#   FR-ASSET-001, FR-AUD-001, FR-PERF-003  (all from `crates/render/src/lib.rs:26`)
+#   FR-PERF-003  (in `crates/engine/src/lib.rs:116`)
 #
-# `render/src/lib.rs` has the identical continuation-line leak: its header
-# bearing line is 25, and line 26 names `FR-ASSET-001..004`, `FR-AUD-001..003`
-# and `FR-PERF-003`. Fixing it is the same one-line move applied to atlas.rs,
-# but it touches a second crate and changes four more audit rows, so it is a
-# separate change. They are listed explicitly so the gap is visible rather than
-# silently tolerated, and so removing any entry fails this test loudly.
+# FR-PERF-003 was previously credited at `crates/render/src/lib.rs:26` as part of
+# the same continuation-line leak fixed by this commit. The remaining
+# `crates/engine/src/lib.rs:116` reference is the same defect class in a
+# different file and is the subject of a separate commit. Listed explicitly so
+# the gap is visible rather than silently tolerated, and so removing this entry
+# fails this test loudly once the engine-side leak is fixed.
 
 _PREEXISTING_WRONG_IN_CODE = {
-    "FR-ASSET-001": "crates/render/src/lib.rs:26",
-    "FR-AUD-001": "crates/render/src/lib.rs:26",
-    "FR-PERF-003": "crates/render/src/lib.rs:26",
+    "FR-PERF-003": "crates/engine/src/lib.rs:116",
 }
 
 

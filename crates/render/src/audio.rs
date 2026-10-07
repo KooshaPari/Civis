@@ -30,7 +30,7 @@
 //! ## Provenance correction
 //!
 //! This module previously carried `FR-AUD-001`, `FR-AUD-002`, and
-//! `FR-AUD-003` tags. No authoritative spec defines those ids; their only
+//! previously carried `FR-AUD-003` tags. No authoritative spec defines those ids; their only
 //! definition was a table in `docs/traceability/TRACEABILITY_MATRIX.md`
 //! citing a nonexistent spec file. The tags were replaced with the single
 //! genuine id this module actually implements.

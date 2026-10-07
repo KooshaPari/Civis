@@ -1,0 +1,49 @@
+name: Recovery Oracles
+
+on:
+  pull_request:
+    branches: [main, spec/mature-recovery-20260929]
+    paths:
+      - 'crates/engine/src/recovery_oracle_tests.rs'
+      - 'crates/engine/src/recovery_state_manifest_prototype.rs'
+      - 'crates/engine/src/lib.rs'
+      - 'crates/engine/src/save_bundle.rs'
+      - 'crates/engine/src/engine.rs'
+      - '.github/workflows/recovery-oracles.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: recovery-oracles-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-persistence-oracles:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+      - name: Candidate receipt
+        run: |
+          mkdir -p recovery-artifacts
+          printf '%s\n' '{"repository":"${{ github.repository }}","candidate":"${{ github.event.pull_request.head.sha || github.sha }}","workflow_run_id":"${{ github.run_id }}","workflow_attempt":"${{ github.run_attempt }}","runner_os":"${{ runner.os }}","oracle_scope":"recovery_tests","product_acceptance_credit":false}' > recovery-artifacts/receipt.json
+      - name: Compile recovery oracles
+        run: cargo test -p civ-engine --lib recovery_ --no-run
+      - name: Execute semantic persistence oracles
+        run: |
+          set -o pipefail
+          cargo test -p civ-engine --lib recovery_ -- --nocapture 2>&1 | tee recovery-artifacts/cargo-test.log
+      - name: Upload raw recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: recovery-persistence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: recovery-artifacts
+          if-no-files-found: warn
+          retention-days: 30

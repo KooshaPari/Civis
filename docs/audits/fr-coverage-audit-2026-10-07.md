@@ -20,10 +20,10 @@
 
 | Status | Count | % |
 |--------|------:|--:|
-| `COVERED` | 657 | 45.9 |
+| `COVERED` | 656 | 45.9 |
 | `SELF-TEST-ONLY` | 229 | 16.0 |
 | `STUB-TEST-ONLY` | 0 | 0.0 |
-| `TEST-NO-CODE-REF` | 338 | 23.6 |
+| `TEST-NO-CODE-REF` | 339 | 23.7 |
 | `IMPL-NO-TEST` | 9 | 0.6 |
 | `SPEC-ONLY` | 197 | 13.8 |
 | `CODE-ONLY-no-spec` | 0 | 0.0 |
@@ -218,7 +218,7 @@
 | FR-MOD | 5 | 1 | 4 | 0 | 0 | 0 | 0 | 0 |
 | FR-MUSIC | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
 | FR-NET | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
-| FR-PERF | 5 | 4 | 1 | 0 | 0 | 0 | 0 | 0 |
+| FR-PERF | 5 | 3 | 1 | 0 | 1 | 0 | 0 | 0 |
 | FR-PHYS-substrate | 8 | 0 | 8 | 0 | 0 | 0 | 0 | 0 |
 | FR-PROT | 6 | 1 | 1 | 0 | 4 | 0 | 0 | 0 |
 | FR-PROTO | 5 | 0 | 0 | 0 | 5 | 0 | 0 | 0 |
@@ -663,7 +663,7 @@
 - `NFR-R-06`
   - spec: docs/models/civ-sim/TECHNICAL_SPEC.md:2082, docs/traceability/index.md:2451, docs/traceability/nfr-r-06/nfr-r-06-intent.md:1
 
-## Tested IDs with no ID-tagged code (add a code reference) (338)
+## Tested IDs with no ID-tagged code (add a code reference) (339)
 
 - `FR-API-002`
   - spec: FUNCTIONAL_REQUIREMENTS.md, agileplus-specs/civ-013-research-api/plan.md:17, agileplus-specs/civ-013-research-api/spec.md:26
@@ -1376,6 +1376,9 @@
 - `FR-MUSIC-001`
   - spec: docs/traceability/fr-music-001/fr-music-001-intent.md:1, docs/traceability/fr-music-001/fr-music-001-intent.md:4, docs/traceability/fr-music-001/fr-music-001-intent.md:26
   - tests: crates/engine/src/engine/engine_tests.rs:3850
+- `FR-PERF-003`
+  - spec: docs/traceability/TRACEABILITY_MATRIX.md:289, docs/traceability/fr-perf-003/fr-perf-003-adr.md:1, docs/traceability/fr-perf-003/fr-perf-003-adr.md:6
+  - tests: crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:14, crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1053, crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1056
 - `FR-PROT-001`
   - spec: docs/traceability/TRACEABILITY_MATRIX.md:178, docs/traceability/fr-prot-001/fr-prot-001-adr.md:1, docs/traceability/fr-prot-001/fr-prot-001-adr.md:6
   - tests: crates/engine/tests/fr_fr_prot_001.rs:1, crates/engine/tests/fr_fr_prot_001.rs:9, crates/engine/tests/fr_fr_prot_001.rs:18

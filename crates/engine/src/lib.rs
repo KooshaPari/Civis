@@ -113,7 +113,7 @@ pub mod tutorial;
 // and :15 divide joules by it at the economy boundary -- but that is a joule
 // conversion, and a used constant is still not a frame-rate measurement. Note
 // the id collision hazard: FR-CIV-3D-003 (45 fps on M2, headless Chromium) and
-// FR-PERF-003 (60 fps on reference GPU, civ-render) are different requirements
+// [unbound] FR-PERF-003 (60 fps on reference GPU, civ-render) are different requirements
 // with similar targets, and the test file for this one is a tautology dressed
 // as coverage.
 //

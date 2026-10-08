@@ -14,10 +14,10 @@
   "totals": {
     "rows": 1430,
     "by_status": {
-      "COVERED": 657,
+      "COVERED": 656,
       "SELF-TEST-ONLY": 229,
       "STUB-TEST-ONLY": 0,
-      "TEST-NO-CODE-REF": 338,
+      "TEST-NO-CODE-REF": 339,
       "IMPL-NO-TEST": 9,
       "SPEC-ONLY": 197,
       "CODE-ONLY-no-spec": 0
@@ -1923,10 +1923,10 @@
         "CODE-ONLY-no-spec": 0
       },
       "FR-PERF": {
-        "COVERED": 4,
+        "COVERED": 3,
         "SELF-TEST-ONLY": 1,
         "STUB-TEST-ONLY": 0,
-        "TEST-NO-CODE-REF": 0,
+        "TEST-NO-CODE-REF": 1,
         "IMPL-NO-TEST": 0,
         "SPEC-ONLY": 0,
         "CODE-ONLY-no-spec": 0
@@ -31505,7 +31505,7 @@
     },
     {
       "id": "FR-PERF-003",
-      "status": "COVERED",
+      "status": "TEST-NO-CODE-REF",
       "epic": "FR-PERF",
       "spec_refs": [
         "docs/traceability/TRACEABILITY_MATRIX.md:289",
@@ -31518,9 +31518,7 @@
         "docs/traceability/fr-perf-003/fr-perf-003-intent.md:15",
         "docs/traceability/fr-perf-003/fr-perf-003-plan.md:1"
       ],
-      "code_refs": [
-        "crates/engine/src/lib.rs:116"
-      ],
+      "code_refs": [],
       "test_refs": [
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:14",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1053",

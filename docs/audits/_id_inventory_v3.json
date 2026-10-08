@@ -33896,9 +33896,7 @@
         "docs/traceability/fr-perf-003/fr-perf-003-intent.md:15",
         "docs/traceability/fr-perf-003/fr-perf-003-plan.md:1"
       ],
-      "in_code": [
-        "crates/engine/src/lib.rs:116"
-      ],
+      "in_code": [],
       "in_tests": [
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:14",
         "crates/engine/tests/fr_civ_rts_client_perf_cluster.rs:1053",
@@ -33912,6 +33910,7 @@
       "in_stub_tests": [],
       "self_test_only": false,
       "unbound_refs": [
+        "crates/engine/src/lib.rs:116",
         "crates/engine/src/lib.rs:121",
         "crates/render/src/frame.rs:1",
         "crates/render/src/frame.rs:10",

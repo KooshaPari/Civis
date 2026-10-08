@@ -2045,22 +2045,20 @@ def test_no_committed_code_ref_sits_inside_a_removal_block() -> None:
 # withdrawn id must never be credited as IMPLEMENTATION evidence. `in_code` is
 # the bucket the classifier turns into COVERED.
 #
-# Known pre-existing failure, deliberately NOT fixed here. The sweep below is
-# repo-wide, and it finds one id whose continuation-line leak survives in a
-# different file and is fixed by a separate commit:
+# Known pre-existing failures, deliberately NOT fixed here. The sweep below is
+# repo-wide and finds ids whose continuation-line leak or similar defect
+# remains in code. Each entry is paired with a removal deadline: when the
+# underlying source line is fixed, the entry is deleted from this allowlist
+# and the same test fails loudly until the deletion lands, forcing the sweep
+# to cover the id again. Listing them achieves visibility; removing the
+# entries once the source is fixed prevents this constant from becoming
+# permanent concealment of stale credits.
 #
-#   FR-PERF-003  (in `crates/engine/src/lib.rs:116`)
-#
-# FR-PERF-003 was previously credited at `crates/render/src/lib.rs:26` as part of
-# the same continuation-line leak fixed by this commit. The remaining
-# `crates/engine/src/lib.rs:116` reference is the same defect class in a
-# different file and is the subject of a separate commit. Listed explicitly so
-# the gap is visible rather than silently tolerated, and so removing this entry
-# fails this test loudly once the engine-side leak is fixed.
+# Currently empty: every known continuation-line leak has been fixed in
+# source and its credit routed to `unbound_refs`. If a future change
+# introduces a new leak, the sweep will populate this set again.
 
-_PREEXISTING_WRONG_IN_CODE = {
-    "FR-PERF-003": "crates/engine/src/lib.rs:116",
-}
+_PREEXISTING_WRONG_IN_CODE: dict[str, str] = {}
 
 
 def _scanned_code_files() -> list[str]:

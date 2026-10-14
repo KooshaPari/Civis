@@ -3,6 +3,8 @@ on:
   pull_request:
   push:
     branches: [main, spec/mature-recovery-20260929]
+env:
+  RUSTUP_TOOLCHAIN: "1.95.0"
 jobs:
   workspace-compile:
     name: cargo check --workspace (real compile gate)
@@ -10,6 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.95.0"
       - uses: Swatinem/rust-cache@v2
       - name: Workspace compiles
-        run: cargo check --workspace --all-targets
+        run: cargo check --locked --workspace --all-targets

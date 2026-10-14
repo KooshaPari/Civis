@@ -10,6 +10,7 @@
 #   bash scripts/playthrough.sh                          # default localhost:3000
 #   CIV_WS_URL=ws://host:3010/ws bash scripts/playthrough.sh
 #   CIVIS_CAPTURE_FRAMES=1 bash scripts/playthrough.sh   # also capture frames
+#   RPC_MAX_MESSAGE_BYTES=1048576 bash scripts/playthrough.sh # lower message cap
 #
 # Exit codes:
 #   0  all ten steps succeeded with the expected response shape
@@ -30,6 +31,8 @@
 #
 # Requirements: bash 4+, GNU timeout, jq, and websocat 1.13.0+
 # (https://github.com/vi/websocat).
+# Incoming WebSocket messages/frames are capped at 16 MiB by default.
+# RPC_MAX_MESSAGE_BYTES may lower the cap (1..16777216 bytes).
 
 set -u
 set -o pipefail
@@ -128,15 +131,27 @@ ws_url() {
     printf 'ws://%s:%s%s' "${CIV_WS_HOST}" "${CIV_SERVER_PORT}" "${CIV_WS_PATH}"
 }
 
+rpc_buffer_size() {
+    local limit="$1"
+    if [[ ! "$limit" =~ ^[1-9][0-9]{0,7}$ ]] || (( limit > 16777216 )); then
+        fail "RPC_MAX_MESSAGE_BYTES must be an integer from 1 to 16777216"
+        return 2
+    fi
+    # Fit an entire accepted message after base64 expansion, type prefix, and
+    # newline. Smaller copy buffers split messages and lose their type prefix.
+    printf '%s' "$((4 * ((limit + 2) / 3) + 16))"
+}
+
+# Subshell scopes the transport and EXIT cleanup to this call.
 rpc() {
-    # Subshell scopes the transport and EXIT cleanup to this call.
     (
-        local id="$1" method="$2" params="${3:-null}" payload
+        local id="$1" method="$2" params="${3:-null}" payload buffer_size
+        local message_limit="${RPC_MAX_MESSAGE_BYTES:-16777216}"
+        buffer_size="$(rpc_buffer_size "$message_limit")" || return 2
         payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
             "${id}" "$(json_quote "${method}")" "${params}" \
             | jq -Rsr '"CIVIS_TEXT:" + @base64')" || return 2
-        # Encode both message types before Bash reads them. No raw binary or
-        # embedded newline can be mistaken for another JSON-RPC message.
+        (( buffer_size > ${#payload} )) || buffer_size=$(( ${#payload} + 1 ))
         coproc CIVIS_RPC {
             # Wait until the parent owns the descriptors and cleanup trap.
             local request_line
@@ -144,6 +159,8 @@ rpc() {
             exec timeout --kill-after=1s "${RPC_TIMEOUT_SECONDS}" \
                 websocat -t -n --base64 --base64-text \
                     --binary-prefix 'CIVIS_BINARY:' --text-prefix 'CIVIS_TEXT:' \
+                    --buffer-size "$buffer_size" --max-ws-message-length "$message_limit" \
+                    --max-ws-frame-length "$message_limit" \
                     --ping-interval 5 --ping-timeout 8 \
                     "$(ws_url)" <<<"$request_line"
         }

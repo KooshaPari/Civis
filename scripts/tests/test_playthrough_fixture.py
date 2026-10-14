@@ -44,6 +44,32 @@ class FixtureLifecycleTests(unittest.TestCase):
                 self.assertEqual(fixture_module.main(), 1)
         fixture.finish.assert_called_once_with(error)
 
+    def test_binding_log_ignores_ansi_but_requires_exact_loopback_address(self):
+        plain = "INFO ws bridge listening addr=127.0.0.1:3800 max_clients=16"
+        colored = "\x1b[32mINFO\x1b[0m ws bridge listening \x1b[3maddr\x1b[0m\x1b[2m=\x1b[0m127.0.0.1:3800 max_clients=16"
+        for line in (plain, colored):
+            with self.subTest(line=line):
+                self.assertEqual(fixture_module.binding_log_confirmation([line], 3800), {"log_line": line, "normalized_log_line": plain})
+        for line in (colored.replace(":3800 ", ":38001 "), colored.replace("127.0.0.1", "0.0.0.0"), colored.replace("ws bridge listening", "unrelated log")):
+            with self.subTest(line=line):
+                self.assertIsNone(fixture_module.binding_log_confirmation([line], 3800))
+
+    def test_failure_stdout_preserves_binding_and_rpc_error_without_trace_noise(self):
+        with tempfile.TemporaryDirectory(prefix="civis-fixture-test-") as directory:
+            fixture = self.fixture(directory)
+            line = "INFO ws bridge listening addr=127.0.0.1:3800 max_clients=16"
+            (fixture.artifacts / "server.log").write_text(line + "\n\x1b[31m ERROR \x1b[0m save.slot failed: json: key must be a string\nTRACE unrelated transport poll\n")
+            fixture.report["owned_listener_evidence"] = {"log_line": line, "normalized_log_line": line, "pid": 123, "socket_inode": "456"}
+            response = {"jsonrpc": "2.0", "id": 2040, "error": {"code": -32603, "message": "json: key must be a string"}}
+            fixture.report["requests"].append({"id": 2040, "method": "save.slot", "exit": 2, "response": response})
+            with mock.patch("builtins.print") as output:
+                self.assertEqual(fixture.finish(fixture_module.FixtureFailure("save failed")), 1)
+            evidence = json.loads(output.call_args.args[0])["failure_evidence"]
+            self.assertEqual(evidence["failing_rpc"]["response"], response)
+            self.assertEqual(evidence["owned_listener"]["normalized_log_line"], line)
+            self.assertIn(" ERROR  save.slot failed: json: key must be a string", evidence["owned_server_log_excerpt"])
+            self.assertFalse(any("TRACE" in line or "\x1b" in line for line in evidence["owned_server_log_excerpt"]))
+
     def test_other_process_listener_is_never_owned(self):
         with tempfile.TemporaryDirectory(prefix="civis-fixture-test-") as directory:
             fixture = self.fixture(directory)

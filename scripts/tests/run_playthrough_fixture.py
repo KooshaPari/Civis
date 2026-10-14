@@ -34,6 +34,7 @@ BAD_DIAGNOSTICS = (
     "jq: error", "jq: parse error", "parse error:", "Incoming message too long",
     "unrecognized transport framing",
 )
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 class FixtureFailure(RuntimeError):
@@ -83,6 +84,14 @@ def available_port() -> int:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]
+
+
+def binding_log_confirmation(lines: list[str], port: int) -> dict | None:
+    for raw in lines:
+        normalized = ANSI_ESCAPE.sub("", raw)
+        if "ws bridge listening" in normalized and f"addr=127.0.0.1:{port} " in normalized:
+            return {"log_line": raw, "normalized_log_line": normalized}
+    return None
 
 
 class Fixture:
@@ -175,18 +184,22 @@ class Fixture:
         self.report["transport"] = {"source": str(self.source_path), "functions": [*FUNCTIONS, "fail"], "exact_source_definitions": True, "test_wrapper": "pinned real websocat; forged header applied only in explicit negative cases"}
 
     def start_server(self) -> None:
+        self.phase = "owned server readiness"
         self.deadline = min(self.deadline, time.monotonic() + 30)
         self.server_log = (self.artifacts / "server.log").open("wb")
         self.server = subprocess.Popen([str(self.server_binary)], cwd=self.artifacts, env=self.env, stdin=subprocess.DEVNULL, stdout=self.server_log, stderr=subprocess.STDOUT, start_new_session=True)
         self.sessions.append(self.server)
         self.report["server_pid"] = self.server.pid
-        until = time.monotonic() + 4
+        started = time.monotonic()
+        until = started + 4
+        self.report["readiness"] = {"deadline_seconds": 4, "owned_socket_observed": False, "matching_binding_log_observed": False}
         while self.server.poll() is None and time.monotonic() < until:
             lines = (self.artifacts / "server.log").read_text().splitlines()
-            confirmation = next((line for line in lines if "ws bridge listening" in line and f"addr=127.0.0.1:{self.port} " in line), None)
+            confirmation = binding_log_confirmation(lines, self.port)
             listener = self.owned_listener()
+            self.report["readiness"].update({"elapsed_seconds": round(time.monotonic() - started, 6), "owned_socket_observed": listener is not None, "matching_binding_log_observed": confirmation is not None})
             if confirmation is not None and listener is not None:
-                self.report["owned_listener_evidence"] = {"log_line": confirmation, **listener}
+                self.report["owned_listener_evidence"] = {**confirmation, **listener}
                 return
             time.sleep(0.03)
         raise FixtureFailure("Owned server did not confirm its own loopback listener within four seconds")
@@ -425,11 +438,28 @@ class Fixture:
         passed = failure is None and not remaining and not self.reaped
         self.report["passed"] = passed
         self.report["failure"] = None if failure is None else {"phase": self.phase, "type": type(failure).__name__, "message": str(failure)}
+        evidence = {}
+        if failure is not None:
+            log_path = self.artifacts / "server.log"
+            if log_path.is_file():
+                lines = [ANSI_ESCAPE.sub("", line) for line in log_path.read_text(errors="replace").splitlines()]
+                relevant = [line for line in lines if any(marker in line for marker in ("ws bridge listening", " ERROR ", " WARN ", "panicked at"))]
+                evidence["owned_server_log_excerpt"] = [line[:300] for line in (relevant or lines)[-4:]]
+            if self.report["requests"]:
+                last = self.report["requests"][-1]
+                response = last.get("response")
+                if isinstance(response, dict) and "error" in response:
+                    evidence["failing_rpc"] = {"id": last["id"], "method": last["method"], "exit": last["exit"], "response": response}
+            if "readiness" in self.report:
+                evidence["readiness"] = self.report["readiness"]
+            if "owned_listener_evidence" in self.report:
+                evidence["owned_listener"] = self.report["owned_listener_evidence"]
+        self.report["failure_evidence"] = evidence
         self.report["counts"] = {"positive_steps_passed": sum(step["passed"] for step in self.report["steps"]), "negative_cases_passed": len(self.report["negative_cases"]), "assertions_passed": sum(check["passed"] for check in self.report["assertions"]), "assertions_failed": sum(not check["passed"] for check in self.report["assertions"])}
         with self.report_path.open("x") as output:
             json.dump(self.report, output, indent=2)
             output.write("\n")
-        print(json.dumps({"passed": passed, "report": str(self.report_path), "counts": self.report["counts"], "failure": self.report["failure"]}))
+        print(json.dumps({"passed": passed, "report": str(self.report_path), "counts": self.report["counts"], "failure": self.report["failure"], "failure_evidence": evidence}))
         return 0 if passed else 1
 
 

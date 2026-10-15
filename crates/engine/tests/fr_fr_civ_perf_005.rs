@@ -9,9 +9,11 @@ mod fr_fr_civ_perf_005 {
     /// Verify FR-CIV-PERF-005: Multiple serialization rounds stay fast.
     #[test]
     fn verify_fr_civ_perf_005_basic() {
-        let mut ws = civ_engine::WorldState::default();
-        ws.tick = 42;
-        ws.population = 10_000;
+        let ws = civ_engine::WorldState {
+            tick: 42,
+            population: 10_000,
+            ..Default::default()
+        };
         const ITERS: u32 = 100;
         const ROUNDS: u32 = 5;
         let mut best_ms = u128::MAX;
@@ -31,9 +33,11 @@ mod fr_fr_civ_perf_005 {
     /// Verify serialization output is stable (deterministic).
     #[test]
     fn serialization_is_deterministic() {
-        let mut ws = civ_engine::WorldState::default();
-        ws.tick = 100;
-        ws.population = 5000;
+        let ws = civ_engine::WorldState {
+            tick: 100,
+            population: 5000,
+            ..Default::default()
+        };
         let json1 = serde_json::to_string(&ws).expect("serialize");
         let json2 = serde_json::to_string(&ws).expect("serialize");
         assert_eq!(json1, json2, "serialization must be deterministic");

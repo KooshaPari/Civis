@@ -14,7 +14,7 @@ mod fr_fr_civ_tactics_001_ {
 
     /// FR-CIV-TACTICS-001-: DamageEvent with zero energy produces zero casualties.
     #[test]
-    fn verify_fr_civ_tactics_001__basic() {
+    fn verify_fr_civ_tactics_001_basic() {
         let de = DamageEvent {
             center: WorldCoord { x: 0, y: 0, z: 0 },
             radius_voxels: 0,

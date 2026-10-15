@@ -3,7 +3,7 @@
 //! Civilizations SHALL be able to declare war, producing
 //! `diplomacy.war.declared.v1` events.
 
-use civ_diplomacy::{PolityId, War, WarDeclarationManager, WarError, WarEvent};
+use civ_diplomacy::{PolityId, WarDeclarationManager, WarError, WarEvent};
 
 fn p(id: u32) -> PolityId {
     PolityId::new(id)
@@ -68,7 +68,6 @@ fn war_end_war_emits_event() {
 fn war_duration_computed() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 10).expect("declare");
-    let pair = civ_diplomacy::Pair::new(p(1), p(2));
     let war = mgr.get_war(p(1), p(2)).unwrap();
     assert_eq!(war.duration_ticks(50), 40);
     assert_eq!(war.total_casualties(), 0);

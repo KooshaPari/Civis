@@ -12,6 +12,8 @@ mod fr_fr_civ_voxel_032 {
         use civ_voxel::{WorldCoord, FIXED_SCALE};
         let c = WorldCoord { x: 0, y: 0, z: 0 };
         assert_eq!(c.x, 0);
-        assert!(FIXED_SCALE > 0);
+        const {
+            assert!(FIXED_SCALE > 0);
+        };
     }
 }

@@ -12,7 +12,7 @@ mod fr_fr_civ_perf_014 {
         let sim = civ_engine::Simulation::with_seed(42u64);
         let view = sim.spectator_view();
         assert!(
-            view.civ_pins.len() > 0,
+            !view.civ_pins.is_empty(),
             "spectator view should have civilian pins"
         );
         assert_eq!(view.factions.len(), 4, "should have 4 factions");

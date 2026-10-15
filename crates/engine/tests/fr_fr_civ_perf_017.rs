@@ -10,8 +10,10 @@ mod fr_fr_civ_perf_017 {
     #[test]
     fn verify_fr_civ_perf_017_basic() {
         use civ_engine::Fixed;
-        let mut ws = civ_engine::WorldState::default();
-        ws.energy_budget_joules = Fixed::from_num(5_000_000i64);
+        let ws = civ_engine::WorldState {
+            energy_budget_joules: Fixed::from_num(5_000_000i64),
+            ..Default::default()
+        };
         let json = serde_json::to_string(&ws).expect("serialize");
         let ws2: civ_engine::WorldState = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(ws.energy_budget_joules, ws2.energy_budget_joules);

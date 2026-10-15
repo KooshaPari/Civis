@@ -339,7 +339,7 @@ fn fr_civ_emergence_004_dashboard_clone_and_debug() {
         &[-0.5, 0.5],
         &[0.6, -0.3],
     );
-    let cloned = d.clone();
+    let cloned = d;
     assert_eq!(d, cloned);
     // Debug output should contain the struct name.
     let debug = format!("{d:?}");

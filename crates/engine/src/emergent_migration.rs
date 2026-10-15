@@ -214,38 +214,47 @@ pub fn migration_tick(
     let mut events = Vec::new();
 
     for agent in agents {
-        // Collect candidates (excluding agent's current settlement)
-        let candidates: Vec<SettlementSnapshot> = settlements
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| *i != agent.settlement_index as usize)
-            .map(|(_, s)| s.clone())
-            .collect();
-
-        if candidates.is_empty() {
+        // Candidates exclude home. `evaluate_migration` reports the index
+        // into this slice, so map it back to the settlement index.
+        let sampled = sampled_destinations(agent, settlements, config.sample_size);
+        if sampled.is_empty() {
             continue;
         }
-
-        // Sample random subset
-        let sampled: Vec<SettlementSnapshot> = if candidates.len() <= config.sample_size {
-            candidates
-        } else {
-            // Deterministic sampling: take first N (in real sim, use seeded RNG)
-            candidates.into_iter().take(config.sample_size).collect()
-        };
-
-        if let Some(event) = evaluate_migration(
+        let snapshots: Vec<SettlementSnapshot> = sampled.iter().map(|(_, s)| s.clone()).collect();
+        if let Some(mut event) = evaluate_migration(
             agent,
             &settlements[agent.settlement_index as usize],
-            &sampled,
+            &snapshots,
             config,
             tick,
         ) {
+            event.target_settlement = sampled[event.target_settlement as usize].0;
             events.push(event);
         }
     }
 
     events
+}
+
+/// Destinations other than the agent's home, capped at `sample_size`.
+///
+/// Each pair is `(settlement_index, snapshot)`. Sampling is the prefix of
+/// the settlement list so the same inputs always yield the same events.
+fn sampled_destinations(
+    agent: &AgentSnapshot,
+    settlements: &[SettlementSnapshot],
+    sample_size: usize,
+) -> Vec<(u32, SettlementSnapshot)> {
+    let mut indexed: Vec<(u32, SettlementSnapshot)> = settlements
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != agent.settlement_index as usize)
+        .map(|(i, snapshot)| (i as u32, snapshot.clone()))
+        .collect();
+    if indexed.len() > sample_size {
+        indexed.truncate(sample_size);
+    }
+    indexed
 }
 
 /// Aggregate migration effects for a single settlement.

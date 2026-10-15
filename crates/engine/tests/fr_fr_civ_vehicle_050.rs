@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_050 {
-    use civ_engine::vehicle_types::{effective_speed, LaneClass, Medium};
+    use civ_engine::vehicle_types::{effective_speed, LaneClass};
 
     /// FR-CIV-VEHICLE-050 -- Agent boarding: time-saved must exceed overhead.
     #[test]

@@ -12,13 +12,14 @@ use serde::{Deserialize, Serialize};
 /// Each civilization SHALL have exactly one active [`GovernanceType`] at any
 /// given tick. The type is assigned at initialization and may transition
 /// when institutional collapse triggers a regime change.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum GovernanceType {
     /// Power concentrated in a single ruler or ruling party.
     Autocracy,
     /// Rule by a small, privileged class.
     Oligarchy,
     /// Representative government with elected officials.
+    #[default]
     Democracy,
     /// Rule by a technical elite or expert class.
     Technocracy,
@@ -55,12 +56,6 @@ impl GovernanceType {
             Self::Democracy => 4,
             Self::Anarchy => 5,
         }
-    }
-}
-
-impl Default for GovernanceType {
-    fn default() -> Self {
-        Self::Democracy
     }
 }
 

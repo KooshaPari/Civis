@@ -610,23 +610,12 @@ fn fr_civ_act_005_decision_boundary_is_strict_with_pull_floor() {
 
 /// Covers FR-CIV-ACT-005.
 ///
-/// TODO(FR-CIV-ACT-005): defect guard.
-///
-/// `MigrationEvent::target_settlement` is documented as "Target settlement
-/// index", but `evaluate_migration` returns the index of the best entry in the
-/// *filtered* candidate list (`emergent_migration.rs:194`). `migration_tick`
-/// drops the agent's own settlement from that list, so for any agent whose home
-/// is not settlement 0 the reported target is shifted by one and can even equal
-/// the source: the event claims an agent moved from settlement 1 to settlement 1
-/// when it actually moved to settlement 2.
-///
-/// EXPECTED: `target_settlement == 2` (where the housing and the pull are).
-/// ACTUAL  : `target_settlement == 1 == source_settlement`.
-///
-/// This pins the ACTUAL value so the defect stays visible and tracked; delete
-/// this guard and assert the EXPECTED value once the indices are reconciled.
+/// `evaluate_migration` reports the index of the best entry in the candidate
+/// slice it was given. `migration_tick` drops the agent's home from that slice,
+/// then maps the candidate index back to the settlement index so an agent
+/// living in settlement 1 and moving to settlement 2 is recorded as such.
 #[test]
-fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
+fn fr_civ_act_005_target_index_is_the_settlement_index() {
     let config = MigrationConfig {
         migration_threshold: 0.5,
         ..migration_config()
@@ -646,15 +635,9 @@ fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
     );
     assert_eq!(event.source_pressure, 1.0, "home pressure saturates");
     assert_eq!(event.target_pull, 1.0, "settlement 2 is the attractive candidate");
-    assert_eq!(
-        event.target_settlement, 1,
-        "ACTUAL (defective): filtered-list index, not the settlement index"
-    );
-    assert_eq!(
-        settlement_net_migration(&events, 2),
-        0,
-        "ACTUAL (defective): the real destination is credited with no arrivals"
-    );
+    assert_eq!(event.target_settlement, 2, "target is the settlement index");
+    assert_eq!(settlement_net_migration(&events, 2), 1);
+    assert_eq!(settlement_net_migration(&events, 1), -1);
 }
 
 /// Covers FR-CIV-ACT-005.
@@ -663,11 +646,8 @@ fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
 /// ineligible ones move, conserves net population across the settlement set, and
 /// is deterministic for identical inputs.
 ///
-/// `MigrationEvent::target_settlement` is a filtered-candidate index rather than
-/// a settlement index (see
-/// `fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo`),
-/// so this test only pins its range; the destination identity is pinned through
-/// `evaluate_migration` in the decision tests above.
+/// `migration_tick` records `target_settlement` as the settlement index, so the
+/// two adults leaving settlement 0 land on settlement 1.
 #[test]
 fn fr_civ_act_005_tick_events_are_valid_and_conserve_population() {
     let config = MigrationConfig {
@@ -703,7 +683,7 @@ fn fr_civ_act_005_tick_events_are_valid_and_conserve_population() {
             event.target_pull, 1.0,
             "the housing-backed candidate is the only pull"
         );
-        assert!((event.target_settlement as usize) < settlements.len());
+        assert_eq!(event.target_settlement, 1, "destination is settlement 1");
         // TODO(FR-CIV-ACT-005): `MigrationEvent::agent_index` is documented as the
         // index of the migrating agent but is filled from `agent.settlement_index`
         // ("placeholder — real index set by caller", emergent_migration.rs:192), so

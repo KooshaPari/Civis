@@ -10,7 +10,7 @@ mod fr_fr_civ_terrain_002 {
     /// VoxelWorld type exists (re-exported from civ-voxel).
     #[test]
     fn voxel_world_type_exists() {
-        let mut sim = civ_engine::Simulation::with_seed(42);
+        let sim = civ_engine::Simulation::with_seed(42);
         let _ = &sim.voxel;
     }
 

@@ -116,14 +116,20 @@ fn budget_config_is_validated() {
         unload_radius: 2,
         resident_cap: 0,
     };
-    assert!(zero_cap.validate().is_err(), "resident_cap = 0 must be rejected");
+    assert!(
+        zero_cap.validate().is_err(),
+        "resident_cap = 0 must be rejected"
+    );
 
     let inverted = StreamingWindowConfig {
         load_radius: 5,
         unload_radius: 2,
         resident_cap: 64,
     };
-    assert!(inverted.validate().is_err(), "inverted radii must be rejected");
+    assert!(
+        inverted.validate().is_err(),
+        "inverted radii must be rejected"
+    );
 
     let good = StreamingWindowConfig {
         load_radius: 2,
@@ -131,7 +137,11 @@ fn budget_config_is_validated() {
         resident_cap: 1024,
     };
     assert!(good.validate().is_ok());
-    assert_eq!(StreamingWindowConfig::inner_ball_size(0), 1, "r=0 is the focus chunk");
+    assert_eq!(
+        StreamingWindowConfig::inner_ball_size(0),
+        1,
+        "r=0 is the focus chunk"
+    );
     assert_eq!(StreamingWindowConfig::inner_ball_size(1), 27);
     assert_eq!(StreamingWindowConfig::inner_ball_size(2), 125);
 }

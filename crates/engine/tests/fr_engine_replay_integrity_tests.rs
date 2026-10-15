@@ -106,7 +106,7 @@ fn fr_core_004_chain_root_mixed_payloads() {
 #[test]
 fn fr_core_004_chain_root_empty_payloads() {
     let empty: [&[u8]; 0] = [];
-    assert!(chain_root_from_payloads(&empty).is_none());
+    assert!(chain_root_from_payloads(empty).is_none());
 }
 
 // ===========================================================================

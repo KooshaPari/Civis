@@ -12,7 +12,8 @@ mod fr_fr_civ_arch_006 {
     fn world_state_is_public_and_defaultable() {
         let ws = civ_engine::WorldState::default();
         assert_eq!(ws.tick, 0);
-        assert!(ws.population == 0 || ws.population > 0); // population is u64, always non-negative
+        // `WorldState::default` seeds a playable world, not an empty one.
+        assert_eq!(ws.population, 1_000_000);
     }
 
     /// FR-CIV-ARCH-006: Simulation::with_seed creates a valid simulation.
@@ -55,7 +56,7 @@ mod fr_fr_civ_arch_006 {
     /// FR-CIV-ARCH-006: SCALE constant defines fixed-point scaling.
     #[test]
     fn scale_constant_is_positive() {
-        assert!(civ_engine::SCALE > 0);
+        const { assert!(civ_engine::SCALE > 0); };
         assert_eq!(civ_engine::SCALE, 1_000);
     }
 }

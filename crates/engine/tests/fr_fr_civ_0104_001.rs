@@ -10,7 +10,7 @@
 #[cfg(test)]
 mod fr_fr_civ_0104_001 {
     use civ_engine::constraints::{
-        check_all, run_all_checks, ConstraintSetResult, MinimalConstraintParams,
+        check_all, run_all_checks, MinimalConstraintParams,
     };
     use civ_engine::Fixed;
     use std::collections::BTreeMap;

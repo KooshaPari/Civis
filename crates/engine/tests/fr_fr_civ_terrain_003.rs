@@ -22,6 +22,6 @@ mod fr_fr_civ_terrain_003 {
         let mut sim = civ_engine::Simulation::with_seed(42);
         sim.tick();
         let count = sim.last_tick_voxel_damage_count();
-        assert!(count >= 0, "damage count must be non-negative");
+        assert_eq!(count, sim.last_tick_voxel_damage_count());
     }
 }

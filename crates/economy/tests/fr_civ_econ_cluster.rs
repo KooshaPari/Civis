@@ -529,7 +529,9 @@ fn joule_budget_loop_spends_every_joule_and_stays_conserved_across_ticks() {
 #[test]
 fn auction_clearing_is_replay_deterministic_across_independent_runs() {
     // Returns (per-trade signature, (treasury, market, institution total)).
-    fn run() -> (Vec<(String, i64, i64, bool)>, (i64, i64, i64)) {
+    type TradeSig = (String, i64, i64, bool);
+    type BalanceTriple = (i64, i64, i64);
+    fn run() -> (Vec<TradeSig>, BalanceTriple) {
         let mut economy = EconomyState::with_energy_budget(10_000);
         let mut ledger = InstitutionLedger::with_defaults();
         fund(&mut economy, &mut ledger, INSTITUTION_TREASURY, 3_000);

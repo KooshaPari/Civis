@@ -935,7 +935,8 @@ mod tests {
                 assert_eq!(found, 999);
                 assert_eq!(max, SCHEMA_VERSION);
             }
-            other => panic!("expected OutdatedSchemaVersion, got a different error"),
+            Err(other) => panic!("expected OutdatedSchemaVersion, got {other:?}"),
+            Ok(_) => panic!("expected OutdatedSchemaVersion, got Ok"),
         }
     }
 

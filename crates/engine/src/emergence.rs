@@ -1386,7 +1386,8 @@ mod tests {
         // Comment lines are stripped first so the module's own audit
         // comment mentioning the bare names does not false-positive.
         let source = include_str!("emergence.rs");
-        let code: String = source
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let code: String = production
             .lines()
             .filter(|line| !line.trim_start().starts_with("//"))
             .collect();

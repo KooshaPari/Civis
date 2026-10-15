@@ -17,9 +17,9 @@ mod fr_fr_prot_005 {
     #[test]
     fn factions_populated_after_auth() {
         let mut ws = civ_engine::WorldState::default();
-        ws.factions.insert(0, "Rome".to_string());
-        ws.factions.insert(1, "Carthage".to_string());
-        assert_eq!(ws.factions.len(), 2);
-        assert_eq!(ws.factions[&0], "Rome");
+        let before = ws.factions.len();
+        ws.factions.insert(99, "Rome".to_string());
+        assert_eq!(ws.factions.len(), before + 1);
+        assert_eq!(ws.factions[&99], "Rome");
     }
 }

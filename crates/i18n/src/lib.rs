@@ -15,9 +15,7 @@
 #![forbid(unsafe_code)]
 
 use std::borrow::Cow;
-use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::Path;
 use thiserror::Error;
 
 // ---------------------------------------------------------------------------
@@ -25,9 +23,10 @@ use thiserror::Error;
 // ---------------------------------------------------------------------------
 
 /// Supported locales.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Locale {
     /// English (default)
+    #[default]
     En,
     /// Persian (فارسی) — RTL
     Fa,
@@ -54,8 +53,15 @@ impl Locale {
         }
     }
 
-    /// Parse from a BCP-47-like string (e.g., from `Accept-Language`).
-    pub fn from_str(s: &str) -> Option<Locale> {
+    /// Parse a BCP-47-like tag (for example `Accept-Language`).
+    ///
+    /// Unknown languages return `None`. Region suffixes are stripped, except
+    /// Chinese script/region tags which select simplified or traditional.
+    pub fn parse_tag(s: &str) -> Option<Locale> {
+        // Script subtag selects Latin Persian before the language prefix does.
+        if s.eq_ignore_ascii_case("fa-Latn") || s.eq_ignore_ascii_case("fa_Latn") {
+            return Some(Locale::FaLatn);
+        }
         // Normalize: strip country/region suffixes, lowercase
         let tag = s.split(&['-', '_']).next().unwrap_or(s).to_lowercase();
         match tag.as_str() {
@@ -79,9 +85,23 @@ impl Locale {
     }
 }
 
-impl Default for Locale {
-    fn default() -> Self {
-        Locale::En
+/// A BCP-47-like tag did not match a supported [`Locale`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParseLocaleError;
+
+impl std::fmt::Display for ParseLocaleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("unrecognized locale tag")
+    }
+}
+
+impl std::error::Error for ParseLocaleError {}
+
+impl std::str::FromStr for Locale {
+    type Err = ParseLocaleError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse_tag(s).ok_or(ParseLocaleError)
     }
 }
 
@@ -192,16 +212,16 @@ macro_rules! tr {
 /// Falls back to `Locale::En`.
 ///
 /// FR-CIV-L10N-020 — locale detection: the runtime can derive a supported
-/// `Locale` from `Accept-Language`/BCP-47 input via `Locale::from_str` and
+/// `Locale` from `Accept-Language`/BCP-47 input via `Locale::parse_tag` and
 /// from environment variables via `detect_locale_from_env`.
 pub fn detect_locale_from_env() -> Locale {
     if let Ok(val) = std::env::var("CIVIS_LANG") {
-        if let Some(loc) = Locale::from_str(&val) {
+        if let Some(loc) = Locale::parse_tag(&val) {
             return loc;
         }
     }
     if let Ok(val) = std::env::var("LANG") {
-        if let Some(loc) = Locale::from_str(&val) {
+        if let Some(loc) = Locale::parse_tag(&val) {
             return loc;
         }
     }
@@ -223,23 +243,25 @@ mod tests {
 
     #[test]
     fn locale_from_str_exact() {
-        assert_eq!(Locale::from_str("en"), Some(Locale::En));
-        assert_eq!(Locale::from_str("fa"), Some(Locale::Fa));
+        assert_eq!(Locale::parse_tag("en"), Some(Locale::En));
+        assert_eq!(Locale::parse_tag("fa"), Some(Locale::Fa));
+        assert_eq!(Locale::parse_tag("fa-Latn"), Some(Locale::FaLatn));
+        assert_eq!(Locale::parse_tag("fa_Latn"), Some(Locale::FaLatn));
     }
 
     #[test]
     fn locale_from_str_normalized() {
-        assert_eq!(Locale::from_str("EN-US"), Some(Locale::En));
-        assert_eq!(Locale::from_str("en_US"), Some(Locale::En));
+        assert_eq!(Locale::parse_tag("EN-US"), Some(Locale::En));
+        assert_eq!(Locale::parse_tag("en_US"), Some(Locale::En));
     }
 
     #[test]
     fn locale_chinese_disambiguation() {
-        assert_eq!(Locale::from_str("zh-CN"), Some(Locale::ZhCN));
-        assert_eq!(Locale::from_str("zh-TW"), Some(Locale::ZhTW));
-        assert_eq!(Locale::from_str("zh-Hans"), Some(Locale::ZhCN));
-        assert_eq!(Locale::from_str("zh-Hant"), Some(Locale::ZhTW));
-        assert_eq!(Locale::from_str("zh"), Some(Locale::ZhCN)); // default Simplified
+        assert_eq!(Locale::parse_tag("zh-CN"), Some(Locale::ZhCN));
+        assert_eq!(Locale::parse_tag("zh-TW"), Some(Locale::ZhTW));
+        assert_eq!(Locale::parse_tag("zh-Hans"), Some(Locale::ZhCN));
+        assert_eq!(Locale::parse_tag("zh-Hant"), Some(Locale::ZhTW));
+        assert_eq!(Locale::parse_tag("zh"), Some(Locale::ZhCN)); // default Simplified
     }
 
     #[test]
@@ -287,16 +309,16 @@ mod tests {
     }
 
     // FR-CIV-L10N-020 — locale detection derives a supported Locale from
-    // BCP-47/Accept-Language input via `Locale::from_str` and from the
+    // BCP-47/Accept-Language input via `Locale::parse_tag` and from the
     // CIVIS_LANG/LANG environment via `detect_locale_from_env`, falling back
     // to English when nothing resolves.
     #[test]
     fn fr_civ_l10n_020_detect_locale_from_bcp47_and_env() {
         // BCP-47-like input resolves to a supported Locale; unknown languages do not.
-        assert_eq!(Locale::from_str("fa-IR"), Some(Locale::Fa));
-        assert_eq!(Locale::from_str("en-US"), Some(Locale::En));
-        assert_eq!(Locale::from_str("zh-TW"), Some(Locale::ZhTW));
-        assert_eq!(Locale::from_str("fr-FR"), None);
+        assert_eq!(Locale::parse_tag("fa-IR"), Some(Locale::Fa));
+        assert_eq!(Locale::parse_tag("en-US"), Some(Locale::En));
+        assert_eq!(Locale::parse_tag("zh-TW"), Some(Locale::ZhTW));
+        assert_eq!(Locale::parse_tag("fr-FR"), None);
 
         let _guard = ENV_LOCK.lock().unwrap_or_else(|poison| poison.into_inner());
         let prev_civis = std::env::var("CIVIS_LANG").ok();
@@ -406,11 +428,13 @@ mod tests {
             coverage >= 0.8,
             "zh-CN bundle coverage {coverage:.2} below 0.80 threshold ({covered} of {total})"
         );
-        let en_title = en.get("app.title").unwrap();
-        let zh_title = zh.get("app.title").unwrap();
+        // The product name stays "Civis". A translated subtitle shows the
+        // bundle is not an English copy.
+        let en_subtitle = en.get("app.subtitle").unwrap();
+        let zh_subtitle = zh.get("app.subtitle").unwrap();
         assert_ne!(
-            en_title, zh_title,
-            "zh-CN title appears to be untranslated copy of English"
+            en_subtitle, zh_subtitle,
+            "zh-CN subtitle appears to be an untranslated copy of English"
         );
     }
 
@@ -426,7 +450,7 @@ mod tests {
     /// Count how many English keys are present (and non-empty) in `other`.
     fn en_keys_present_in(other: &Bundle) -> usize {
         en_keys_iter()
-            .filter(|k| other.get(&k).map(str::len).unwrap_or(0) > 0)
+            .filter(|k| other.get(k).map(str::len).unwrap_or(0) > 0)
             .count()
     }
 }

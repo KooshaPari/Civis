@@ -53,8 +53,10 @@ mod fr_fr_civ_legends_sig_05 {
     #[test]
     fn significance_capped_at_max() {
         let mut acc = SignificanceAccumulator::new();
-        let mut config = SignificanceConfig::default();
-        config.max_significance = 0.5;
+        let config = SignificanceConfig {
+            max_significance: 0.5,
+            ..Default::default()
+        };
         let id = civ_legends::LegendEntityId(0);
         for tick in 0..100u64 {
             acc.record_event(

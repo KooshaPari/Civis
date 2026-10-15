@@ -4,11 +4,10 @@
 //! The engine SHALL export complete simulation runs to a replay format
 //! containing a header, event log, and integrity verification.
 
-use civ_engine::{Fixed, WorldState};
 
 #[cfg(test)]
 mod fr_fr_rep_001 {
-    use super::*;
+    
 
     /// FR-REP-001: Hash chain module produces deterministic hashes.
     #[test]
@@ -41,6 +40,6 @@ mod fr_fr_rep_001 {
     #[test]
     fn save_bundle_has_spec_id() {
         assert_eq!(civ_engine::CIVSAVE_SPEC_ID, "CIV-1000");
-        assert!(civ_engine::CIVSAVE_FORMAT_VERSION > 0);
+        const { assert!(civ_engine::CIVSAVE_FORMAT_VERSION > 0); };
     }
 }

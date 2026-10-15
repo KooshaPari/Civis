@@ -22,9 +22,9 @@
 //!   `last_tick_mood`, `snapshot().outcome_progress`).
 //! * **FR-CIV-NOTIFY-911** — "stats SHALL be readable at empire scale (aggregate
 //!   + drill-down) … 100k+-agent aggregates without stalling". Engine surface:
-//!   `lod::{aggregate_strategic, operational_hex_snapshot}` (region rollup ↔
-//!   per-district drill-down) and the per-region stats frames
-//!   (`last_tick_mood_all` ↔ `last_tick_mood`).
+//!     `lod::{aggregate_strategic, operational_hex_snapshot}` (region rollup ↔
+//!     per-district drill-down) and the per-region stats frames
+//!     (`last_tick_mood_all` ↔ `last_tick_mood`).
 //! * **FR-CIV-NOTIFY-920** — "onboarding SHALL use progressive disclosure: …
 //!   a first-run flow … skippable". Engine surface: `tutorial::TutorialProgress`
 //!   (a progressive state machine gated on measured milestones, surfaced on
@@ -497,7 +497,7 @@ fn notify_910_dashboard_frames_track_measured_state_live_each_tick() {
             live_frames += 1;
         }
 
-        let snapshot = sim.last_tick_mood(0).expect("per-tick mood frame").clone();
+        let snapshot = *sim.last_tick_mood(0).expect("per-tick mood frame");
         let food_score = (tick * 5_000 / 200).clamp(MOOD_MIN, MOOD_MAX);
         let housing_score = 0_i64; // population == capacity
         let crime_score = (MOOD_CRIME_BASE - 4 * tick * 10).clamp(0, MOOD_CRIME_BASE);
@@ -629,10 +629,9 @@ fn notify_911_empire_scale_aggregate_is_exact_and_drills_down_per_region() {
         "the aggregate stats view must cover every region at empire scale"
     );
     for settlement_id in 0..64u32 {
-        let drill_down = sim
+        let drill_down = *sim
             .last_tick_mood(settlement_id)
-            .expect("every region must expose a drill-down frame")
-            .clone();
+            .expect("every region must expose a drill-down frame");
         assert_eq!(drill_down.settlement_id, settlement_id);
         let aggregate_entry = aggregate_view
             .iter()

@@ -37,7 +37,7 @@ mod fr_fr_civ_terrain_006 {
         }
         let snap = sim.snapshot();
         assert_eq!(snap.tick, 5);
-        assert!(snap.population >= 0);
+        assert_eq!(snap.population, sim.state.population);
         // Snapshot energy matches state energy
         assert_eq!(snap.energy_budget, sim.state.energy_budget_joules);
     }

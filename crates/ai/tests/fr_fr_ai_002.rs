@@ -41,8 +41,8 @@ impl MctsGameState for DepthGame {
             return None;
         }
         // "right" then "continue" = 1.0, everything else < 1.0.
-        if self.path.get(0).map_or(false, |a| a == "right")
-            && self.path.get(1).map_or(false, |a| a == "continue")
+        if self.path.first().is_some_and(|a| a == "right")
+            && self.path.get(1).is_some_and(|a| a == "continue")
         {
             Some(1.0)
         } else {

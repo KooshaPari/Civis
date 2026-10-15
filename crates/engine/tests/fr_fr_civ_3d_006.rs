@@ -10,7 +10,7 @@
 #[cfg(test)]
 mod fr_fr_civ_3d_006 {
     use civ_engine::{create_rng, step, Fixed, WorldState};
-    use rand::SeedableRng;
+    
     use rand::Rng;
 
     /// Same seed produces identical RNG sequences.

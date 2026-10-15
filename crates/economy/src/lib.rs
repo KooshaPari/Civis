@@ -61,7 +61,10 @@ pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
     ProductionProfile, Stocks, TradeOffer, GOODS,
 };
-pub use budget::{BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance, fiscal_health};
+pub use budget::{
+    compute_variances, fiscal_health, BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance,
+    BUCKET_ADMINISTRATION, BUCKET_EDUCATION, BUCKET_HEALTH, BUCKET_INFRASTRUCTURE, BUCKET_MILITARY,
+};
 pub use district::{tick_district_collapse, CollapseCheck, DistrictCollapseEvent, DistrictEnergyState, DEFAULT_DEFICIT_TICKS};
 pub use distribution::{
     deduct_consumption, distribute_surplus, step_distribution, DistributionConfig,
@@ -77,7 +80,8 @@ pub use waste::{compute_waste_heat, WasteHeatConfig, WasteHeatResult};
 pub use trade_flow::{
     complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,
 };
-pub use trade::{TradeAgreement, TradeAgreementError};
+pub use prices::{compute_price, update_cluster_prices, ClusterId, PriceState};
+pub use trade::{compute_trade_flows, TradeAgreement, TradeAgreementError, TradeFlow};
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };

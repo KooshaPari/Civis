@@ -244,7 +244,6 @@ pub enum ManifestError {
 //
 // Removed, with the reason each cannot be discharged here:
 //  [unbound] FR-CIV-MOD-020: NOT IMPLEMENTED, and this constant is the least capable thing it could sit on. The requirement is "Save-game / mod compatibility + migration" (docs/design/modding-platform.md:46, §13 at :500). `git grep -n "save_schema\|min_save_schema\|max_save_schema"` across crates/mod-host and crates/engine/src/save_bundle.rs returns zero hits, so no save records a mod set, no manifest declares a supported save range, and no migration path exists. This constant is a single &str naming the root path inside the ZIP ("manifest.toml", lib.rs:246); a filename cannot express a version range or migrate a save.
-
 pub const CIVMOD_MANIFEST_NAME: &str = "manifest.toml";
 
 // The following 1 requirement tags were removed from ModLoadedRecord.

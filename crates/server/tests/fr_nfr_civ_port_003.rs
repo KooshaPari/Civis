@@ -28,10 +28,12 @@ fn read_repo(rel: &str) -> String {
 /// unconditionally before compiling the server with no GPU features.
 #[test]
 fn headless_build_contract_is_required() {
-    assert!(
+    const {
+        assert!(
         HEADLESS_BUILD_REQUIRED,
         "the no-GPU headless build must be required unconditionally"
-    );
+        );
+    };
     assert!(
         headless_build_required(),
         "the runtime accessor must agree with HEADLESS_BUILD_REQUIRED"

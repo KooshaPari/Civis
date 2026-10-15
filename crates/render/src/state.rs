@@ -50,7 +50,7 @@ pub enum UiEvent {
 /// Construct with [`UiState::default`] (empty) and fold events in with
 /// [`apply`](Self::apply). [`poll_engine`](Self::poll_engine) exists only to be
 /// asserted against: it must always be zero, demonstrating the UI never polls.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct UiState {
     selected_unit: Option<u64>,
     display_tick: u64,
@@ -60,19 +60,6 @@ pub struct UiState {
     events_applied: u64,
     /// Number of direct engine polls; must stay 0.
     engine_polls: u64,
-}
-
-impl Default for UiState {
-    fn default() -> Self {
-        Self {
-            selected_unit: None,
-            display_tick: 0,
-            camera: (0, 0),
-            notifications: Vec::new(),
-            events_applied: 0,
-            engine_polls: 0,
-        }
-    }
 }
 
 impl UiState {

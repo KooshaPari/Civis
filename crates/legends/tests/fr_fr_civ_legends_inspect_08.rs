@@ -10,7 +10,7 @@ mod fr_fr_civ_legends_inspect_08 {
     /// FR-CIV-LEGENDS-INSPECT-08: Query API version is defined.
     #[test]
     fn query_api_version_is_defined() {
-        assert!(civ_legends::query::QUERY_API_VERSION > 0);
+        const { assert!(civ_legends::query::QUERY_API_VERSION > 0); }
     }
 
     /// FR-CIV-LEGENDS-INSPECT-08: Entity lookup returns None for unknown id.

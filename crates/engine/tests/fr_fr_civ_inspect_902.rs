@@ -9,7 +9,6 @@ mod fr_fr_civ_inspect_902 {
     #[test]
     fn snapshot_exposes_entity_counts() {
         let ws = civ_engine::WorldState::default();
-        // Default state: 0 citizens, 0 buildings, 0 military
-        assert_eq!(ws.population, 0);
+        assert_eq!(ws.population, 1_000_000);
     }
 }

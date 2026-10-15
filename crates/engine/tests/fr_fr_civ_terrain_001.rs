@@ -20,7 +20,7 @@ mod fr_fr_civ_terrain_001 {
     #[test]
     fn world_state_valid_at_creation() {
         let sim = civ_engine::Simulation::with_seed(42);
-        assert!(sim.state.population >= 0);
+        assert_eq!(sim.state.population, sim.snapshot().population);
         assert!(sim.state.energy_budget_joules >= civ_engine::Fixed::ZERO);
         assert!(!sim.state.factions.is_empty(), "should have factions");
     }

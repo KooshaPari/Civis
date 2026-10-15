@@ -21,9 +21,11 @@ mod fr_fr_civ_perf_002 {
     /// Verify WorldState with non-default data still serializes under 1 MiB.
     #[test]
     fn populated_world_state_serialization_budget() {
-        let mut ws = civ_engine::WorldState::default();
-        ws.tick = 9999;
-        ws.population = 6_400_000;
+        let mut ws = civ_engine::WorldState {
+            tick: 9999,
+            population: 6_400_000,
+            ..Default::default()
+        };
         ws.factions.insert(0, "Rome".to_string());
         ws.factions.insert(1, "Carthage".to_string());
         ws.factions.insert(2, "Persia".to_string());

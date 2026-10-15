@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Treasury holding balances in Joules (i64) and MilliCredits (i64).
 /// No floating-point types are used to prevent accumulation errors (FR-ECON-010).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Treasury {
     /// Energy balance in Joules (integer, no float).
     balance_joules: i64,
@@ -52,15 +52,6 @@ impl Treasury {
     /// Debit MilliCredits (subtract). Caller must ensure sufficient balance.
     pub fn debit_milli_credits(&mut self, amount: i64) {
         self.balance_milli_credits -= amount;
-    }
-}
-
-impl Default for Treasury {
-    fn default() -> Self {
-        Self {
-            balance_joules: 0,
-            balance_milli_credits: 0,
-        }
     }
 }
 

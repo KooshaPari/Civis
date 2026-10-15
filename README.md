@@ -85,7 +85,6 @@ The simulation core runs headlessly over WebSocket JSON-RPC + binary frames. Mul
 
 ## Running
 
-ust-toolchain.toml) and a separate terminal for each process.
 Requires Rust (see `rust-toolchain.toml`). The standalone sandbox does not
 require a separate server process.
 

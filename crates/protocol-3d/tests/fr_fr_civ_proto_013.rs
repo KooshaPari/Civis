@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_proto_013 {
-    use civ_protocol_3d::{encode_frame3d_bundle, decode_frame3d_bundle, is_frame3d_bundle, Frame3dBundleEncodeOptions, DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL};
+    use civ_protocol_3d::{encode_frame3d_bundle, is_frame3d_bundle, Frame3dBundleEncodeOptions, DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL};
 
     #[test]
     fn verify_fr_civ_proto_013_basic() {

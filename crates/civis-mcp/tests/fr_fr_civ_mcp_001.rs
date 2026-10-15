@@ -10,7 +10,7 @@ mod fr_fr_civ_mcp_001 {
     #[test]
     fn verify_fr_civ_mcp_001_basic() {
         use civis_mcp::TOOL_NAMES;
-        assert!(TOOL_NAMES.len() > 0);
+        assert!(!TOOL_NAMES.is_empty());
         // civis-mcp has no SCHEMA_VERSION; TOOL_NAMES is the primary public constant.
     }
 }

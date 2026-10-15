@@ -10,7 +10,7 @@
 mod fr_fr_civ_market_008 {
     use civ_economy::{
         EconomyState, LedgerEntry, LedgerSide, verify_ledger_conservation, ACCOUNT_CONSUMPTION,
-        INSTITUTION_MARKET, INSTITUTION_TREASURY,
+        INSTITUTION_MARKET,
     };
 
     /// LedgerSide enum covers institution and macro accounts.

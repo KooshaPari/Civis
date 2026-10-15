@@ -100,10 +100,7 @@ mod tests {
 
     #[test]
     fn doubling_co2_gives_ecs_anomaly() {
-        let cfg = TemperatureConfig {
-            ecs_c: 3.0,
-            ..Default::default()
-        };
+        let cfg = TemperatureConfig { ecs_c: 3.0 };
         let doubled = PRE_INDUSTRIAL_CO2_PPM * 2.0;
         let anomaly = temperature_anomaly_from_co2(doubled, &cfg);
         // At doubling, anomaly should equal ECS exactly.

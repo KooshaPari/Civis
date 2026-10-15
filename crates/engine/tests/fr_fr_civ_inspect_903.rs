@@ -7,7 +7,7 @@
 mod fr_fr_civ_inspect_903 {
     /// FR-CIV-INSPECT-903: Faction count is inspectable.
     #[test]
-    fn faction_countInspectable() {
+    fn faction_count_inspectable() {
         let mut ws = civ_engine::WorldState::default();
         ws.factions.insert(0, "Rome".into());
         ws.factions.insert(1, "Greece".into());

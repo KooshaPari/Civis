@@ -27,22 +27,19 @@ fn treaty_breach_emits_event_and_penalty() {
         status: TreatyStatus::Active,
     };
 
-    let event = detect_breach(&treaty, true, p(1), 100).expect("breach detected");
-    if let TreatyBreachEvent::TreatyBroken {
+    let TreatyBreachEvent::TreatyBroken {
         treaty_id,
         breacher,
         victim,
         reputation_penalty,
         tick,
-    } = event
-    {
-        assert_eq!(treaty_id, 1);
-        assert_eq!(breacher, p(1));
-        assert_eq!(victim, p(2));
-        assert_eq!(reputation_penalty, BREACH_REPUTATION_PENALTY);
-        assert_eq!(reputation_penalty, -500);
-        assert_eq!(tick, 100);
-    }
+    } = detect_breach(&treaty, true, p(1), 100).expect("breach detected");
+    assert_eq!(treaty_id, 1);
+    assert_eq!(breacher, p(1));
+    assert_eq!(victim, p(2));
+    assert_eq!(reputation_penalty, BREACH_REPUTATION_PENALTY);
+    assert_eq!(reputation_penalty, -500);
+    assert_eq!(tick, 100);
 }
 
 /// FR-DIPL-004: No breach if no war declared.
@@ -98,11 +95,10 @@ fn treaty_breach_from_defender() {
         status: TreatyStatus::Active,
     };
 
-    let event = detect_breach(&treaty, true, p(2), 50).expect("breach");
-    if let TreatyBreachEvent::TreatyBroken { breacher, victim, .. } = event {
-        assert_eq!(breacher, p(2));
-        assert_eq!(victim, p(1));
-    }
+    let TreatyBreachEvent::TreatyBroken { breacher, victim, .. } =
+        detect_breach(&treaty, true, p(2), 50).expect("breach");
+    assert_eq!(breacher, p(2));
+    assert_eq!(victim, p(1));
 }
 
 /// FR-DIPL-004: Breach penalty constant is -500.

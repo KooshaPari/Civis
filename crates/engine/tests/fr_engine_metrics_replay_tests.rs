@@ -3,7 +3,7 @@
 //! Covers: FR-METRICS-001/002/003, FR-CIV-METRICS-001/001-TIMESERIES,
 //! FR-REPLAY-002, NFR-CIV-DET-001/002/003
 
-use civ_engine::metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+use civ_engine::metrics::{compute, compute_fixed, MetricsFixed};
 use civ_engine::replay::ReplayEvent;
 use civ_engine::Fixed;
 

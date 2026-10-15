@@ -13,7 +13,7 @@ mod fr_fr_civ_tactics_025_ {
 
     /// FR-CIV-TACTICS-025-: Doctrine fitness scores higher for more engagements.
     #[test]
-    fn verify_fr_civ_tactics_025__basic() {
+    fn verify_fr_civ_tactics_025_basic() {
         let doctrine = Doctrine {
             id: 1,
             unit_composition: vec![3, 2, 1],

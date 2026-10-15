@@ -9,7 +9,7 @@ mod fr_fr_civ_server_001 {
     /// Verify FR-CIV-SERVER-001 type existence and basic behavior.
     #[test]
     fn verify_fr_civ_server_001_basic() {
-        use civ_server::{JsonRpcRequest, SessionSnapshot, SESSION_HISTORY_CAP};
-        assert!(SESSION_HISTORY_CAP > 0);
+        use civ_server::SESSION_HISTORY_CAP;
+        const { assert!(SESSION_HISTORY_CAP > 0); };
     }
 }

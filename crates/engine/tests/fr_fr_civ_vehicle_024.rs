@@ -15,7 +15,11 @@ mod fr_fr_civ_vehicle_024 {
         let lane = LaneClass::Trail.speed_mult();
         // Foot baseline: vehicle speed mult = 1.0 (not a vehicle row)
         let foot_speed = effective_speed(base, lane, 1.0, 1.0, 0.0, 1.0);
-        assert!(foot_speed >= base, "foot speed must be at least walk speed");
+        let expected = base * lane;
+        assert!(
+            (foot_speed - expected).abs() < f32::EPSILON,
+            "vehicle multiplier 1.0 leaves the scalar path as base × lane"
+        );
         // Trail is slightly slower than road
         let road_foot = effective_speed(base, LaneClass::Road.speed_mult(), 1.0, 1.0, 0.0, 1.0);
         assert!(road_foot >= foot_speed, "road foot >= trail foot");

@@ -14,7 +14,7 @@ mod fr_fr_civ_core_009 {
         sim.tick();
         let snap = sim.snapshot();
         assert_eq!(snap.tick, 1, "snapshot must report current tick");
-        assert!(snap.population >= 0, "population must be non-negative");
+        assert_eq!(snap.population, sim.state.population);
         let json = serde_json::to_value(&snap).expect("snapshot to JSON value");
         assert!(json.get("tick").is_some(), "JSON must have tick field");
         assert!(

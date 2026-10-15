@@ -40,6 +40,6 @@ mod fr_fr_civ_emergence_004 {
             jh.observe(i % 4, i % 4);
         }
         let nmi = mutual_information_normalised(&jh);
-        assert!(nmi >= 0.0 && nmi <= 1.0, "NMI should be in [0,1], got {nmi}");
+        assert!((0.0..=1.0).contains(&nmi), "NMI should be in [0,1], got {nmi}");
     }
 }

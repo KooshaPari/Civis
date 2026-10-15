@@ -7,8 +7,10 @@
 mod fr_fr_sess_004 {
     #[test]
     fn challenge_seed_is_settable() {
-        let mut ws = civ_engine::WorldState::default();
-        ws.rng_seed = 42;
+        let ws = civ_engine::WorldState {
+            rng_seed: 42,
+            ..Default::default()
+        };
         assert_eq!(ws.rng_seed, 42, "challenge seed is settable");
     }
 }

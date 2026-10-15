@@ -13,7 +13,7 @@ use civ_economy::{
 /// FR-CIV-ECON-001-MARKET — Schema version is a valid positive integer.
 #[test]
 fn fr_civ_econ_001_market_schema_version_valid() {
-    assert!(SCHEMA_VERSION > 0, "SCHEMA_VERSION must be positive");
+    const { assert!(SCHEMA_VERSION > 0, "SCHEMA_VERSION must be positive"); };
 }
 
 // ---------------------------------------------------------------------------

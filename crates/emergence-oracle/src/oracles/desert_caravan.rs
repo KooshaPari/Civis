@@ -27,8 +27,8 @@ impl FeatureOracle for DesertCaravanOracle {
         let has_buildings = snap.building_count > 0;
         let measured = (snap.citizen_count * snap.building_count) as f64;
 
-        // At tick 0 no emergence has occurred yet; any state is acceptable.
-        // After tick 0, require both citizens AND buildings (real settlement for migration patterns to exist).
+        // Tick 0 passes even when the seeded world already has citizens and
+        // buildings. After tick 0, require both (settled infrastructure).
         let threshold = if tick == 0 { 0.0 } else { 1.0 };
         let passed = tick == 0 || (has_citizens && has_buildings);
 
@@ -58,10 +58,15 @@ mod tests {
     fn desert_caravan_oracle_tick_zero_passes_with_fr_id() {
         let sim = Simulation::new();
         let verdict = DesertCaravanOracle.check(&sim);
+        let snap = sim.snapshot();
         assert_eq!(verdict.fr_id, "FR-EMG-022");
         assert!(verdict.passed, "tick 0 always passes");
         assert!((verdict.threshold - 0.0).abs() < f64::EPSILON);
-        assert!((verdict.measured - 0.0).abs() < f64::EPSILON);
+        let product = (snap.citizen_count * snap.building_count) as f64;
+        assert!(
+            (verdict.measured - product).abs() < f64::EPSILON,
+            "tick 0 still reports the citizen×building product"
+        );
     }
 
     /// FR-EMG-022 — after warmup the measured value equals the

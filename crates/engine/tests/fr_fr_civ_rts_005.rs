@@ -18,8 +18,10 @@ mod fr_fr_civ_rts_005 {
     /// Resources can be modified (supply consumed).
     #[test]
     fn resources_mutable() {
-        let mut r = civ_engine::Resources::default();
-        r.food = civ_engine::Fixed::from_num(100);
+        let r = civ_engine::Resources {
+            food: civ_engine::Fixed::from_num(100),
+            ..Default::default()
+        };
         assert_eq!(r.food, civ_engine::Fixed::from_num(100));
     }
 

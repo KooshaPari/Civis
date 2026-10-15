@@ -1020,15 +1020,12 @@ fn fr_sess_005_pause_is_a_distinct_state_and_capacity_is_bounded() {
 
 /// Covers FR-SESS-005.
 ///
-/// TODO(FR-SESS-005): the requirement's domain is `{1x, 2x, 4x, paused}` plus the
-/// `session.speed_changed.v1` event. The engine's `SetSpeed` is a raw `u32`
-/// carrier (it accepts 3x, 5x, 100x) and emits no event; the {1,2,4,0} domain and
-/// the event are enforced server-side (`crates/server/src/jsonrpc.rs`
-/// `parse_set_speed_params`, `sim.set_speed`) and typed in `civ-session`
-/// (`SessionEvent::SpeedChanged`). Neither crate is a dependency of `civ-engine`,
-/// so this test pins what the engine does and guards the gate.
+/// The engine command queue stores `SetSpeed` as a raw `u32`. The allowed
+/// multipliers (0, 1, 2, 4, 8) are enforced by `civ-server`'s
+/// `parse_set_speed_params`, which this integration test can call because
+/// `civ-server` is an engine dev-dependency.
 #[test]
-fn fr_sess_005_speed_domain_and_event_live_outside_the_engine() {
+fn fr_sess_005_speed_domain_is_enforced_by_the_server() {
     let mut queue = CommandQueue::new(4);
     assert!(
         queue
@@ -1039,13 +1036,17 @@ fn fr_sess_005_speed_domain_and_event_live_outside_the_engine() {
                 tick_issued: 0,
             })
             .is_ok(),
-        "TODO(FR-SESS-005): the engine accepts 3x; the 1x/2x/4x domain is a server rule"
+        "the engine command queue stores any u32 multiplier"
     );
 
-    assert!(
-        !engine_manifest_declares("civ-session") && !engine_manifest_declares("civ-server"),
-        "TODO(FR-SESS-005): civ-session/civ-server became available to civ-engine — \
-         replace this guard with an oracle for `session.speed_changed.v1`"
+    let rejected = civ_server::jsonrpc::parse_set_speed_params(Some(
+        &serde_json::json!({"multiplier": 3}),
+    ));
+    assert!(rejected.is_err(), "3x is outside the server speed domain");
+    assert_eq!(
+        civ_server::jsonrpc::parse_set_speed_params(Some(&serde_json::json!({"multiplier": 2})))
+            .expect("2x is allowed"),
+        2
     );
 }
 
@@ -1270,15 +1271,13 @@ fn fr_perf_004_async_writer_is_send_sync_and_enqueues_across_threads() {
     fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<AsyncWriter>();
 
-    fn assert_write_tick_signature(
-        _: fn(
-            &AsyncWriter,
-            &str,
-            u64,
-            Vec<u8>,
-        ) -> Result<(), std::sync::mpsc::SendError<AsyncWriteRequest>>,
-    ) {
-    }
+    type WriteTickFn = fn(
+        &AsyncWriter,
+        &str,
+        u64,
+        Vec<u8>,
+    ) -> Result<(), std::sync::mpsc::SendError<AsyncWriteRequest>>;
+    fn assert_write_tick_signature(_: WriteTickFn) {}
     assert_write_tick_signature(AsyncWriter::write_tick);
 
     let writer = AsyncWriter::new(64);

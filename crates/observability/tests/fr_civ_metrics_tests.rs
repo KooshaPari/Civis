@@ -9,7 +9,7 @@ use prometheus::Registry;
 #[test]
 fn fr_civ_metrics_001_sim_metrics_creation() {
     let registry = Registry::new();
-    let metrics = SimMetrics::new(&registry).expect("SimMetrics::new should succeed");
+    SimMetrics::new(&registry).expect("SimMetrics::new should succeed");
     // Verify the metrics were registered
     let gathered = registry.gather();
     assert!(!gathered.is_empty(), "registry should have metric families after SimMetrics::new");

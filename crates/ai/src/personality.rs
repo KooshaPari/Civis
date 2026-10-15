@@ -131,7 +131,7 @@ impl PersonalityDrift {
         tick: u64,
         rng_value: f64,
     ) -> PersonalityProfile {
-        if self.interval_ticks == 0 || tick % self.interval_ticks != 0 {
+        if self.interval_ticks == 0 || !tick.is_multiple_of(self.interval_ticks) {
             return profile.clone();
         }
         let drift = self.magnitude * rng_value.clamp(-1.0, 1.0);

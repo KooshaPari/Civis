@@ -36,7 +36,7 @@ mod fr_fr_civ_rts_013 {
             position: Position { x: 0, y: 0 },
             faction_id: 1,
         };
-        unit.strength = unit.strength + Fixed::from_num(5);
+        unit.strength += Fixed::from_num(5);
         assert_eq!(unit.strength, Fixed::from_num(15));
     }
 }

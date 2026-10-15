@@ -53,10 +53,11 @@ type ClientSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 /// socket, so the connection remains open while server-side health is
 /// asserted (dropping it early would race the disconnect counter).
 async fn spawn_observer(client_id: usize, url: String) -> (Vec<u64>, ClientSocket) {
-    let (mut socket, _) = timeout(Duration::from_secs(10), connect_async(&url))
-        .await
-        .unwrap_or_else(|_| panic!("client {client_id}: handshake timeout"))
-        .unwrap_or_else(|e| panic!("client {client_id}: handshake failed: {e}"));
+    let (mut socket, _) = match timeout(Duration::from_secs(10), connect_async(&url)).await {
+        Ok(Ok(pair)) => pair,
+        Ok(Err(e)) => panic!("client {client_id}: handshake failed: {e}"),
+        Err(_) => panic!("client {client_id}: handshake timeout"),
+    };
 
     let deadline = TokioInstant::now() + OBSERVE_WINDOW;
     let mut observed: Vec<u64> = Vec::new();

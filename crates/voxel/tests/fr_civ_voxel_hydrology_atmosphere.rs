@@ -190,8 +190,7 @@ fn fr_civ_voxel_032_gas_pockets_are_not_yet_generated() {
         for gas in GAS_POCKET_MATERIALS {
             let n = count(&w, gas);
             assert_eq!(
-                n,
-                0,
+                n, 0,
                 "worldgen emitted {n} cells of {gas:?} for seed {seed:#x}. \
                  FR-CIV-VOXEL-032 appears to have been implemented: replace this \
                  test with a real positive oracle for gas-pocket seeding"
@@ -212,7 +211,7 @@ fn fr_civ_voxel_032_underground_is_solid_apart_from_ore() {
 
     let w = world(0x0320_9EED);
     let dims = w.dims;
-    let [dx, dy, dz] = dims;
+    let [dx, _dy, dz] = dims;
 
     // Materials legitimately found below the surface line.
     let solid_or_ore = [STONE, ORE, BEDROCK, DIRT];

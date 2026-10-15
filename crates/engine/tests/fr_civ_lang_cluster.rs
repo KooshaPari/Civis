@@ -31,7 +31,6 @@ use civ_engine::language::{
     evolve_language, loan_word, person_name, place_name, seeded_language_state,
     tick_language_for_lineage, tick_language_system, LanguageFamilyTree, WordKind,
 };
-use civ_engine::LanguageState;
 
 // ---------------------------------------------------------------------------
 // FR-CIV-LANG-001 — semantic keys in sim state, not rendered strings
@@ -252,7 +251,7 @@ fn fr_civ_lang_005_borrow_copies_only_existing_lexemes() {
     let source = add_vocabulary(&create_language("Source", vec!["k".into()], 0), "water", "akwa");
     let target = create_language("Target", vec!["t".into()], 0);
     assert!(
-        target.vocabulary.get("water").is_none(),
+        !target.vocabulary.contains_key("water"),
         "premise: target does not know the word"
     );
 
@@ -266,7 +265,7 @@ fn fr_civ_lang_005_borrow_copies_only_existing_lexemes() {
     // A meaning the source lacks must not be invented in the receiver.
     let absent = loan_word(&target, &source, "fire");
     assert!(
-        absent.vocabulary.get("fire").is_none(),
+        !absent.vocabulary.contains_key("fire"),
         "borrowing a meaning the source lacks must not fabricate a word"
     );
 

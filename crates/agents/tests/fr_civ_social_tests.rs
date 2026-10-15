@@ -135,6 +135,8 @@ fn fr_civ_psyche_006_decay_reduces_familiarity() {
 /// FR-CIV-PSYCHE-006 — Social graph respects MAX_TIES limit.
 #[test]
 fn fr_civ_psyche_006_max_ties_constant() {
-    assert!(MAX_TIES > 0, "MAX_TIES must be positive");
-    assert!(MAX_TIES <= 500, "MAX_TIES should be reasonable");
+    const {
+        assert!(MAX_TIES > 0, "MAX_TIES must be positive");
+        assert!(MAX_TIES <= 500, "MAX_TIES should be reasonable");
+    }
 }

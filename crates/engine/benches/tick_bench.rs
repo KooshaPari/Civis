@@ -66,8 +66,8 @@ mod nfr_p_03_tests {
     // deterministically, and a 100-tick run completes inside a generous
     // wall-clock ceiling (a gross regression trips long before CI compares
     // the stored criterion baseline).
-    use civ_engine::Simulation;
-    use std::time::Instant;
+    
+    
 
     #[test]
     fn tick_bench_fixture_ticks_and_stays_within_generous_ceiling() {
@@ -95,8 +95,8 @@ mod nfr_p_01_tests {
     // this always-on smoke measures the same scenario (the seeded fixture
     // scaled to 1000 citizens) with a deliberately generous ceiling so only
     // gross regressions trip it on shared runners.
-    use civ_engine::{Citizen, Simulation};
-    use std::time::{Duration, Instant};
+    
+    
 
     #[test]
     fn nfr_p_01_p50_tick_time_at_1k_citizens_stays_under_budget() {
@@ -145,9 +145,9 @@ mod nfr_p_02_tests {
     // and asserts the nearest-rank p99 stays under a generous wall-clock
     // ceiling; the criterion baseline comparison is the precise release gate,
     // this only trips on gross regressions in the debug test build.
-    use civ_agents::{count_civilians, spawn_civilian_at, ActorVisualKind, Alignment};
-    use civ_engine::Simulation;
-    use std::time::Instant;
+    
+    
+    
 
     #[test]
     fn nfr_p_02_p99_tick_time_at_1k_citizens_within_generous_ceiling() {

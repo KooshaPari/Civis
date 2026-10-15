@@ -33,7 +33,7 @@
 use std::sync::Arc;
 
 use civ_ai::{
-    AiError, AiProvider, Capabilities, DummyAiProvider, EmbedRequest, GenRequest,
+    AiProvider, Capabilities, DummyAiProvider, EmbedRequest, GenRequest,
 };
 
 /// Compile-time proof that the port is object-safe and shareable.

@@ -20,11 +20,15 @@ use serde::{Deserialize, Serialize};
 /// Budget category identifier.
 pub type BucketId = u32;
 
-/// Well-known budget buckets.
+/// Military spending bucket.
 pub const BUCKET_MILITARY: BucketId = 0;
+/// Infrastructure spending bucket.
 pub const BUCKET_INFRASTRUCTURE: BucketId = 1;
+/// Education spending bucket.
 pub const BUCKET_EDUCATION: BucketId = 2;
+/// Health spending bucket.
 pub const BUCKET_HEALTH: BucketId = 3;
+/// Administration spending bucket.
 pub const BUCKET_ADMINISTRATION: BucketId = 4;
 
 /// A named budget bucket with planned and actual amounts.

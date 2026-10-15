@@ -171,8 +171,10 @@ pub fn evaluate_commodity_gaps(
         // Consumption is proportional to population (each person needs some of each good)
         let target_consumption = target.population; // Simplified: 1 unit per person per tick
         let target_deficit = target_consumption.saturating_sub(target_prod);
-
-        if target_deficit < min_gap {
+        // A gap is complementary only when the target is worse off than the
+        // source. Identical profiles share the same deficit and must not trade.
+        let source_deficit = source.population.saturating_sub(surplus);
+        if target_deficit <= source_deficit || target_deficit < min_gap {
             continue;
         }
 

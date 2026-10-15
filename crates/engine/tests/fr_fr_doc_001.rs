@@ -16,7 +16,7 @@ mod fr_fr_doc_001 {
     /// FR-DOC-001: SCALE constant is documented with a value.
     #[test]
     fn scale_constant_is_documented() {
-        assert!(civ_engine::SCALE > 0);
+        const { assert!(civ_engine::SCALE > 0); };
     }
 
     /// FR-DOC-001: create_rng function is public.

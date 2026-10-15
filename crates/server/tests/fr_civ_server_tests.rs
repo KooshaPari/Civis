@@ -8,11 +8,13 @@ use civ_server::{SessionSnapshot, SharedSession, SESSION_HISTORY_CAP};
 /// FR-CIV-SERVER-001 — Session history cap is defined and positive.
 #[test]
 fn fr_civ_server_001_session_history_cap() {
-    assert!(SESSION_HISTORY_CAP > 0, "SESSION_HISTORY_CAP must be positive");
-    assert!(
+    const { assert!(SESSION_HISTORY_CAP > 0, "SESSION_HISTORY_CAP must be positive"); };
+    const {
+        assert!(
         SESSION_HISTORY_CAP >= 10,
         "SESSION_HISTORY_CAP should be at least 10"
-    );
+        );
+    };
 }
 
 /// FR-CIV-SERVER-001-WS — SharedSession can be constructed with connection id.

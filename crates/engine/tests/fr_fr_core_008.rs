@@ -15,7 +15,7 @@ use civ_engine::Simulation;
 #[test]
 fn no_global_resources() {
     let mut a = Simulation::with_seed(0xAAAA_u64);
-    let mut b = Simulation::with_seed(0xBBBB_u64);
+    let b = Simulation::with_seed(0xBBBB_u64);
 
     let a_entities = a.world.len();
     let b_entities = b.world.len();

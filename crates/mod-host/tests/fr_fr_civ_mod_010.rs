@@ -17,6 +17,6 @@ mod fr_fr_civ_mod_010 {
     /// FR-CIV-MOD-010: MOD_GUEST_STATE_VERSION is positive.
     #[test]
     fn guest_state_version_positive() {
-        assert!(civ_mod_host::MOD_GUEST_STATE_VERSION > 0);
+        const { assert!(civ_mod_host::MOD_GUEST_STATE_VERSION > 0); };
     }
 }

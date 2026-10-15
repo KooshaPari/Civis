@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn export_svg_missing_output_dir_is_io_error() {
         let input = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
-        let missing = PathBuf::from(format!("/nonexistent/asset-pipeline-002-out"));
+        let missing = PathBuf::from("/nonexistent/asset-pipeline-002-out");
         let err = export_svg(&input, &missing).expect_err("missing output dir");
         assert!(
             matches!(err, ExportError::Io { .. }),

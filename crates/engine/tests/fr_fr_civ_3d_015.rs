@@ -15,14 +15,12 @@ mod fr_fr_civ_3d_015 {
     /// All six biomes are valid variants (would map to atlas regions).
     #[test]
     fn biome_variants_map_to_atlas() {
-        let all_biomes = vec![
-            BiomeKind::Ocean,
+        let all_biomes = [BiomeKind::Ocean,
             BiomeKind::Plains,
             BiomeKind::Forest,
             BiomeKind::Desert,
             BiomeKind::Tundra,
-            BiomeKind::Mountain,
-        ];
+            BiomeKind::Mountain];
         // Each biome maps to exactly one atlas region.
         assert_eq!(all_biomes.len(), 6);
     }

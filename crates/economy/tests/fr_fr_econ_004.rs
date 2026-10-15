@@ -60,8 +60,8 @@ fn surplus_spreads_across_adjacent_deficits() {
     let report = distribute_surplus(&mut d, &graph, &DistributionConfig::default());
 
     assert_eq!(report.transferred_joules, 60);
-    for i in 1..4 {
-        assert_eq!(d[i].balance_joules, 0, "every adjacent deficit relieved");
+    for district in d.iter().take(4).skip(1) {
+        assert_eq!(district.balance_joules, 0, "every adjacent deficit relieved");
     }
     assert_eq!(d[0].balance_joules, 240);
     let order: Vec<u32> = report.transfers.iter().map(|t| t.to).collect();

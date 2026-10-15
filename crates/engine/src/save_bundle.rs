@@ -379,10 +379,14 @@ fn is_plain_component_name(name: &str) -> bool {
     if name.is_empty() || name == "." || name == ".." {
         return false;
     }
+    // Manifests travel between machines. `Path` on Unix treats `\` as a normal
+    // character, so a Windows traversal such as `nested\..\..\escape.json`
+    // would otherwise look like one plain file name.
+    if name.contains(['/', '\\']) {
+        return false;
+    }
     // `Path::components` yields exactly one `Component::Normal` only for a name
-    // with no separator, no prefix, and no `.`/`..` element. Using it instead of
-    // string matching keeps the check aligned with the platform's own path
-    // grammar rather than a hand-rolled allowlist of separators.
+    // with no separator, no prefix, and no `.`/`..` element.
     let mut components = Path::new(name).components();
     matches!(components.next(), Some(std::path::Component::Normal(_))) && components.next().is_none()
 }

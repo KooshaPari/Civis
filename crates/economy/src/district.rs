@@ -140,12 +140,13 @@ mod tests {
     #[test]
     fn custom_threshold() {
         let mut state = DistrictEnergyState::new(0, -10);
-        let _ = tick_district_collapse(&mut state, 1, 1); // threshold=1
-        // Should collapse immediately
-        state.consecutive_deficit_ticks = 1; // manually set since tick_district already reset
-        // Re-test with threshold 5
+        let event = tick_district_collapse(&mut state, 1, 1);
+        assert!(event.is_some(), "threshold of 1 collapses on the first deficit tick");
+        assert_eq!(state.consecutive_deficit_ticks, 0);
+
         let mut state2 = DistrictEnergyState::new(0, -10);
         let e = tick_district_collapse(&mut state2, 1, 5);
-        assert_eq!(e, None); // only 1 tick, threshold is 5
+        assert_eq!(e, None);
+        assert_eq!(state2.consecutive_deficit_ticks, 1);
     }
 }

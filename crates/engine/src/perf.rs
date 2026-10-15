@@ -161,10 +161,12 @@ mod tests {
         // simpler approach: measure the size of serialized output as a proxy
         // for heap allocation. A 1 MiB output upper bound is conservative for
         // a single tick's world-state snapshot.
-        let mut state = crate::WorldState::default();
-        state.tick = 42;
-        state.population = 10_000;
-        state.energy_budget_joules = crate::Fixed::from_num(1_000_000);
+        let state = crate::WorldState {
+            tick: 42,
+            population: 10_000,
+            energy_budget_joules: crate::Fixed::from_num(1_000_000),
+            ..Default::default()
+        };
 
         // Simulate a tick's output: serialize the world state to JSON
         let json = serde_json::to_string(&state).expect("serialize world state");

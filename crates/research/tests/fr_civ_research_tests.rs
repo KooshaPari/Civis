@@ -2,7 +2,7 @@
 //!
 //! Covers: FR-CIV-RESEARCH-001-SCENARIO, FR-CIV-RESEARCH-002-SNAPSHOT, FR-CIV-RESEARCH-003-EXPORT
 
-use civ_research::{TechCard, ValidationOutcome, SCHEMA_VERSION};
+use civ_research::{TechCard, ValidationOutcome};
 
 /// FR-CIV-RESEARCH-001-SCENARIO — TechCard can be constructed with all required fields.
 #[test]

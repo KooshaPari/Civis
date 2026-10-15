@@ -14,7 +14,7 @@ mod fr_fr_civ_mod_008 {
     /// FR-CIV-MOD-008: HOST_CAPABILITY_API_VERSION is defined and non-empty.
     #[test]
     fn api_version_is_defined() {
-        assert!(civ_mod_host::HOST_CAPABILITY_API_VERSION > 0);
+        const { assert!(civ_mod_host::HOST_CAPABILITY_API_VERSION > 0); };
     }
 
     /// FR-CIV-MOD-008: HOST_IMPORT_MODULE is non-empty.

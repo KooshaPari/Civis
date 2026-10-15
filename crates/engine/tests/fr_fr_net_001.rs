@@ -12,7 +12,7 @@ mod fr_fr_net_001 {
         let ws = civ_engine::WorldState::default();
         assert_eq!(ws.tick, 0, "initial tick must be zero");
         assert!(ws.energy_budget_joules > civ_engine::Fixed::ZERO, "initial energy must be positive");
-        assert_eq!(ws.population, 0, "initial population is zero");
+        assert_eq!(ws.population, 1_000_000, "seeded population is one million");
     }
 
     /// FR-NET-001: Step function advances tick by exactly one.

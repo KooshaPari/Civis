@@ -19,7 +19,7 @@ const IDEOLOGY_HALF_RANGE: i64 = 1_000;
 pub type CohortId = u64;
 
 /// Per-cohort ideological alignment score.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IdeologyScore {
     /// Which cohort this score belongs to.
     pub cohort: CohortId,
@@ -77,15 +77,6 @@ impl IdeologyScore {
     /// strongly negative (extreme dissent).
     pub fn is_dissenting(&self) -> bool {
         self.alignment_bp < -IDEOLOGY_HALF_RANGE / 2
-    }
-}
-
-impl Default for IdeologyScore {
-    fn default() -> Self {
-        Self {
-            cohort: 0,
-            alignment_bp: 0,
-        }
     }
 }
 

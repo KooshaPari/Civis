@@ -36,7 +36,7 @@ mod fr_fr_civ_rts_010 {
             position: Position { x: 0, y: 0 },
             faction_id: 1,
         };
-        unit.hp = unit.hp - Fixed::from_num(30);
+        unit.hp -= Fixed::from_num(30);
         assert_eq!(unit.hp, Fixed::from_num(70));
     }
 }

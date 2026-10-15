@@ -9,9 +9,8 @@ mod fr_fr_civ_mod_016 {
     #[test]
     fn scan_empty_wasm_no_sites() {
         let result = civ_mod_host::scan_float_action_emit_contamination(&[]);
-        match result {
-            Ok(sites) => assert!(sites.is_empty()),
-            Err(_) => {} // Empty WASM may fail to parse, which is acceptable
+        if let Ok(sites) = result {
+            assert!(sites.is_empty());
         }
     }
 

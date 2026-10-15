@@ -39,7 +39,7 @@ fn fr_civ_diplo_002_shadow_score_clamped() {
         culture_similarity: 1.0,
     };
     let score = drivers.score();
-    assert!(score >= -1.0 && score <= 1.0, "score {score} out of range");
+    assert!((-1.0..=1.0).contains(&score), "score {score} out of range");
 }
 
 /// FR-CIV-DIPLO-002-SHADOW — Border friction cools relations (negative contribution).

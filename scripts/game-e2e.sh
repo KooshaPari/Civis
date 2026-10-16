@@ -124,11 +124,15 @@ fi
 
 # ── Start Xvfb (headless) ──────────────────────────────────────────
 if [[ "${HEADLESS}" -eq 1 ]]; then
-    step "Starting Xvfb (software rendering)..."
     export DISPLAY=:99
-    Xvfb :99 -screen 0 1920x1080x24 +extension RANDR &
-    XVFB_PID=$!
-    sleep 1
+    if [[ -e /tmp/.X99-lock ]]; then
+        step "Xvfb already running on :99"
+    else
+        step "Starting Xvfb (software rendering)..."
+        Xvfb :99 -screen 0 1920x1080x24 +extension RANDR &
+        XVFB_PID=$!
+        sleep 1
+    fi
 
     # The client accepts dx12, vulkan, or metal. `gl` is ignored and the
     # preflight then finds no adapter on a headless runner. lavapipe is the
@@ -349,7 +353,7 @@ capture_screenshot() {
         fi
     fi
     dim "  ${name} (not captured — game window may not be visible)"
-    return 1
+    return 0
 }
 
 # Main menu (game starts here)

@@ -1529,22 +1529,252 @@ pub fn parse_capture_frame_params(
     })
 }
 
-/// Encode and write a `sim.capture_frame` PNG under `dir`, returning its
-/// absolute path.
+// ---------------------------------------------------------------------
+// `sim.capture_frame` world-state rasterizer (issue #1599).
+//
+// `civ-server` is the headless simulation surface (NFR-CIV-PORT-003): the
+// production build carries no GPU/renderer dependency, so there is no live
+// Bevy viewport to grab a frame from in-process. A survey of the
+// codebase's pixel-producing code turned up exactly two renderers, and
+// neither is reusable from here:
+//   - `clients/bevy-ref` is a real GPU-backed Bevy renderer, gated behind
+//     its own `bevy` feature, and needs a display/GPU this headless
+//     service deliberately does not depend on.
+//   - `web/dashboard` renders to an HTML canvas in TypeScript; it cannot
+//     run inside a Rust process.
+// There is no third in-process Rust renderer to call as a black box.
+//
+// What *is* reusable is the live world-state data those renderers already
+// consume: `Simulation::spectator_view()` (civilian pins, faction
+// capitals/territory, building pins — the exact feed `civ-watch` and the
+// web dashboard use for their own real-time maps) plus the deterministic
+// planet `Climate`/`weather_grid` (day/night phase, per-region
+// temperature/precipitation/storm, both of which evolve every tick). The
+// functions below are a small CPU rasterizer over that same live data:
+// every pixel is derived from the simulation's actual tick-mutable state
+// via `snapshot_fields_from_sim`, so the frame changes as the simulation
+// changes rather than emitting a constant placeholder. See
+// `sim_capture_frame_pixels_differ_between_distinct_simulation_states` and
+// `render_world_frame_changes_with_tick_population_and_pins` for proof.
+// ---------------------------------------------------------------------
+
+/// Render the live simulation state captured in `snapshot` into an RGB8
+/// pixel buffer (row-major, 3 bytes/pixel) at `width` x `height`.
 ///
-/// `civ-server` is the headless simulation surface (NFR-CIV-PORT-003: the
-/// production build carries no GPU/renderer dependency), so there is no
-/// live Bevy viewport here to grab a frame from. This writes a flat-color
-/// placeholder frame at the requested dimensions instead, which is enough
-/// for `scripts/playthrough.sh` and CI capture tooling: they only assert
-/// that a real, non-empty PNG lands on disk at the returned path. A
-/// GPU-backed client (e.g. `civ-bevy-ref`, gated behind its own `bevy`
-/// feature) remains the place to capture an actual rendered frame.
+/// Layers, back to front:
+/// 1. A per-region background strip colored from `weather_grid` (real
+///    temperature/precipitation/storm, see [`weather_cell_rgb`]), dimmed by
+///    [`day_night_brightness`] (real `climate.day_phase`).
+/// 2. Faction capitals, buildings, and civilian pins from `spectator`
+///    (real ECS positions/job/building data), each a small colored square.
+/// 3. A population bar along the bottom edge, filled proportional to
+///    `snapshot.population`.
+pub fn render_world_frame(snapshot: &SnapshotFields, width: u32, height: u32) -> Vec<u8> {
+    let width = width.max(1) as usize;
+    let height = height.max(1) as usize;
+    let mut pixels = vec![0u8; width * height * 3];
+
+    let brightness = day_night_brightness(snapshot.climate.day_phase);
+    let region_count = snapshot.weather_grid.len();
+    for y in 0..height {
+        for x in 0..width {
+            let base = if region_count == 0 {
+                // No climate sample yet (fresh host, pre-first-tick) — a
+                // neutral ground tone rather than inventing weather.
+                [48u8, 64, 56]
+            } else {
+                let region_idx = (x * region_count / width).min(region_count - 1);
+                weather_cell_rgb(&snapshot.weather_grid[region_idx])
+            };
+            let idx = (y * width + x) * 3;
+            for c in 0..3 {
+                pixels[idx + c] = (f32::from(base[c]) * brightness).clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+
+    if let Some(spectator) = snapshot.spectator.as_ref() {
+        for faction in &spectator.factions {
+            draw_marker(
+                &mut pixels,
+                width,
+                height,
+                faction.capital[0],
+                faction.capital[1],
+                faction.color,
+                4,
+            );
+        }
+        for building in &spectator.buildings {
+            draw_marker(
+                &mut pixels,
+                width,
+                height,
+                building.x,
+                building.y,
+                building_rgb(building.kind),
+                2,
+            );
+        }
+        for pin in &spectator.civ_pins {
+            draw_marker(
+                &mut pixels,
+                width,
+                height,
+                pin.x,
+                pin.y,
+                job_rgb(pin.job),
+                1,
+            );
+        }
+    }
+
+    draw_population_bar(&mut pixels, width, height, snapshot.population);
+
+    pixels
+}
+
+/// Continuous day/night brightness multiplier from the real
+/// `Climate::day_phase` (`[0, 1)`, advances every tick). Peaks at 1.0 at
+/// noon (`phase == 0.5`), troughs at 0.25 at midnight (`phase == 0.0/1.0`),
+/// so the frame visibly changes tick-over-tick even with nothing else
+/// moving.
+fn day_night_brightness(day_phase: f32) -> f32 {
+    let phase = day_phase.rem_euclid(1.0);
+    let triangle = 1.0 - (phase - 0.5).abs() * 2.0;
+    0.25 + 0.75 * triangle
+}
+
+/// Map one real `WeatherCell` (fixed-point scale 1000, matching its field
+/// docs) to an RGB background tone: cold-to-hot gradient from
+/// `temp_c_fp`, pulled toward damp green/blue by `precip_mm_fp`, and
+/// darkened by `storm_intensity_fp`.
+fn weather_cell_rgb(cell: &civ_planet::WeatherCell) -> [u8; 3] {
+    const FP_SCALE: f32 = 1000.0;
+    let temp_c = cell.temp_c_fp as f32 / FP_SCALE;
+    let precip_mm = (cell.precip_mm_fp as f32 / FP_SCALE).max(0.0);
+    let storm = (cell.storm_intensity_fp as f32 / FP_SCALE).clamp(0.0, 1.0);
+
+    let t = ((temp_c + 20.0) / 60.0).clamp(0.0, 1.0);
+    let cold = [40.0_f32, 80.0, 170.0];
+    let hot = [210.0_f32, 110.0, 40.0];
+    let mut rgb = [
+        cold[0] + (hot[0] - cold[0]) * t,
+        cold[1] + (hot[1] - cold[1]) * t,
+        cold[2] + (hot[2] - cold[2]) * t,
+    ];
+
+    let wet = (precip_mm / 20.0).clamp(0.0, 1.0);
+    rgb[0] *= 1.0 - wet * 0.3;
+    rgb[1] = rgb[1] * (1.0 - wet * 0.1) + 40.0 * wet;
+    rgb[2] = rgb[2] * (1.0 - wet * 0.2) + 60.0 * wet;
+
+    let darken = 1.0 - storm * 0.5;
+    [
+        (rgb[0] * darken).clamp(0.0, 255.0) as u8,
+        (rgb[1] * darken).clamp(0.0, 255.0) as u8,
+        (rgb[2] * darken).clamp(0.0, 255.0) as u8,
+    ]
+}
+
+/// Marker color for one civilian pin, by real `JobLabel` (from the
+/// citizen's ECS `Citizen::job`).
+fn job_rgb(job: Option<civ_engine::spectator::JobLabel>) -> [u8; 3] {
+    use civ_engine::spectator::JobLabel;
+    match job {
+        Some(JobLabel::Farmer) => [196, 164, 60],
+        Some(JobLabel::Warrior) => [200, 50, 50],
+        Some(JobLabel::Scholar) => [80, 140, 220],
+        Some(JobLabel::Trader) => [220, 180, 60],
+        Some(JobLabel::Priest) => [235, 235, 235],
+        Some(JobLabel::Admin) => [160, 90, 200],
+        Some(JobLabel::Unemployed) | None => [120, 120, 120],
+    }
+}
+
+/// Marker color for one building pin, by real `BuildingKind` (derived from
+/// the ECS `Building::building_type`).
+fn building_rgb(kind: civ_engine::spectator::BuildingKind) -> [u8; 3] {
+    use civ_engine::spectator::BuildingKind;
+    match kind {
+        BuildingKind::Residential => [120, 180, 120],
+        BuildingKind::Commercial => [220, 190, 80],
+        BuildingKind::Industrial => [150, 100, 70],
+        BuildingKind::Civic => [230, 230, 230],
+    }
+}
+
+/// Plot a filled `(2 * half_size + 1)`-square marker centered at normalized
+/// `(nx, ny)` (`[0, 1]` plane coordinates, matching `SpectatorView`'s
+/// convention), clipped to the image bounds.
+fn draw_marker(
+    pixels: &mut [u8],
+    width: usize,
+    height: usize,
+    nx: f32,
+    ny: f32,
+    color: [u8; 3],
+    half_size: i32,
+) {
+    if width == 0 || height == 0 || !nx.is_finite() || !ny.is_finite() {
+        return;
+    }
+    let cx = (nx.clamp(0.0, 1.0) * (width - 1) as f32).round() as i32;
+    let cy = (ny.clamp(0.0, 1.0) * (height - 1) as f32).round() as i32;
+    for dy in -half_size..=half_size {
+        for dx in -half_size..=half_size {
+            let (px, py) = (cx + dx, cy + dy);
+            if px < 0 || py < 0 {
+                continue;
+            }
+            let (px, py) = (px as usize, py as usize);
+            if px >= width || py >= height {
+                continue;
+            }
+            let idx = (py * width + px) * 3;
+            pixels[idx] = color[0];
+            pixels[idx + 1] = color[1];
+            pixels[idx + 2] = color[2];
+        }
+    }
+}
+
+/// Fill a thin strip along the bottom edge proportional to
+/// `population` (soft-capped at 200 for a legible bar without needing
+/// thousands of citizens to move the needle). Exists purely so population
+/// growth/decline is always visible in the frame even when no pins are in
+/// view.
+fn draw_population_bar(pixels: &mut [u8], width: usize, height: usize, population: u64) {
+    if width == 0 || height == 0 {
+        return;
+    }
+    let bar_height = (height / 20).max(1);
+    let filled_fraction = (population as f32 / 200.0).clamp(0.0, 1.0);
+    let filled_px = (filled_fraction * width as f32).round() as usize;
+    for y in height.saturating_sub(bar_height)..height {
+        for x in 0..width {
+            let idx = (y * width + x) * 3;
+            let color = if x < filled_px {
+                [230u8, 220, 90]
+            } else {
+                [20, 20, 20]
+            };
+            pixels[idx] = color[0];
+            pixels[idx + 1] = color[1];
+            pixels[idx + 2] = color[2];
+        }
+    }
+}
+
+/// Encode `pixels` (RGB8, `width * height * 3` bytes, as produced by
+/// [`render_world_frame`]) as a PNG under `dir`, returning its absolute
+/// path.
 fn write_capture_frame_png(
     dir: &std::path::Path,
     label: &str,
     width: u32,
     height: u32,
+    pixels: &[u8],
 ) -> Result<PathBuf, String> {
     std::fs::create_dir_all(dir)
         .map_err(|err| format!("create capture directory {dir:?}: {err}"))?;
@@ -1558,19 +1788,8 @@ fn write_capture_frame_png(
     let mut writer = encoder
         .write_header()
         .map_err(|err| format!("write PNG header for {file_path:?}: {err}"))?;
-
-    // Deep navy placeholder pixel, repeated across the whole frame — a
-    // deliberate, recognizable fill rather than an all-zero buffer so a
-    // human skimming an archived capture can tell it's a real (if
-    // non-rendered) frame.
-    const PLACEHOLDER_RGB: [u8; 3] = [10, 20, 40];
-    let pixel_count = width as usize * height as usize;
-    let mut data = Vec::with_capacity(pixel_count * 3);
-    for _ in 0..pixel_count {
-        data.extend_from_slice(&PLACEHOLDER_RGB);
-    }
     writer
-        .write_image_data(&data)
+        .write_image_data(pixels)
         .map_err(|err| format!("write PNG data for {file_path:?}: {err}"))?;
     writer
         .finish()
@@ -2616,9 +2835,16 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimCaptureFrame => match parse_capture_frame_params(req.params.as_ref()) {
-            Ok(params) => match ctx.captures_dir.as_deref() {
-                Some(dir) => {
-                    match write_capture_frame_png(dir, &params.label, params.width, params.height) {
+            Ok(params) => match (ctx.captures_dir.as_deref(), ctx.snapshot.as_ref()) {
+                (Some(dir), Some(snapshot)) => {
+                    let pixels = render_world_frame(snapshot, params.width, params.height);
+                    match write_capture_frame_png(
+                        dir,
+                        &params.label,
+                        params.width,
+                        params.height,
+                        &pixels,
+                    ) {
                         Ok(path) => DispatchPlan {
                             response: JsonRpcResponse::success(
                                 req.id,
@@ -2627,6 +2853,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                                     "label": params.label,
                                     "width": params.width,
                                     "height": params.height,
+                                    "tick": snapshot.tick,
                                 }),
                             ),
                             effect: DispatchEffect::None,
@@ -2644,12 +2871,23 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         },
                     }
                 }
-                None => DispatchPlan {
+                (None, _) => DispatchPlan {
                     response: JsonRpcResponse::failure(
                         req.id,
                         JsonRpcError {
                             code: error_code::INTERNAL_ERROR,
                             message: "Capture directory unavailable".to_owned(),
+                            data: None,
+                        },
+                    ),
+                    effect: DispatchEffect::None,
+                },
+                (_, None) => DispatchPlan {
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INTERNAL_ERROR,
+                            message: "Simulation snapshot unavailable".to_owned(),
                             data: None,
                         },
                     ),
@@ -5551,6 +5789,80 @@ mod tests {
         );
     }
 
+    /// Build a `DispatchContext` for `sim.capture_frame` tests with every
+    /// other field at its inert default, varying only `captures_dir` /
+    /// `snapshot`.
+    fn capture_frame_test_ctx(
+        captures_dir: Option<PathBuf>,
+        snapshot: Option<SnapshotFields>,
+    ) -> DispatchContext {
+        DispatchContext {
+            tick: 0,
+            population: None,
+            snapshot,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            captures_dir,
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        }
+    }
+
+    /// Minimal-but-real `SnapshotFields` for `sim.capture_frame` tests:
+    /// shares the exact shape `snapshot_fields_from_sim` produces for live
+    /// hosts, with only `tick`/`population`/`climate.day_phase`/`spectator`
+    /// parameterized per test.
+    fn capture_frame_test_snapshot(
+        tick: u64,
+        population: u64,
+        day_phase: f32,
+        spectator: Option<civ_engine::SpectatorView>,
+    ) -> SnapshotFields {
+        SnapshotFields {
+            weather_grid: vec![],
+            tick,
+            population,
+            building_count: 0,
+            energy_budget: None,
+            market_prices: BTreeMap::new(),
+            hash_chain_root: None,
+            speed_multiplier: 1,
+            spectator,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate {
+                tick,
+                day_phase,
+                year_phase: 0.0,
+                moon_phase: 0.0,
+                tide_offset: 0.0,
+            },
+            music_cues: BTreeMap::new(),
+            audio_events: vec![],
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_progress: Default::default(),
+        }
+    }
+
     // Issue #1599 — `sim.capture_frame` must be a registered method that
     // writes a real, non-empty PNG under the configured capture directory
     // and reports its absolute path back to the caller. This is what
@@ -5569,26 +5881,11 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":60,"method":"sim.capture_frame","params":{"label":"step1","width":64,"height":32}}"#,
         )
         .expect("parse");
-        let ctx = DispatchContext {
-            tick: 7,
-            population: None,
-            snapshot: None,
-            tile_probe: None,
-            require_role: false,
-            speed_multiplier: 1,
-            connection_role: None,
-            saves_dir: None,
-            captures_dir: Some(capture_dir.path().to_path_buf()),
-            emergence: None,
-            legends: None,
-            researched: vec![],
-            in_progress_tech: None,
-            last_tick_ms: 0.0,
-            outcome_fields: None,
-            psyche_snapshot: None,
-            sentience_events: None,
-            religion_state: None,
-        };
+        let snapshot = capture_frame_test_snapshot(7, 12, 0.1, None);
+        let ctx = capture_frame_test_ctx(
+            Some(capture_dir.path().to_path_buf()),
+            Some(snapshot.clone()),
+        );
 
         let plan = dispatch_request(req, ctx);
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -5596,6 +5893,10 @@ mod tests {
             .response
             .result
             .expect("sim.capture_frame must return a result");
+        assert_eq!(
+            result.get("tick").and_then(serde_json::Value::as_u64),
+            Some(7)
+        );
         let path_str = result
             .get("path")
             .and_then(|v| v.as_str())
@@ -5613,6 +5914,24 @@ mod tests {
             &[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1A, b'\n'],
             "captured file must start with the PNG magic number"
         );
+
+        // The on-disk bytes must match rendering the same snapshot directly
+        // — proving the dispatch path encodes `render_world_frame`'s real
+        // output, not some other (e.g. placeholder) buffer.
+        let expected_pixels = render_world_frame(&snapshot, 64, 32);
+        let mut expected_png = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut expected_png, 64, 32);
+            encoder.set_color(png::ColorType::Rgb);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder.write_header().expect("png header");
+            writer.write_image_data(&expected_pixels).expect("png data");
+            writer.finish().expect("png finish");
+        }
+        assert_eq!(
+            bytes, expected_png,
+            "capture_frame must write exactly render_world_frame's encoding of the live snapshot"
+        );
     }
 
     #[test]
@@ -5621,26 +5940,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":61,"method":"sim.capture_frame","params":{"label":"../escape"}}"#,
         )
         .expect("parse");
-        let ctx = DispatchContext {
-            tick: 0,
-            population: None,
-            snapshot: None,
-            tile_probe: None,
-            require_role: false,
-            speed_multiplier: 1,
-            connection_role: None,
-            saves_dir: None,
-            captures_dir: Some(PathBuf::from("captures")),
-            emergence: None,
-            legends: None,
-            researched: vec![],
-            in_progress_tech: None,
-            last_tick_ms: 0.0,
-            outcome_fields: None,
-            psyche_snapshot: None,
-            sentience_events: None,
-            religion_state: None,
-        };
+        let ctx = capture_frame_test_ctx(Some(PathBuf::from("captures")), None);
 
         let plan = dispatch_request(req, ctx);
         assert!(
@@ -5650,6 +5950,191 @@ mod tests {
         assert_eq!(
             plan.response.error.as_ref().unwrap().code,
             error_code::INVALID_PARAMS
+        );
+    }
+
+    #[test]
+    fn sim_capture_frame_errors_when_snapshot_unavailable() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":62,"method":"sim.capture_frame","params":{"label":"nosim"}}"#,
+        )
+        .expect("parse");
+        // captures_dir present, snapshot absent (host not initialized yet).
+        let ctx = capture_frame_test_ctx(Some(PathBuf::from("captures")), None);
+
+        let plan = dispatch_request(req, ctx);
+        let error = plan
+            .response
+            .error
+            .expect("missing snapshot must be a hard error, not a fabricated frame");
+        assert_eq!(error.code, error_code::INTERNAL_ERROR);
+    }
+
+    // Issue #1599 (review follow-up) — the renderer must be driven by real,
+    // tick-mutable simulation fields, not emit a constant image. Each
+    // assertion toggles exactly one field that the live engine actually
+    // mutates every tick (`climate.day_phase`), on population change
+    // (civilian birth/death), or on movement (civilian pin position), and
+    // proves the rendered pixel buffer changes in response.
+    #[test]
+    fn render_world_frame_changes_with_tick_population_and_pins() {
+        let midnight = capture_frame_test_snapshot(0, 10, 0.0, None);
+        let noon = capture_frame_test_snapshot(6_000, 10, 0.5, None);
+        assert_ne!(
+            render_world_frame(&midnight, 64, 48),
+            render_world_frame(&noon, 64, 48),
+            "day/night brightness (real Climate::day_phase) must affect pixels"
+        );
+
+        let empty_city = capture_frame_test_snapshot(0, 0, 0.5, None);
+        let populous_city = capture_frame_test_snapshot(0, 150, 0.5, None);
+        assert_ne!(
+            render_world_frame(&empty_city, 64, 48),
+            render_world_frame(&populous_city, 64, 48),
+            "population must affect pixels (the population bar)"
+        );
+
+        let civ_near_origin = civ_engine::spectator::CivPin {
+            idx: 1,
+            x: 0.1,
+            y: 0.1,
+            dx: 0.0,
+            dy: 0.0,
+            job: None,
+        };
+        let civ_far_corner = civ_engine::spectator::CivPin {
+            x: 0.9,
+            y: 0.9,
+            ..civ_near_origin
+        };
+        let spectator_a = civ_engine::SpectatorView {
+            civ_pins: vec![civ_near_origin],
+            factions: vec![],
+            buildings: vec![],
+            is_day: true,
+        };
+        let spectator_b = civ_engine::SpectatorView {
+            civ_pins: vec![civ_far_corner],
+            factions: vec![],
+            buildings: vec![],
+            is_day: true,
+        };
+        let pin_here = capture_frame_test_snapshot(0, 1, 0.5, Some(spectator_a));
+        let pin_there = capture_frame_test_snapshot(0, 1, 0.5, Some(spectator_b));
+        assert_ne!(
+            render_world_frame(&pin_here, 64, 48),
+            render_world_frame(&pin_there, 64, 48),
+            "a moved civilian pin (real ECS Position3d) must affect pixels"
+        );
+
+        // Replay-safety: rendering is a pure function of the snapshot —
+        // identical input must produce byte-identical output every time.
+        assert_eq!(
+            render_world_frame(&midnight, 64, 48),
+            render_world_frame(&midnight, 64, 48),
+            "render_world_frame must be deterministic for a fixed snapshot"
+        );
+    }
+
+    // Issue #1599 (review follow-up) — end-to-end proof using a *real*
+    // `civ_engine::Simulation`: capture before and after a real state
+    // change (spawning a civilian — the same ECS mutation `sim.spawn_civilian`
+    // performs — plus real tick advancement), and show the two PNGs
+    // written to disk via the full `sim.capture_frame` dispatch path are
+    // different, non-placeholder images.
+    #[test]
+    fn sim_capture_frame_pixels_differ_between_distinct_real_simulation_states() {
+        use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment};
+
+        let mut sim = civ_engine::Simulation::with_seed(123);
+        let snapshot_before = snapshot_fields_from_sim(&sim, 1);
+
+        // Real, user-reachable state mutations: spawn a civilian (the same
+        // ECS write `sim.spawn_civilian`'s effect performs) and advance a
+        // few real ticks (the same effect `sim.command` tick performs).
+        let mut rng = sim.rng_mut().clone();
+        let _ = spawn_civilian_at(
+            &mut sim.world,
+            999_001,
+            Alignment::None,
+            0.12,
+            0.85,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+        *sim.rng_mut() = rng;
+        // `spawn_civilian_at` only inserts the ECS entity; the population
+        // counter is maintained separately on `WorldState` (the same field
+        // `sim.spawn_civilian`'s effect updates), so bump it the same way.
+        sim.state.population += 1;
+        for _ in 0..5 {
+            sim.tick();
+        }
+        let snapshot_after = snapshot_fields_from_sim(&sim, 1);
+
+        assert_ne!(
+            snapshot_before, snapshot_after,
+            "the real simulation must have actually changed state between captures"
+        );
+        assert_ne!(
+            snapshot_before.population, snapshot_after.population,
+            "the spawned civilian must be reflected in population"
+        );
+
+        let pixels_before = render_world_frame(&snapshot_before, 96, 64);
+        let pixels_after = render_world_frame(&snapshot_after, 96, 64);
+        assert_ne!(
+            pixels_before, pixels_after,
+            "sim.capture_frame output must change as the real simulation changes"
+        );
+
+        // Full dispatch path: both captures land as distinct, non-empty
+        // PNGs on disk.
+        let capture_dir = tempfile::tempdir().expect("tempdir");
+        let req_before = parse_request(
+            r#"{"jsonrpc":"2.0","id":70,"method":"sim.capture_frame","params":{"label":"before","width":96,"height":64}}"#,
+        )
+        .expect("parse");
+        let req_after = parse_request(
+            r#"{"jsonrpc":"2.0","id":71,"method":"sim.capture_frame","params":{"label":"after","width":96,"height":64}}"#,
+        )
+        .expect("parse");
+
+        let plan_before = dispatch_request(
+            req_before,
+            capture_frame_test_ctx(
+                Some(capture_dir.path().to_path_buf()),
+                Some(snapshot_before),
+            ),
+        );
+        let plan_after = dispatch_request(
+            req_after,
+            capture_frame_test_ctx(Some(capture_dir.path().to_path_buf()), Some(snapshot_after)),
+        );
+
+        let path_before = plan_before
+            .response
+            .result
+            .as_ref()
+            .and_then(|r| r.get("path"))
+            .and_then(|v| v.as_str())
+            .expect("before capture must return a path")
+            .to_owned();
+        let path_after = plan_after
+            .response
+            .result
+            .as_ref()
+            .and_then(|r| r.get("path"))
+            .and_then(|v| v.as_str())
+            .expect("after capture must return a path")
+            .to_owned();
+
+        let bytes_before = std::fs::read(&path_before).expect("read before.png");
+        let bytes_after = std::fs::read(&path_after).expect("read after.png");
+        assert!(!bytes_before.is_empty() && !bytes_after.is_empty());
+        assert_ne!(
+            bytes_before, bytes_after,
+            "two real, distinct simulation states must capture to two distinct PNGs"
         );
     }
 }

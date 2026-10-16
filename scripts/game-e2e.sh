@@ -178,7 +178,8 @@ done
 step "Launching game client..."
 export CIV_ATTACH_MODE=standalone
 export CIV_SERVER_URL="ws://127.0.0.1:${PORT}/ws"
-export CIVIS_SMOKE_FRAMES="${FRAMES_TO_WAIT}"
+# Do not set CIVIS_SMOKE_FRAMES. On llvmpipe a 120-frame cap exits before
+# the health check. The workflow step timeout bounds a hung client.
 export BEVY_ASSET_ROOT="${REPO_ROOT}/clients/bevy-ref"
 export CARGO_TARGET_DIR="${REPO_ROOT}/target"
 export RUST_LOG="info"
@@ -448,6 +449,7 @@ if kill -0 "${GAME_PID}" 2>/dev/null; then
     ok "Game: still running"
 else
     fail "Game: process died"
+    tail -n 20 "${LOGS}/game.log" >&2 || true
     exit 3
 fi
 

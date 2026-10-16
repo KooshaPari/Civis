@@ -12,38 +12,58 @@
 
 mod allocation;
 mod allocator;
+#[allow(dead_code)]
+// CIV-0100 economy-v1 scaffold: spec-aligned API surface (docs/specs/CIV-0100-economy-v1.md)
+// not yet wired into Simulation; allow until integration lands.
 mod budget;
 mod currency_trust;
-mod district;
 pub mod distribution;
+mod district;
 mod extraction;
 mod gdp;
 mod institution;
 mod market;
 pub mod metrics;
+#[allow(dead_code)]
+// CIV-0100 economy-v1 scaffold: spec-aligned API surface (docs/specs/CIV-0100-economy-v1.md)
+// not yet wired into Simulation; allow until integration lands.
 mod prices;
 mod production;
 pub mod shadow;
 pub mod shocks;
 pub mod specialization;
 mod stocks;
+pub mod subsistence;
 mod tax_policy;
+#[allow(dead_code)]
+// CIV-0100 economy-v1 scaffold: spec-aligned API surface (docs/specs/CIV-0100-economy-v1.md)
+// not yet wired into Simulation; allow until integration lands.
 mod trade;
 mod trade_flow;
 mod trade_routes;
-mod waste;
-pub mod subsistence;
 pub mod treasury;
+mod waste;
 
 pub use allocation::{
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
     JouleAllocator, LaborCapacityAllocator, PlannedAllocator, PriorityTier,
 };
 pub use allocator::{Allocator, Bid, CancelledOrder, Offer};
+pub use budget::{fiscal_health, BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance};
 pub use currency_trust::{acceptance, step_currency_trust, CurrencyTrust, CurrencyTrustOutcome};
+pub use distribution::{
+    deduct_consumption, distribute_surplus, step_distribution, DistributionConfig,
+    DistributionReport, DistrictGraph, Transfer, DEFAULT_MAX_TRANSFER_PER_TICK,
+    DEFAULT_RESERVE_FLOOR,
+};
+pub use district::{
+    tick_district_collapse, CollapseCheck, DistrictCollapseEvent, DistrictEnergyState,
+    DEFAULT_DEFICIT_TICKS,
+};
 pub use extraction::{
     find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
 };
+pub use gdp::{compute_gdp, GdpResult, RegionGdp};
 pub use institution::{
     collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
     InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
@@ -54,6 +74,7 @@ pub use market::{
     GoodId, MarketState, MultiGoodMarket, Order, OrderBook, OrderBookSnapshot, SettlementTradeFlow,
     Side, Trade, DEFAULT_SMOOTHING_FACTOR,
 };
+pub use metrics::{compute_metrics, EconomyMetrics, EconomyMetricsFixed};
 pub use production::{
     produce, ProductionOrder, ProductionQueue, ProductionResult, ResourceType, RESOURCE_TYPES,
 };
@@ -61,26 +82,17 @@ pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, Good,
     ProductionProfile, Stocks, TradeOffer, GOODS,
 };
-pub use budget::{BudgetBucket, BudgetPlan, BudgetSnapshot, BudgetVariance, fiscal_health};
-pub use district::{tick_district_collapse, CollapseCheck, DistrictCollapseEvent, DistrictEnergyState, DEFAULT_DEFICIT_TICKS};
-pub use distribution::{
-    deduct_consumption, distribute_surplus, step_distribution, DistributionConfig,
-    DistributionReport, DistrictGraph, Transfer, DEFAULT_MAX_TRANSFER_PER_TICK,
-    DEFAULT_RESERVE_FLOOR,
-};
-pub use gdp::{compute_gdp, GdpResult, RegionGdp};
-pub use metrics::{compute_metrics, EconomyMetrics, EconomyMetricsFixed};
-pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
 pub use subsistence::{SubsistenceMode, DEFAULT_SUBSISTENCE_THRESHOLD};
-pub use treasury::Treasury;
-pub use waste::{compute_waste_heat, WasteHeatConfig, WasteHeatResult};
+pub use tax_policy::{apply_tax_policy, TaxPolicy, TaxPolicyOutcome};
+pub use trade::{TradeAgreement, TradeAgreementError};
 pub use trade_flow::{
     complementary_round_trips, complementary_routes, ComplementaryTradeFlow, SettlementFlow,
 };
-pub use trade::{TradeAgreement, TradeAgreementError};
 pub use trade_routes::{
     compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
 };
+pub use treasury::Treasury;
+pub use waste::{compute_waste_heat, WasteHeatConfig, WasteHeatResult};
 
 use serde::{Deserialize, Serialize};
 

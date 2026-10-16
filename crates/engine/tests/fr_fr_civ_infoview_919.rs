@@ -22,8 +22,16 @@ mod fr_fr_civ_infoview_919 {
             availability: OverlayAvailability::Near,
             legend_kind: LegendKind::Continuous,
             legend_stops: vec![
-                LegendStop { position: 0.0, label: "Poor".into(), color: [0.4, 0.2, 0.1] },
-                LegendStop { position: 1.0, label: "Prosperous".into(), color: [1.0, 0.84, 0.0] },
+                LegendStop {
+                    position: 0.0,
+                    label: "Poor".into(),
+                    color: [0.4, 0.2, 0.1],
+                },
+                LegendStop {
+                    position: 1.0,
+                    label: "Prosperous".into(),
+                    color: [1.0, 0.84, 0.0],
+                },
             ],
             description: "Per-entity wealth",
         };
@@ -38,11 +46,16 @@ mod fr_fr_civ_infoview_919 {
     fn wealth_is_first_entity_tint_exemplar() {
         let mut registry = OverlayRegistry::new();
         register_priority_12(&mut registry);
-        let entity_tints: Vec<&InfoOverlay> = registry.overlays()
+        let entity_tints: Vec<&InfoOverlay> = registry
+            .overlays()
             .iter()
             .filter(|o| o.render_kind == RenderKind::EntityTint)
             .collect();
-        assert_eq!(entity_tints.len(), 1, "should be exactly one EntityTint in priority-12");
+        assert_eq!(
+            entity_tints.len(),
+            1,
+            "should be exactly one EntityTint in priority-12"
+        );
         assert_eq!(entity_tints[0].id, "info_wealth");
     }
 }

@@ -697,7 +697,9 @@ mod tests {
         let mut engine = FestivalEngine::new();
         let mut state = default_state(1);
         state.disaster_severity = 0.9;
-        assert!(engine.evaluate(&state, 0).contains(&FestivalType::Emergency));
+        assert!(engine
+            .evaluate(&state, 0)
+            .contains(&FestivalType::Emergency));
 
         let f = engine.spawn(FestivalType::Emergency, 1, 0, 100).unwrap();
         // Emergency participation_rate is 0.4.

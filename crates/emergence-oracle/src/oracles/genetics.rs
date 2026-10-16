@@ -141,7 +141,11 @@ mod tests {
         let v = GeneticsOracle.check(&sim);
         assert_eq!(v.threshold, 64.0, "64 trials after tick 0");
         assert_eq!(v.measured, 64.0, "every inheritance trial must succeed");
-        assert!(v.passed, "genetics inheritance oracle must pass: {}", v.detail);
+        assert!(
+            v.passed,
+            "genetics inheritance oracle must pass: {}",
+            v.detail
+        );
         assert!(v.detail.contains("Genetics inheritance:"));
     }
 }

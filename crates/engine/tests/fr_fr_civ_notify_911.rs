@@ -1,4 +1,4 @@
-﻿//! Tests for FR-CIV-NOTIFY-911 - Notification System
+//! Tests for FR-CIV-NOTIFY-911 - Notification System
 //!
 //! Epic: FR-CIV-FRAME
 //! Notification system for god-tool events and UI updates.

@@ -1141,12 +1141,8 @@ mod tests {
             assert_eq!(full.0.len(), archetype.0.len());
             // Byte-level distance from the archetype at 0.5 must not exceed
             // the distance at full divergence (monotone dial).
-            let dist = |a: &Dna, b: &Dna| {
-                a.0.iter()
-                    .zip(b.0.iter())
-                    .filter(|(x, y)| x != y)
-                    .count()
-            };
+            let dist =
+                |a: &Dna, b: &Dna| a.0.iter().zip(b.0.iter()).filter(|(x, y)| x != y).count();
             assert!(
                 dist(&mid, &archetype) <= dist(&full, &archetype),
                 "{named:?}: divergence dial must be monotone"
@@ -1160,12 +1156,8 @@ mod tests {
     fn fr_civ_genetics_seed_003_divergence_is_monotone_across_all_steps() {
         for &named in ALL_NAMED_SEEDS.iter() {
             let archetype = archetype_dna(named);
-            let dist = |a: &Dna, b: &Dna| {
-                a.0.iter()
-                    .zip(b.0.iter())
-                    .filter(|(x, y)| x != y)
-                    .count()
-            };
+            let dist =
+                |a: &Dna, b: &Dna| a.0.iter().zip(b.0.iter()).filter(|(x, y)| x != y).count();
             let mut previous = 0usize;
             for step in 0..=10 {
                 let d = step as f32 / 10.0;

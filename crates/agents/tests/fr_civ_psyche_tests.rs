@@ -2,10 +2,7 @@
 //!
 //! Covers: FR-CIV-PSYCHE-001 through FR-CIV-PSYCHE-006
 
-use civ_agents::{
-    Mood, Psyche, PsychGenomeProfile, PSYCHE_DIM, SocialEvent, SocialGraph, Tie, Interaction,
-    MAX_TIES, decay_social_graph, relation_label, apply_social_event, RelationLabel,
-};
+use civ_agents::{Mood, PsychGenomeProfile, Psyche, PSYCHE_DIM};
 
 // ---------------------------------------------------------------------------
 // FR-CIV-PSYCHE-001 — Psyche vector construction and dimensionality

@@ -74,7 +74,10 @@ fn species_200_loci_are_independent() {
     assert_eq!(before.morphology.leg_count, 30);
     // Everything else is byte-identical.
     assert_eq!(after.morphology.height_cm, before.morphology.height_cm);
-    assert_eq!(after.morphology.body_color_hue, before.morphology.body_color_hue);
+    assert_eq!(
+        after.morphology.body_color_hue,
+        before.morphology.body_color_hue
+    );
     assert_eq!(after.morphology.arm_count, before.morphology.arm_count);
     assert_eq!(after.morphology.eye_count, before.morphology.eye_count);
     assert_eq!(after.behavior, before.behavior);

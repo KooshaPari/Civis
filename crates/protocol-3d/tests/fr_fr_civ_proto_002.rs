@@ -5,7 +5,9 @@
 
 #[cfg(test)]
 mod fr_fr_civ_proto_002 {
-    use civ_protocol_3d::{BuildingDiffEntry, BuildingDiffFrame, BuildingKind3d, BuildingProvenance, WorldXZ};
+    use civ_protocol_3d::{
+        BuildingDiffEntry, BuildingDiffFrame, BuildingKind3d, BuildingProvenance, WorldXZ,
+    };
 
     #[test]
     fn verify_fr_civ_proto_002_basic() {
@@ -13,7 +15,9 @@ mod fr_fr_civ_proto_002 {
             tick: 1,
             provenance: BuildingProvenance::Procedural,
             buildings: vec![BuildingDiffEntry {
-                id: 42, kind: BuildingKind3d::Farm, tier: 1,
+                id: 42,
+                kind: BuildingKind3d::Farm,
+                tier: 1,
                 position: WorldXZ { x: 1.0, z: 2.0 },
             }],
             graph: None,

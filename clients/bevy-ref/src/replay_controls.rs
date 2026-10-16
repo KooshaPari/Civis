@@ -65,14 +65,13 @@ fn draw_replay_controls(
                     ui.horizontal(|ui| {
                         // Play/Pause button
                         let label = if is_paused { "▶ Play" } else { "⏸ Pause" };
-                        let btn = egui::Button::new(
-                            egui::RichText::new(label).color(ACCENT).strong(),
-                        )
-                        .fill(if is_paused {
-                            ACCENT.gamma_multiply(0.25)
-                        } else {
-                            CHIP_FILL
-                        });
+                        let btn =
+                            egui::Button::new(egui::RichText::new(label).color(ACCENT).strong())
+                                .fill(if is_paused {
+                                    ACCENT.gamma_multiply(0.25)
+                                } else {
+                                    CHIP_FILL
+                                });
                         if ui.add(btn).clicked() {
                             if is_paused {
                                 // Resume
@@ -103,16 +102,12 @@ fn draw_replay_controls(
                         }
 
                         // Step (forward one tick)
-                        let step_btn = egui::Button::new(
-                            egui::RichText::new("⏭ Step").color(DIM),
-                        )
-                        .fill(CHIP_FILL);
+                        let step_btn = egui::Button::new(egui::RichText::new("⏭ Step").color(DIM))
+                            .fill(CHIP_FILL);
                         if ui.add(step_btn).clicked() && *attach == AttachMode::Server {
                             if let Some(bridge) = bridge_ref {
-                                bridge.send_rpc(
-                                    "sim.command",
-                                    serde_json::json!({"action": "step"}),
-                                );
+                                bridge
+                                    .send_rpc("sim.command", serde_json::json!({"action": "step"}));
                             }
                         }
 
@@ -124,8 +119,7 @@ fn draw_replay_controls(
                             &[(1.0, "1x"), (2.0, "2x"), (5.0, "5x"), (10.0, "10x")]
                         };
                         for &(mult, label) in speed_steps {
-                            let active =
-                                (speed.multiplier - mult).abs() < 0.01;
+                            let active = (speed.multiplier - mult).abs() < 0.01;
                             let btn = egui::Button::new(
                                 egui::RichText::new(label)
                                     .color(if active { ACCENT } else { DIM })

@@ -260,7 +260,10 @@ mod tests {
             (hist.power_law.back().copied().unwrap() - 2.1).abs() < 1e-6,
             "power-law alpha sampled"
         );
-        assert_eq!(hist.last_sampled_tick, 20, "sampling cursor follows the stream");
+        assert_eq!(
+            hist.last_sampled_tick, 20,
+            "sampling cursor follows the stream"
+        );
     }
 
     // FR-CIV-CLIENT-013 — the Y key toggles the history panel open/closed.
@@ -277,13 +280,19 @@ mod tests {
         world.insert_resource(pressed);
         let (keys, open) = state.get_mut(&mut world);
         toggle_history_panel(keys, open);
-        assert!(world.resource::<CivHistoryPanelOpen>().0, "Y opens the panel");
+        assert!(
+            world.resource::<CivHistoryPanelOpen>().0,
+            "Y opens the panel"
+        );
 
         // Frame 2: no press → state held.
         world.insert_resource(ButtonInput::<KeyCode>::default());
         let (keys, open) = state.get_mut(&mut world);
         toggle_history_panel(keys, open);
-        assert!(world.resource::<CivHistoryPanelOpen>().0, "no press keeps it open");
+        assert!(
+            world.resource::<CivHistoryPanelOpen>().0,
+            "no press keeps it open"
+        );
 
         // Frame 3: Y pressed again → panel closes.
         let mut pressed = ButtonInput::<KeyCode>::default();

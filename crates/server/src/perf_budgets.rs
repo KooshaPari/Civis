@@ -339,7 +339,10 @@ mod tests {
         // Within budget passes.
         assert!(event_log_budget_met(0), "no growth is within budget");
         assert!(event_log_budget_met(4 * 1024 * 1024));
-        assert!(event_log_budget_met(EVENT_LOG_BUDGET_BYTES_MIN - 1), "1 byte under passes");
+        assert!(
+            event_log_budget_met(EVENT_LOG_BUDGET_BYTES_MIN - 1),
+            "1 byte under passes"
+        );
         // At or over budget fails (strict <).
         assert!(
             !event_log_budget_met(EVENT_LOG_BUDGET_BYTES_MIN),
@@ -400,6 +403,9 @@ mod tests {
         };
         let report = BudgetReport::from_measurement(below);
         assert!(!report.command_rate, "S-04 flag flips below the budget");
-        assert!(!report.all_passed(), "a command-rate miss fails the whole report");
+        assert!(
+            !report.all_passed(),
+            "a command-rate miss fails the whole report"
+        );
     }
 }

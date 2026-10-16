@@ -173,12 +173,29 @@ mod tests {
     fn rect_selection_picks_units_inside() {
         let mut cam = RtsCamera::new();
         let units = [
-            SelectableUnit { id: 1, x: 10.0, y: 10.0 },
-            SelectableUnit { id: 2, x: 500.0, y: 500.0 },
-            SelectableUnit { id: 3, x: 30.0, y: 20.0 },
+            SelectableUnit {
+                id: 1,
+                x: 10.0,
+                y: 10.0,
+            },
+            SelectableUnit {
+                id: 2,
+                x: 500.0,
+                y: 500.0,
+            },
+            SelectableUnit {
+                id: 3,
+                x: 30.0,
+                y: 20.0,
+            },
         ];
         cam.apply(
-            CameraInput::SelectRect { x0: 0.0, y0: 0.0, x1: 100.0, y1: 100.0 },
+            CameraInput::SelectRect {
+                x0: 0.0,
+                y0: 0.0,
+                x1: 100.0,
+                y1: 100.0,
+            },
             &units,
         );
         assert_eq!(cam.selection(), &[1, 3]);

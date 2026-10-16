@@ -204,10 +204,7 @@ fn fr_civ_ai_001_trait_object_is_dyn_safe_send_sync_and_arc_shareable() {
 
     let shared: Arc<dyn AiProvider> = Arc::new(DummyAiProvider);
     let request = GenRequest::from_prompt("epoch one digest");
-    let expected = DummyAiProvider
-        .generate_sync(&request)
-        .text
-        .clone();
+    let expected = DummyAiProvider.generate_sync(&request).text.clone();
     assert!(
         !expected.is_empty(),
         "generate_sync must produce a non-empty deterministic string"
@@ -227,7 +224,11 @@ fn fr_civ_ai_001_trait_object_is_dyn_safe_send_sync_and_arc_shareable() {
                 .expect("generate through Arc<dyn AiProvider>")
                 .text
         });
-        (text, moved.model_id().to_string(), moved.model_version().to_string())
+        (
+            text,
+            moved.model_id().to_string(),
+            moved.model_version().to_string(),
+        )
     });
 
     let (thread_text, model_id, model_version) = worker.join().expect("worker thread");
@@ -237,7 +238,11 @@ fn fr_civ_ai_001_trait_object_is_dyn_safe_send_sync_and_arc_shareable() {
     );
     assert_eq!(model_id, "dummy");
     assert_eq!(model_version, "0");
-    assert_eq!(Arc::strong_count(&shared), 1, "worker clone must be dropped");
+    assert_eq!(
+        Arc::strong_count(&shared),
+        1,
+        "worker clone must be dropped"
+    );
 }
 
 /// Covers FR-CIV-AI-001.
@@ -246,7 +251,10 @@ async fn fr_civ_ai_001_generate_and_embed_dispatch_through_trait_objects() {
     let provider: Arc<dyn AiProvider> = Arc::new(DummyAiProvider);
     let request = GenRequest::from_prompt("rail line between two hubs");
 
-    let concrete = DummyAiProvider.generate(&request).await.expect("concrete gen");
+    let concrete = DummyAiProvider
+        .generate(&request)
+        .await
+        .expect("concrete gen");
     let dyn_ref: &dyn AiProvider = provider.as_ref();
     let via_dyn = dyn_ref.generate(&request).await.expect("dyn gen");
     let via_arc = provider.generate(&request).await.expect("arc gen");
@@ -274,7 +282,10 @@ async fn fr_civ_ai_001_generate_and_embed_dispatch_through_trait_objects() {
         texts.push(entry.generate(&request).await.expect("gen").text);
     }
     assert_eq!(texts.len(), 2);
-    assert_ne!(texts[0], texts[1], "distinct providers must be dispatched distinctly");
+    assert_ne!(
+        texts[0], texts[1],
+        "distinct providers must be dispatched distinctly"
+    );
 }
 
 /// Covers FR-CIV-AI-001.
@@ -380,7 +391,10 @@ fn fr_civ_ai_002_local_model_env_path_is_the_required_preflight_artifact() {
     let scratch = ScratchDir::new("fr002-present");
     let model = scratch.write("local-slm.gguf", "not a real gguf");
 
-    env.set("CIVAI_LOCAL_MODEL_PATH", model.to_str().expect("utf-8 model path"));
+    env.set(
+        "CIVAI_LOCAL_MODEL_PATH",
+        model.to_str().expect("utf-8 model path"),
+    );
     env.set("CIVAI_NARRATOR_MODEL", "qwen2.5-1.5b-instruct");
 
     let config = AiConfig::from_env();
@@ -391,7 +405,11 @@ fn fr_civ_ai_002_local_model_env_path_is_the_required_preflight_artifact() {
     );
 
     let required = civ_ai::preflight::required_artifacts(&config);
-    assert_eq!(required.len(), 1, "only the local GGUF is a startup requirement");
+    assert_eq!(
+        required.len(),
+        1,
+        "only the local GGUF is a startup requirement"
+    );
     assert_eq!(required[0].name, "qwen2.5-1.5b-instruct");
     assert_eq!(required[0].path, model.to_str().expect("utf-8 model path"));
 
@@ -417,8 +435,9 @@ fn fr_civ_ai_002_missing_local_artifact_fails_loud_and_named() {
     env.set("CIVAI_LOCAL_MODEL_PATH", &missing);
 
     let config = AiConfig::from_env();
-    let error = civ_ai::preflight::preflight(&config)
-        .expect_err("a missing local model artifact must fail preflight, never silently disable AI");
+    let error = civ_ai::preflight::preflight(&config).expect_err(
+        "a missing local model artifact must fail preflight, never silently disable AI",
+    );
 
     assert_eq!(
         error.to_string(),
@@ -445,7 +464,10 @@ fn fr_civ_ai_002_missing_local_artifact_fails_loud_and_named() {
     let message = combined.to_string();
     assert!(message.contains("missing model 'narrator' at"));
     assert!(message.contains("missing model 'embedder' at"));
-    assert!(message.contains("; "), "missing artifacts are listed together");
+    assert!(
+        message.contains("; "),
+        "missing artifacts are listed together"
+    );
 }
 
 /// Covers FR-CIV-AI-002.
@@ -542,7 +564,10 @@ mod dev_provider {
         assert_eq!(provider.model_version(), "dev");
         let capabilities = provider.capabilities();
         assert!(capabilities.generate && !capabilities.embed);
-        assert!(capabilities.cloud, "Ollama is a local HTTP service, classified as remote");
+        assert!(
+            capabilities.cloud,
+            "Ollama is a local HTTP service, classified as remote"
+        );
     }
 
     /// Covers FR-CIV-AI-003.
@@ -713,7 +738,10 @@ fn fr_civ_ai_004_cloud_is_opt_in_and_not_a_startup_requirement() {
 
     // The cloud provider stays behind its feature gate (opt-in build knob too).
     let manifest = crate_file("Cargo.toml");
-    assert_eq!(manifest_value(&manifest, "cloud"), "cloud = [\"dep:civ-research\"]");
+    assert_eq!(
+        manifest_value(&manifest, "cloud"),
+        "cloud = [\"dep:civ-research\"]"
+    );
     assert!(is_feature_gated(
         &crate_file("src/providers/mod.rs"),
         "firepass_kimi",
@@ -798,11 +826,17 @@ mod cloud_provider {
         env.set("KIMI_API_KEY", "test-cloud-key");
 
         // Unreachable endpoint -> loud Unavailable, never a silent empty result.
-        env.set("FIREPASS_BASE_URL", &format!("{}/v1", loopback::dead_address()));
+        env.set(
+            "FIREPASS_BASE_URL",
+            &format!("{}/v1", loopback::dead_address()),
+        );
         let provider = civ_ai::providers::FirepassKimiProvider::from_env().expect("construct");
         match provider.generate(&GenRequest::from_prompt("x")).await {
             Err(AiError::Unavailable(message)) => {
-                assert!(message.contains("Firepass/Kimi request failed"), "got: {message}");
+                assert!(
+                    message.contains("Firepass/Kimi request failed"),
+                    "got: {message}"
+                );
             }
             other => panic!("expected Unavailable, got {other:?}"),
         }
@@ -833,7 +867,10 @@ mod cloud_provider {
         let provider = civ_ai::providers::FirepassKimiProvider::from_env().expect("construct");
         match provider.generate(&GenRequest::from_prompt("x")).await {
             Err(AiError::InvalidResponse(message)) => {
-                assert!(message.contains("missing chat completion content"), "got: {message}");
+                assert!(
+                    message.contains("missing chat completion content"),
+                    "got: {message}"
+                );
             }
             other => panic!("expected InvalidResponse, got {other:?}"),
         }
@@ -844,7 +881,10 @@ mod cloud_provider {
     async fn fr_civ_ai_004_embed_is_unsupported_for_cloud_provider() {
         let env = EnvGuard::new();
         env.set("KIMI_API_KEY", "test-cloud-key");
-        env.set("FIREPASS_BASE_URL", &format!("{}/v1", loopback::dead_address()));
+        env.set(
+            "FIREPASS_BASE_URL",
+            &format!("{}/v1", loopback::dead_address()),
+        );
         let provider = civ_ai::providers::FirepassKimiProvider::from_env().expect("construct");
 
         let error = provider
@@ -867,7 +907,10 @@ mod cloud_provider {
 #[test]
 fn fr_civ_ai_005_embed_provider_is_feature_gated_and_artifact_backed() {
     let manifest = crate_file("Cargo.toml");
-    assert_eq!(manifest_value(&manifest, "embed"), "embed = [\"dep:fastembed\"]");
+    assert_eq!(
+        manifest_value(&manifest, "embed"),
+        "embed = [\"dep:fastembed\"]"
+    );
     assert!(
         is_feature_gated(&crate_file("src/providers/mod.rs"), "embed", "embed"),
         "EmbedProvider must stay behind the `embed` feature gate"
@@ -876,7 +919,14 @@ fn fr_civ_ai_005_embed_provider_is_feature_gated_and_artifact_backed() {
     // The embed path never fetches weights: the loader only reads local files and
     // pulls in no HTTP/hub client.
     let source = crate_file("src/providers/embed.rs");
-    for forbidden in ["hf_hub", "from_pretrained", "reqwest", "ureq", "http://", "https://"] {
+    for forbidden in [
+        "hf_hub",
+        "from_pretrained",
+        "reqwest",
+        "ureq",
+        "http://",
+        "https://",
+    ] {
         assert!(
             !source.contains(forbidden),
             "the embed provider must not contact the network (`{forbidden}` found)"
@@ -900,14 +950,21 @@ async fn fr_civ_ai_005_embed_requests_are_batched_and_order_sensitive() {
         input_snapshot_hash: [9u8; 32],
     };
     let vectors = provider.embed(&request).await.expect("embed");
-    assert_eq!(vectors.len(), request.texts.len(), "one vector per batched text");
+    assert_eq!(
+        vectors.len(),
+        request.texts.len(),
+        "one vector per batched text"
+    );
 
     let reordered = EmbedRequest {
         texts: vec!["gamma".into(), "beta".into(), "alpha".into()],
         input_snapshot_hash: [9u8; 32],
     };
     let reordered_vectors = provider.embed(&reordered).await.expect("embed");
-    assert_eq!(vectors[0], reordered_vectors[2], "vectors follow input order");
+    assert_eq!(
+        vectors[0], reordered_vectors[2],
+        "vectors follow input order"
+    );
     assert_ne!(
         vectors[0], vectors[1],
         "distinct texts must not collapse onto one vector"
@@ -1030,11 +1087,11 @@ mod embed_provider {
         let scratch = ScratchDir::new("fr005-zero-dim");
         // The directory is empty: a dimension guard must fire first, so the
         // failure is about the requested dimension and not about missing files.
-        let error = match civ_ai::providers::EmbedProvider::try_from_model_dir("m", scratch.path(), 0)
-        {
-            Ok(_) => panic!("a zero embedding dimension must be rejected"),
-            Err(error) => error,
-        };
+        let error =
+            match civ_ai::providers::EmbedProvider::try_from_model_dir("m", scratch.path(), 0) {
+                Ok(_) => panic!("a zero embedding dimension must be rejected"),
+                Err(error) => error,
+            };
         match error {
             AiError::InvalidResponse(message) => {
                 assert_eq!(message, "embedding dimension must be greater than zero");
@@ -1078,10 +1135,17 @@ mod embed_provider {
             .expect("embed");
         assert_eq!(vectors.len(), 2);
         for vector in &vectors {
-            assert_eq!(vector.len(), dimension, "MiniLM must emit {dimension}-dim vectors");
+            assert_eq!(
+                vector.len(),
+                dimension,
+                "MiniLM must emit {dimension}-dim vectors"
+            );
             assert!(vector.iter().all(|value| value.is_finite()));
         }
-        assert_ne!(vectors[0], vectors[1], "distinct texts must embed distinctly");
+        assert_ne!(
+            vectors[0], vectors[1],
+            "distinct texts must embed distinctly"
+        );
     }
 }
 

@@ -62,14 +62,20 @@ mod tests {
         let v = MountainPassOracle.check(&sim);
         assert_eq!(v.fr_id, "FR-EMG-021");
         assert!(v.passed, "tick 0 must pass unconditionally: {}", v.detail);
-        assert!((v.threshold - 0.0).abs() < f64::EPSILON, "tick-0 threshold is 0.0");
+        assert!(
+            (v.threshold - 0.0).abs() < f64::EPSILON,
+            "tick-0 threshold is 0.0"
+        );
         let snap = sim.snapshot();
         assert_eq!(
             v.measured,
             (snap.citizen_count * snap.building_count) as f64,
             "measured is the citizen×building product"
         );
-        assert!(v.detail.contains("Mountain pass emergence"), "detail identifies the oracle");
+        assert!(
+            v.detail.contains("Mountain pass emergence"),
+            "detail identifies the oracle"
+        );
     }
 
     // FR-EMG-021 — after tick 0 the verdict demands citizens AND buildings.

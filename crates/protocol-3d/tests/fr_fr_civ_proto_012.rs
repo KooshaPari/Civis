@@ -62,6 +62,9 @@ mod fr_fr_civ_proto_012 {
         let bytes = encode_frame3d_bundle(&frames, &zstd).expect("encode zstd");
         let back = decode_frame3d_bundle(&bytes).expect("decode zstd");
         assert_eq!(back.frames, frames);
-        assert_eq!(back.tick, decoded.tick, "compression must not alter the tick");
+        assert_eq!(
+            back.tick, decoded.tick,
+            "compression must not alter the tick"
+        );
     }
 }

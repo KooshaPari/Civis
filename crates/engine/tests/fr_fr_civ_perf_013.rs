@@ -13,7 +13,10 @@ mod fr_fr_civ_perf_013 {
         sim.tick();
         let log = sim.replay_log();
         // Replay log should have events after a tick
-        assert!(!log.events.is_empty(), "replay log must have events after tick");
+        assert!(
+            !log.events.is_empty(),
+            "replay log must have events after tick"
+        );
     }
 
     /// Verify replay log event count increases with ticks.

@@ -10,7 +10,11 @@ fn threshold_event_emitted() {
     let mut tracker = ThresholdTracker::new();
     let events = tracker.check(1.0, 15.0, 10);
 
-    assert_eq!(events.len(), 1, "Should emit exactly one event for Paris crossing");
+    assert_eq!(
+        events.len(),
+        1,
+        "Should emit exactly one event for Paris crossing"
+    );
     assert_eq!(events[0].event_type, "climate.threshold.crossed.v1");
     assert_eq!(events[0].level, ThresholdLevel::Paris);
     assert_eq!(events[0].tick, 10);
@@ -37,7 +41,11 @@ fn simultaneous_crossings() {
     let events = tracker.check(3.5, 17.5, 50);
 
     // Should cross: Paris (1.0), ParisTarget (1.5), ParisUpper (2.0), Severe (3.0)
-    assert_eq!(events.len(), 4, "Should emit 4 events for a jump to +3.5 °C");
+    assert_eq!(
+        events.len(),
+        4,
+        "Should emit 4 events for a jump to +3.5 °C"
+    );
     assert!(events.iter().any(|e| e.level == ThresholdLevel::Paris));
     assert!(events.iter().any(|e| e.level == ThresholdLevel::Severe));
     assert_eq!(tracker.crossed_count(), 4);

@@ -19,11 +19,21 @@ mod fr_fr_civ_vehicle_012 {
 
         // Land speed is unchanged whether rail exists or not
         let land_speed = effective_speed(base, road, vehicle, 1.0, load, congestion);
-        let rail_speed = effective_speed(base, LaneClass::Rail.speed_mult(), vehicle, 1.0, load, congestion);
+        let rail_speed = effective_speed(
+            base,
+            LaneClass::Rail.speed_mult(),
+            vehicle,
+            1.0,
+            load,
+            congestion,
+        );
 
         // Rail is faster than road
         assert!(rail_speed > land_speed);
         // But road speed itself is independent
-        assert!(land_speed > base, "road vehicle must be faster than walking");
+        assert!(
+            land_speed > base,
+            "road vehicle must be faster than walking"
+        );
     }
 }

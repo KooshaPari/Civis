@@ -20,8 +20,8 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 
 #[cfg(test)]
 mod fr_fr_civ_ai_013 {
-    use civ_ai::AiProvider;
     use super::*;
+    use civ_ai::AiProvider;
 
     /// FR-CIV-AI-013 — Embedding provider produces fixed-dimension vectors
     /// suitable for cosine-distance drift measurement between memes/cultures.
@@ -70,7 +70,10 @@ mod fr_fr_civ_ai_013 {
         let vectors = rt.block_on(provider.embed(&req)).unwrap();
         let sim = cosine_similarity(&vectors[0], &vectors[1]);
         // These should not be identical (sim < 1.0) to allow drift detection
-        assert!(sim < 1.0, "different memes should produce different vectors");
+        assert!(
+            sim < 1.0,
+            "different memes should produce different vectors"
+        );
     }
 
     /// FR-CIV-AI-013 — Cosine similarity is in [-1, 1] and identical vectors
@@ -86,7 +89,10 @@ mod fr_fr_civ_ai_013 {
         let vectors = rt.block_on(provider.embed(&req)).unwrap();
         let v = &vectors[0];
         let sim_self = cosine_similarity(v, v);
-        assert!((sim_self - 1.0).abs() < 1e-6, "self-similarity must be ~1.0");
+        assert!(
+            (sim_self - 1.0).abs() < 1e-6,
+            "self-similarity must be ~1.0"
+        );
 
         // Test against zero vector
         let zero = vec![0.0; v.len()];

@@ -29,6 +29,9 @@ mod fr_fr_civ_mod_013 {
             0x01, 0x00, 0x00, 0x00, // version: 1
         ];
         let result = civ_mod_host::scan_wasm_determinism_report(minimal_wasm);
-        assert!(result.is_ok(), "minimal valid WASM should parse: {result:?}");
+        assert!(
+            result.is_ok(),
+            "minimal valid WASM should parse: {result:?}"
+        );
     }
 }

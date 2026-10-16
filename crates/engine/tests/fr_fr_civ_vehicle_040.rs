@@ -18,9 +18,23 @@ mod fr_fr_civ_vehicle_040 {
         let congestion = 1.0;
 
         // Route A: highway (fast)
-        let speed_a = effective_speed(base, LaneClass::Highway.speed_mult(), vehicle, coupling, load, congestion);
+        let speed_a = effective_speed(
+            base,
+            LaneClass::Highway.speed_mult(),
+            vehicle,
+            coupling,
+            load,
+            congestion,
+        );
         // Route B: trail (slow)
-        let speed_b = effective_speed(base, LaneClass::Trail.speed_mult(), vehicle, coupling, load, congestion);
+        let speed_b = effective_speed(
+            base,
+            LaneClass::Trail.speed_mult(),
+            vehicle,
+            coupling,
+            load,
+            congestion,
+        );
 
         assert!(speed_a > speed_b, "highway route must be faster");
         // Faster route has lower time-cost per unit

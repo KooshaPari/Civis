@@ -18,7 +18,7 @@ mod fr_fr_civ_vehicle_005 {
         let materials: BTreeSet<String> = cart.requires_materials.clone();
 
         // Save original era_hint and change it
-        let original_hint = cart.era_hint;
+        let _original_hint = cart.era_hint;
         let mut modified = cart.clone();
         modified.era_hint = 999; // absurd era hint
 

@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_brush_13 {
-    use civ_engine::brush_types::{ActionKind, TOTAL_ACTION_KINDS, all_action_kinds};
+    use civ_engine::brush_types::{all_action_kinds, ActionKind, TOTAL_ACTION_KINDS};
 
     /// FR-CIV-BRUSH-13 -- Total action kinds count and mutating distinction.
     #[test]

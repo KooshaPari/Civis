@@ -554,8 +554,16 @@ mod tests {
 
         // Per-faction ages: tech and prosperity each advance the age.
         assert_eq!(CivAge::evaluate(0, 0, 0), CivAge::Stone);
-        assert_eq!(CivAge::evaluate(400, 0, 0), CivAge::Bronze, "pop >= 300 reaches Bronze");
-        assert_eq!(CivAge::evaluate(0, 3, 0), CivAge::Iron, "tech >= 3 reaches Iron");
+        assert_eq!(
+            CivAge::evaluate(400, 0, 0),
+            CivAge::Bronze,
+            "pop >= 300 reaches Bronze"
+        );
+        assert_eq!(
+            CivAge::evaluate(0, 3, 0),
+            CivAge::Iron,
+            "tech >= 3 reaches Iron"
+        );
         assert_eq!(
             CivAge::evaluate(6_000, 0, 0),
             CivAge::Iron,

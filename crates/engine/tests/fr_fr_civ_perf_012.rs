@@ -20,6 +20,9 @@ mod fr_fr_civ_perf_012 {
         let mut sim = civ_engine::Simulation::with_seed(42u64);
         sim.tick();
         let log = sim.replay_log();
-        assert!(!log.events.is_empty(), "replay log should have events after tick");
+        assert!(
+            !log.events.is_empty(),
+            "replay log should have events after tick"
+        );
     }
 }

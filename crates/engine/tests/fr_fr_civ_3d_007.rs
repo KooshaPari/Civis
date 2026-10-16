@@ -9,9 +9,8 @@
 
 #[cfg(test)]
 mod fr_fr_civ_3d_007 {
-    use civ_engine::{create_rng, Fixed, WorldState, step};
+    use civ_engine::{create_rng, step, Fixed, WorldState};
     use rand::Rng;
-    use rand::SeedableRng;
 
     /// Same seed + same steps = identical world state trajectory.
     #[test]

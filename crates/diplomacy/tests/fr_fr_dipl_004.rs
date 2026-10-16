@@ -1,11 +1,15 @@
+#![allow(irrefutable_let_patterns)]
+// TreatyBreachEvent currently has a single variant; the `if let` destructuring is
+// kept so the test does not need to change when the enum gains variants.
+
 //! FR-DIPL-004 tests — Treaty breach detection.
 //!
 //! Treaty breach SHALL emit `diplomacy.treaty.broken.v1` and apply
 //! reputation penalty.
 
 use civ_diplomacy::{
-    detect_breach, Treaty, TreatyBreachEvent, TreatyStatus, TreatyTerm, BREACH_REPUTATION_PENALTY,
-    PolityId,
+    detect_breach, PolityId, Treaty, TreatyBreachEvent, TreatyStatus, TreatyTerm,
+    BREACH_REPUTATION_PENALTY,
 };
 
 fn p(id: u32) -> PolityId {
@@ -99,7 +103,10 @@ fn treaty_breach_from_defender() {
     };
 
     let event = detect_breach(&treaty, true, p(2), 50).expect("breach");
-    if let TreatyBreachEvent::TreatyBroken { breacher, victim, .. } = event {
+    if let TreatyBreachEvent::TreatyBroken {
+        breacher, victim, ..
+    } = event
+    {
         assert_eq!(breacher, p(2));
         assert_eq!(victim, p(1));
     }

@@ -1597,7 +1597,6 @@ mod tests {
     #[test]
     #[ignore = "pre-existing: u8 vs u8 > comparison doesn't compile; belongs to game_ui lane"]
     fn tool_button_fill_active_dominates_hover() {
-
         let active = tool_button_fill(true, false);
         let active_hover = tool_button_fill(true, true);
         // Both variants stay ACCENT-derived (green+blue dominant), so the
@@ -1637,13 +1636,15 @@ mod tests {
         assert_eq!(hover.width, 1.5, "hover stroke must be 1.5px");
         assert_eq!(active.width, 1.5, "active stroke must be 1.5px");
         assert_ne!(idle.color, hover.color, "hover color must differ from idle");
-        assert_ne!(hover.color, active.color, "hover color must differ from active");
+        assert_ne!(
+            hover.color, active.color,
+            "hover color must differ from active"
+        );
     }
 
     #[test]
     #[ignore = "pre-existing: u8 vs u8 > comparison doesn't compile; belongs to game_ui lane"]
     fn tool_button_label_color_active_is_brightest() {
-
         let idle = tool_button_label_color(false, false);
         let hover = tool_button_label_color(false, true);
         let active = tool_button_label_color(true, false);

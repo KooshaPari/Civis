@@ -354,8 +354,8 @@ impl Simulation {
 
         // An empty ledger means no avalanche observation, so a zero rolling
         // mean is unknown rather than evidence of sustained subcriticality.
-        let subcritical = !self.emergence_branching.ledger.is_empty()
-            && sigma_bar < SIGMA_SUBCRITICAL;
+        let subcritical =
+            !self.emergence_branching.ledger.is_empty() && sigma_bar < SIGMA_SUBCRITICAL;
         self.emergence_branching.subcritical_tick_streak = if subcritical {
             self.emergence_branching
                 .subcritical_tick_streak

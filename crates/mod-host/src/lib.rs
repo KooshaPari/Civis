@@ -235,7 +235,6 @@ pub enum ManifestError {
     },
 }
 
-/// Root manifest path inside a `.civmod` ZIP archive.
 // The following 1 requirement tags were removed from CIVMOD_MANIFEST_NAME.
 // They are not discharged by this symbol. The tag named a requirement whose
 // behavior lives elsewhere, or a requirement with no implementation at all, so
@@ -245,6 +244,7 @@ pub enum ManifestError {
 // Removed, with the reason each cannot be discharged here:
 //  [unbound] FR-CIV-MOD-020: NOT IMPLEMENTED, and this constant is the least capable thing it could sit on. The requirement is "Save-game / mod compatibility + migration" (docs/design/modding-platform.md:46, §13 at :500). `git grep -n "save_schema\|min_save_schema\|max_save_schema"` across crates/mod-host and crates/engine/src/save_bundle.rs returns zero hits, so no save records a mod set, no manifest declares a supported save range, and no migration path exists. This constant is a single &str naming the root path inside the ZIP ("manifest.toml", lib.rs:246); a filename cannot express a version range or migrate a save.
 
+/// Root manifest path inside a `.civmod` ZIP archive.
 pub const CIVMOD_MANIFEST_NAME: &str = "manifest.toml";
 
 // The following 1 requirement tags were removed from ModLoadedRecord.
@@ -443,7 +443,7 @@ impl ModHost {
         self.registry.mods()
     }
 
-// FR-CIV-TACTICS-067
+    // FR-CIV-TACTICS-067
     /// `mod.loaded.v1` records emitted on successful loads.
     #[must_use]
     pub fn loaded_records(&self) -> &[ModLoadedRecord] {
@@ -2532,7 +2532,7 @@ write_policy = true
     /// FR-MOD-005: Mods can register hook handlers for simulation events.
     #[test]
     fn fr_mod_005_can_register_resources() {
-        use crate::hooks::{ModHook, ModHookEngine, HookResult};
+        use crate::hooks::{HookResult, ModHook, ModHookEngine};
 
         let mut engine = ModHookEngine::new();
 
@@ -2542,16 +2542,17 @@ write_policy = true
         engine.register("event-mod", ModHook::OnEvent("war.declared".into()), 1);
 
         // Verify registrations
+        assert_eq!(engine.get_registrations(&ModHook::OnTick(0)).len(), 1);
         assert_eq!(
-            engine.get_registrations(&ModHook::OnTick(0)).len(),
+            engine
+                .get_registrations(&ModHook::OnBuildPhase("economy".into()))
+                .len(),
             1
         );
         assert_eq!(
-            engine.get_registrations(&ModHook::OnBuildPhase("economy".into())).len(),
-            1
-        );
-        assert_eq!(
-            engine.get_registrations(&ModHook::OnEvent("war.declared".into())).len(),
+            engine
+                .get_registrations(&ModHook::OnEvent("war.declared".into()))
+                .len(),
             1
         );
 
@@ -2560,17 +2561,15 @@ write_policy = true
             ("policy-mod", HookResult::Modify("tax_rate=0.15".into())),
             ("event-mod", HookResult::Continue),
         ];
-        let final_result = engine.execute_with_results(
-            ModHook::OnBuildPhase("economy".into()),
-            &results,
-        );
+        let final_result =
+            engine.execute_with_results(ModHook::OnBuildPhase("economy".into()), &results);
         assert_eq!(final_result, HookResult::Modify("tax_rate=0.15".into()));
     }
 
     /// FR-MOD-005: Multiple mods register for the same event; priority ordering.
     #[test]
     fn fr_mod_005_multiple_mods_register_same_event() {
-        use crate::hooks::{ModHook, ModHookEngine, HookResult};
+        use crate::hooks::{HookResult, ModHook, ModHookEngine};
 
         let mut engine = ModHookEngine::new();
         engine.register("mod-a", ModHook::OnTick(100), 100);

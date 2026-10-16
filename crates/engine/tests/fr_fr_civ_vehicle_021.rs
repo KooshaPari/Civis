@@ -21,7 +21,17 @@ mod fr_fr_civ_vehicle_021 {
         let half = effective_speed(base, lane, vehicle, coupling, 0.5, congestion);
         let full = effective_speed(base, lane, vehicle, coupling, 1.0, congestion);
 
-        assert!(empty > half, "empty ({}) must be faster than half-laden ({})", empty, half);
-        assert!(half > full, "half-laden ({}) must be faster than full ({})", half, full);
+        assert!(
+            empty > half,
+            "empty ({}) must be faster than half-laden ({})",
+            empty,
+            half
+        );
+        assert!(
+            half > full,
+            "half-laden ({}) must be faster than full ({})",
+            half,
+            full
+        );
     }
 }

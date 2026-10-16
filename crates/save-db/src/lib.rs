@@ -358,9 +358,7 @@ pub fn paginate_by_tick_desc(
         (SessionSaveRecord::Slot(s1), SessionSaveRecord::Slot(s2)) => {
             s1.slot_name.cmp(&s2.slot_name)
         }
-        (SessionSaveRecord::Autosave(a1), SessionSaveRecord::Autosave(a2)) => {
-            a2.tick.cmp(&a1.tick)
-        }
+        (SessionSaveRecord::Autosave(a1), SessionSaveRecord::Autosave(a2)) => a2.tick.cmp(&a1.tick),
         (SessionSaveRecord::Slot(_), SessionSaveRecord::Autosave(_)) => std::cmp::Ordering::Less,
         (SessionSaveRecord::Autosave(_), SessionSaveRecord::Slot(_)) => std::cmp::Ordering::Greater,
     });
@@ -731,12 +729,8 @@ mod tests {
     /// **FR-SAVE-022** — `session.save_failed.v1` carries the error code.
     #[test]
     fn session_save_failed_event_json_has_error_code() {
-        let json = format_session_save_failed_event_json(
-            "sess-1",
-            "SAVE_IO_ERROR",
-            "disk full",
-            99,
-        );
+        let json =
+            format_session_save_failed_event_json("sess-1", "SAVE_IO_ERROR", "disk full", 99);
         let v: serde_json::Value = serde_json::from_str(&json).expect("parse json");
         assert_eq!(v["event_type"], "session.save_failed.v1");
         assert_eq!(v["error_code"], "SAVE_IO_ERROR");
@@ -922,11 +916,8 @@ mod tests {
         {
             let conn = rusqlite::Connection::open(&path).expect("open raw");
             conn.execute_batch(SCHEMA).expect("create schema");
-            conn.execute(
-                "INSERT INTO save_schema_version (version) VALUES (999)",
-                [],
-            )
-            .expect("stamp future version");
+            conn.execute("INSERT INTO save_schema_version (version) VALUES (999)", [])
+                .expect("stamp future version");
         }
         // Opening this database should fail with OutdatedSchemaVersion.
         let result = SaveDb::open(&path);
@@ -935,7 +926,7 @@ mod tests {
                 assert_eq!(found, 999);
                 assert_eq!(max, SCHEMA_VERSION);
             }
-            other => panic!("expected OutdatedSchemaVersion, got a different error"),
+            _other => panic!("expected OutdatedSchemaVersion, got a different error"),
         }
     }
 

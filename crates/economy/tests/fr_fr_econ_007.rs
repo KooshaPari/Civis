@@ -33,7 +33,10 @@ mod fr_fr_econ_007 {
         let result = agreement.bilateral_transfer(&mut from, &mut to);
         assert!(result.is_err());
         match result.unwrap_err() {
-            TradeAgreementError::InsufficientJoules { available, required } => {
+            TradeAgreementError::InsufficientJoules {
+                available,
+                required,
+            } => {
                 assert_eq!(available, 100);
                 assert_eq!(required, 200);
             }
@@ -53,7 +56,10 @@ mod fr_fr_econ_007 {
         let result = agreement.bilateral_transfer(&mut from, &mut to);
         assert!(result.is_err());
         match result.unwrap_err() {
-            TradeAgreementError::InsufficientMilliCredits { available, required } => {
+            TradeAgreementError::InsufficientMilliCredits {
+                available,
+                required,
+            } => {
                 assert_eq!(available, 50);
                 assert_eq!(required, 200);
             }
@@ -85,6 +91,9 @@ mod fr_fr_econ_007 {
         let agreement = TradeAgreement::new(0, 1, 300, 0);
         agreement.bilateral_transfer(&mut from, &mut to).unwrap();
         let total_after = from.balance_joules() + to.balance_joules();
-        assert_eq!(total_before, total_after, "total joules conserved across trade");
+        assert_eq!(
+            total_before, total_after,
+            "total joules conserved across trade"
+        );
     }
 }

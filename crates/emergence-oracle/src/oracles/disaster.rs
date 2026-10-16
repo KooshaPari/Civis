@@ -59,7 +59,10 @@ mod tests {
         assert_eq!(v.fr_id, "FR-EMG-013");
         assert!(v.passed, "tick 0 must pass: {}", v.detail);
         assert_eq!(v.threshold, 0.0);
-        assert!(v.measured >= 0.0, "measured is the citizen×building product");
+        assert!(
+            v.measured >= 0.0,
+            "measured is the citizen×building product"
+        );
     }
 
     // FR-EMG-013 — after warmup the oracle requires an inhabited, exposed

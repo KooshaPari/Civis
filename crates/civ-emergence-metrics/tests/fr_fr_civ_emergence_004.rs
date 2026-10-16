@@ -5,7 +5,9 @@
 
 #[cfg(test)]
 mod fr_fr_civ_emergence_004 {
-    use civ_emergence_metrics::{mutual_information_bits, mutual_information_normalised, JointHistogram};
+    use civ_emergence_metrics::{
+        mutual_information_bits, mutual_information_normalised, JointHistogram,
+    };
 
     #[test]
     fn verify_fr_civ_emergence_004_basic() {
@@ -15,7 +17,10 @@ mod fr_fr_civ_emergence_004 {
             jh.observe(i % 3, i % 3);
         }
         let mi = mutual_information_bits(&jh);
-        assert!(mi > 1.0, "perfect correlation should have high MI, got {mi}");
+        assert!(
+            mi > 1.0,
+            "perfect correlation should have high MI, got {mi}"
+        );
     }
 
     #[test]
@@ -30,7 +35,10 @@ mod fr_fr_civ_emergence_004 {
             }
         }
         let mi = mutual_information_bits(&jh);
-        assert!(mi.abs() < 0.1, "independent should have near-zero MI, got {mi}");
+        assert!(
+            mi.abs() < 0.1,
+            "independent should have near-zero MI, got {mi}"
+        );
     }
 
     #[test]
@@ -40,6 +48,9 @@ mod fr_fr_civ_emergence_004 {
             jh.observe(i % 4, i % 4);
         }
         let nmi = mutual_information_normalised(&jh);
-        assert!(nmi >= 0.0 && nmi <= 1.0, "NMI should be in [0,1], got {nmi}");
+        assert!(
+            (0.0..=1.0).contains(&nmi),
+            "NMI should be in [0,1], got {nmi}"
+        );
     }
 }

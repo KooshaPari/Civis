@@ -15,7 +15,7 @@ use civ_engine::Simulation;
 #[test]
 fn no_global_resources() {
     let mut a = Simulation::with_seed(0xAAAA_u64);
-    let mut b = Simulation::with_seed(0xBBBB_u64);
+    let b = Simulation::with_seed(0xBBBB_u64);
 
     let a_entities = a.world.len();
     let b_entities = b.world.len();
@@ -53,7 +53,11 @@ fn identical_runs_stay_in_lockstep_without_sharing() {
     let mut c = Simulation::with_seed(0x5EED_u64);
     let mut d = Simulation::with_seed(0x5EED_u64);
 
-    assert_eq!(c.world.len(), d.world.len(), "same seed => same initial world");
+    assert_eq!(
+        c.world.len(),
+        d.world.len(),
+        "same seed => same initial world"
+    );
 
     for _ in 0..5 {
         c.tick();

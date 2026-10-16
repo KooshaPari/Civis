@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_proto_001 {
-    use civ_protocol_3d::{SCHEMA_VERSION, FRAME3D_BINARY_MAGIC};
+    use civ_protocol_3d::{FRAME3D_BINARY_MAGIC, SCHEMA_VERSION};
 
     #[test]
     fn verify_fr_civ_proto_001_basic() {

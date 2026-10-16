@@ -87,17 +87,15 @@ impl ThresholdTracker {
     /// `anomaly_c`: current temperature anomaly above baseline.
     /// `mean_temp_c`: current absolute temperature.
     /// `tick`: current simulation tick.
-    pub fn check(
-        &mut self,
-        anomaly_c: f64,
-        mean_temp_c: f64,
-        tick: u64,
-    ) -> Vec<ThresholdEvent> {
+    pub fn check(&mut self, anomaly_c: f64, mean_temp_c: f64, tick: u64) -> Vec<ThresholdEvent> {
         self.pending_events.clear();
 
         for level in ThresholdLevel::standard_levels() {
             let threshold = level.anomaly_c();
-            let already_crossed = self.crossed_anomalies.iter().any(|a| (*a - threshold).abs() < 1e-10);
+            let already_crossed = self
+                .crossed_anomalies
+                .iter()
+                .any(|a| (*a - threshold).abs() < 1e-10);
             if !already_crossed && anomaly_c >= threshold {
                 self.crossed_anomalies.push(threshold);
                 self.pending_events.push(ThresholdEvent {

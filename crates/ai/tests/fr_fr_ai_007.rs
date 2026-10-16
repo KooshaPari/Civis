@@ -64,11 +64,17 @@ fn time_capped_within_budget() {
     let elapsed = start.elapsed();
 
     // Should have stopped well before 100_000 iterations due to time budget.
-    assert!(tree.iterations() < 100_000,
-        "expected early termination, ran {} iterations", tree.iterations());
+    assert!(
+        tree.iterations() < 100_000,
+        "expected early termination, ran {} iterations",
+        tree.iterations()
+    );
     // Should respect the 20ms budget (with some tolerance for scheduling).
-    assert!(elapsed.as_millis() < 500,
-        "search took {:?}, expected < 500ms (20ms budget + overhead)", elapsed);
+    assert!(
+        elapsed.as_millis() < 500,
+        "search took {:?}, expected < 500ms (20ms budget + overhead)",
+        elapsed
+    );
 }
 
 #[test]

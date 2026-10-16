@@ -31,8 +31,14 @@ mod fr_fr_net_002 {
     /// FR-NET-002: Different seeds are preserved in state.
     #[test]
     fn different_seeds_preserved() {
-        let s1 = civ_engine::WorldState { rng_seed: 111, ..civ_engine::WorldState::default() };
-        let s2 = civ_engine::WorldState { rng_seed: 222, ..civ_engine::WorldState::default() };
+        let s1 = civ_engine::WorldState {
+            rng_seed: 111,
+            ..civ_engine::WorldState::default()
+        };
+        let s2 = civ_engine::WorldState {
+            rng_seed: 222,
+            ..civ_engine::WorldState::default()
+        };
         assert_ne!(s1.rng_seed, s2.rng_seed);
     }
 }

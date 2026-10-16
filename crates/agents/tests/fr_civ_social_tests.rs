@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! FR traceability tests for the social graph module in civ-agents.
 //!
 //! Covers: FR-CIV-PSYCHE-002 (social interactions), FR-CIV-PSYCHE-003

@@ -1,3 +1,7 @@
+#![allow(non_snake_case)]
+// FR-id test names keep their requirement-code form (e.g. fr_civ_tactics_025_)
+// rather than snake_case; renaming would break the FR-traceability mapping.
+
 //! Tests for FR-CIV-TACTICS-025-
 //!
 //! Epic: FR-CIV-TACTICS

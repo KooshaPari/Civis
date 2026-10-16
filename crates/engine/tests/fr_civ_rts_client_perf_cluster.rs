@@ -1317,6 +1317,9 @@ fn fr_perf_004_burst_enqueue_stays_inside_one_frame() {
 /// "Async writes" is only meaningful if the writer handle can be moved to (and
 /// shared with) another thread; `AsyncWriter` is `Send + Sync` and a
 /// cross-thread enqueue is observed by the channel, not by the tick loop.
+// Verifies the exact public fn signature; the deliberately explicit signature
+// type is the point of the test.
+#[allow(clippy::type_complexity)]
 #[test]
 fn fr_perf_004_async_writer_is_send_sync_and_enqueues_across_threads() {
     use civ_save_db::{AsyncWriteRequest, AsyncWriter};

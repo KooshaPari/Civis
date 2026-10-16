@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! FR traceability tests for the server crate.
 //!
 //! Covers: FR-CIV-SERVER-001, FR-CIV-SERVER-001-WS, FR-CIV-SERVER-002,

@@ -1,3 +1,7 @@
+#![allow(clippy::doc_lazy_continuation)]
+// Doc-comment list continuation lines kept as written; reformatting FR requirement
+// text is out of scope for this no-behavior-change cleanup.
+
 //! FR-CIV-NOTIFY-9xx cluster — real behavioural oracles.
 //!
 //! Replaces the auto-generated `fr_fr_civ_notify_9{01,10,11,20,21}.rs`

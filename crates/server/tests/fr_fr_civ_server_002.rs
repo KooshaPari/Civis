@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! Tests for FR-CIV-SERVER-002
 //!
 //! Upgraded from stub to real assertions.

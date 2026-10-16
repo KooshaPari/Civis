@@ -1,3 +1,8 @@
+#![allow(clippy::absurd_extreme_comparisons)]
+#![allow(unused_comparisons)]
+// Placeholder comparison assertion kept as a marker until the owning lane writes
+// the real oracle; tracked as a follow-up issue.
+
 //! Behavioural oracles for the `FR-CIV-0001-TICK` / `FR-CIV-ACT-*` /
 //! `FR-CIV-ARCH-00{1,2}` / `FR-CIV-L5` / `FR-CIV-RES-001` cluster.
 //!

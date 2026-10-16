@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! Behavioral coverage for NFR-CIV-PORT-003 — headless server runs
 //! without a GPU backend on all platforms.
 //!

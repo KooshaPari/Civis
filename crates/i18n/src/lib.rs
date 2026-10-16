@@ -60,6 +60,9 @@ impl Locale {
     }
 
     /// Parse from a BCP-47-like string (e.g., from `Accept-Language`).
+    // Parses a language tag without region handling; distinct from FromStr
+    // (returns Option, not Result). Renaming to match the trait is a follow-up issue.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Locale> {
         // Normalize: strip country/region suffixes, lowercase
         let tag = s.split(&['-', '_']).next().unwrap_or(s).to_lowercase();

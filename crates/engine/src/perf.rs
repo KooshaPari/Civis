@@ -72,6 +72,8 @@ pub fn tick_over_budget(profile: &TickProfile, budget_micros: u64) -> bool {
 }
 
 #[cfg(test)]
+// Tests build state via Default::default() + explicit assignments for readability.
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 

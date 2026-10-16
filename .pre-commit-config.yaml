@@ -58,7 +58,6 @@ repos:
       rev: v2.0.0
       hooks:
           - id: biome-check
-            args: [--write]
 
     # ── Go ──
     - repo: https://github.com/golangci/golangci-lint

@@ -1,3 +1,7 @@
+#![allow(clippy::single_match)]
+// The `Err` arm is intentionally explicit (empty/invalid WASM may fail to parse)
+// so the tolerance is documented; a bare `if let Ok` would hide it.
+
 //! Tests for FR-CIV-MOD-016 — Float contamination scanning
 //!
 //! Epic: FR-CIV-MOD

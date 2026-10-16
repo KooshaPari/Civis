@@ -11,9 +11,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::postfx::error::{PostFxError, PostFxResult};
-use crate::postfx::ports::post_fx_pass::{
-    PassDescriptor, PassEffect, PassQuality, PostFxContext, PostFxPass,
-};
+#[cfg(test)]
+use crate::postfx::ports::post_fx_pass::PassQuality;
+use crate::postfx::ports::post_fx_pass::{PassDescriptor, PassEffect, PostFxContext, PostFxPass};
 use crate::postfx::ports::shader_availability::PostFxShaderAvailability;
 
 /// Stable shader name used by the SSAO pass.

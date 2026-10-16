@@ -1,3 +1,7 @@
+#![allow(irrefutable_let_patterns)]
+// TreatyBreachEvent currently has a single variant; the `if let` destructuring is
+// kept so the test does not need to change when the enum gains variants.
+
 //! FR-DIPL-004 tests — Treaty breach detection.
 //!
 //! Treaty breach SHALL emit `diplomacy.treaty.broken.v1` and apply

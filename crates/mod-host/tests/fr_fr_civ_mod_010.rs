@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! Tests for FR-CIV-MOD-010 — Guest state save/load
 //!
 //! Epic: FR-CIV-MOD

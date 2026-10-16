@@ -1,3 +1,7 @@
+#![allow(non_snake_case)]
+// Legacy camelCase test fn name (`faction_countInspectable`) kept as-is; renaming
+// tests is out of scope for this no-behavior-change cleanup.
+
 //! Tests for FR-CIV-INSPECT-903 - Region Inspection View
 //!
 //! Epic: FR-CIV-INSPECT

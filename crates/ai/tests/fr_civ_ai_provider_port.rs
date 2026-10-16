@@ -32,7 +32,18 @@
 
 use std::sync::Arc;
 
-use civ_ai::{AiError, AiProvider, Capabilities, DummyAiProvider, EmbedRequest, GenRequest};
+use civ_ai::{AiProvider, Capabilities, DummyAiProvider, EmbedRequest, GenRequest};
+
+// Only the feature-gated provider tests name `AiError`; gating the import the
+// same way keeps `-D unused-imports` clean when this test target builds with
+// default features.
+#[cfg(any(
+    feature = "local",
+    feature = "dev",
+    feature = "cloud",
+    feature = "embed"
+))]
+use civ_ai::AiError;
 
 /// Compile-time proof that the port is object-safe and shareable.
 ///

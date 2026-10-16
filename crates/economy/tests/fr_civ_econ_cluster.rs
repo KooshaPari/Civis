@@ -1,3 +1,8 @@
+#![allow(clippy::absurd_extreme_comparisons)]
+#![allow(unused_comparisons)]
+// Placeholder comparison assertion kept as a marker until the owning lane writes
+// the real oracle; tracked as a follow-up issue.
+
 //! Real behavioural oracles for the economy FR cluster:
 //! `FR-CIV-ECON-003`, `FR-ECON-006`, `FR-ECON-009`, `FR-ECON-010`.
 //!

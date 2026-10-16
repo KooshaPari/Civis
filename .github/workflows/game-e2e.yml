@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 45
 
     env:
-      CIV_BEVY_BACKEND: gl
+      CIV_BEVY_BACKEND: vulkan
       LIBGL_ALWAYS_SOFTWARE: "1"
       GALLIUM_DRIVER: llvmpipe
       MESA_GL_VERSION_OVERRIDE: "3.3"
@@ -59,13 +59,16 @@ jobs:
             libasound2-dev \
             libudev-dev \
             libxkbcommon-dev \
+            libxkbcommon-x11-0 \
             libwayland-dev \
             libx11-dev \
             libxcursor-dev \
             libxi-dev \
             libxrandr-dev \
             pkg-config \
-            jq
+            jq \
+            libvulkan1 \
+            mesa-vulkan-drivers
 
       - name: Install websocat
         run: |
@@ -77,9 +80,13 @@ jobs:
         run: |
           cargo build --locked --release \
             -p civ-server \
+            --bin civ-server
+          cargo build --locked --release \
             -p civ-bevy-ref \
             --bin civ-standalone \
             --features bevy,egui,client-bins
+          test -x target/release/civ-server
+          test -x target/release/civ-standalone
 
       - name: Start Xvfb
         run: |
@@ -97,6 +104,8 @@ jobs:
         with:
           name: game-e2e-captures-${{ github.run_id }}
           path: .game-e2e/
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 14
 
       - name: Upload game logs

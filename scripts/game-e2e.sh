@@ -91,8 +91,11 @@ GAME_BIN="target/release/civ-standalone"
 
 if [[ "${QUICK}" -eq 0 ]]; then
     step "Building game client + server (release)..."
-    cargo build --locked --release -p civ-server -p civ-bevy-ref \
-        --bin civ-standalone --features bevy,egui,client-bins 2>&1 | tail -5
+    cargo build --locked --release -p civ-server --bin civ-server
+    cargo build --locked --release -p civ-bevy-ref \
+        --bin civ-standalone --features bevy,egui,client-bins
+    [[ -x "${SERVER_BIN}" ]] || { fail "Binary not found: ${SERVER_BIN}"; exit 1; }
+    [[ -x "${GAME_BIN}" ]] || { fail "Binary not found: ${GAME_BIN}"; exit 1; }
     ok "Build complete"
 else
     step "Skipping build (--quick)"
@@ -121,18 +124,39 @@ fi
 
 # ── Start Xvfb (headless) ──────────────────────────────────────────
 if [[ "${HEADLESS}" -eq 1 ]]; then
-    step "Starting Xvfb (software rendering)..."
     export DISPLAY=:99
-    Xvfb :99 -screen 0 1920x1080x24 +extension RANDR &
-    XVFB_PID=$!
-    sleep 1
+    if [[ -e /tmp/.X99-lock ]]; then
+        step "Xvfb already running on :99"
+    else
+        step "Starting Xvfb (software rendering)..."
+        Xvfb :99 -screen 0 1920x1080x24 +extension RANDR &
+        XVFB_PID=$!
+        sleep 1
+    fi
 
-    # Force Mesa software rendering
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export GALLIUM_DRIVER=llvmpipe
-    export MESA_GL_VERSION_OVERRIDE=3.3
-    export CIV_BEVY_BACKEND=gl
-    dim "Display: ${DISPLAY}, Driver: llvmpipe, Backend: GL"
+    # The client accepts dx12, vulkan, or metal. `gl` is ignored and the
+    # preflight then finds no adapter on a headless runner. lavapipe is the
+    # software Vulkan ICD.
+    if [[ "$(uname -s)" == "Linux" ]]; then
+        export CIV_BEVY_BACKEND=vulkan
+        icd=""
+        for candidate in \
+            /usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            /usr/share/vulkan/icd.d/lvp_icd.json
+        do
+            if [[ -f "${candidate}" ]]; then
+                icd="${candidate}"
+                break
+            fi
+        done
+        if [[ -z "${icd}" ]]; then
+            fail "lavapipe ICD missing; install mesa-vulkan-drivers"
+            exit 2
+        fi
+        export VK_ICD_FILENAMES="${icd}"
+        export VK_DRIVER_FILES="${icd}"
+        dim "Display: ${DISPLAY}, Backend: vulkan, ICD: ${icd}"
+    fi
 fi
 
 # ── Start server ─────────────────────────────────────────────────────
@@ -154,7 +178,8 @@ done
 step "Launching game client..."
 export CIV_ATTACH_MODE=standalone
 export CIV_SERVER_URL="ws://127.0.0.1:${PORT}/ws"
-export CIVIS_SMOKE_FRAMES="${FRAMES_TO_WAIT}"
+# Do not set CIVIS_SMOKE_FRAMES. On llvmpipe a 120-frame cap exits before
+# the health check. The workflow step timeout bounds a hung client.
 export BEVY_ASSET_ROOT="${REPO_ROOT}/clients/bevy-ref"
 export CARGO_TARGET_DIR="${REPO_ROOT}/target"
 export RUST_LOG="info"
@@ -173,6 +198,14 @@ sleep 5
 if ! kill -0 "${GAME_PID}" 2>/dev/null; then
     fail "Game crashed on startup"
     cat "${LOGS}/game.log" >&2
+    crash_dir="${HOME}/.local/share/civis/crashes"
+    if [[ -d "${crash_dir}" ]]; then
+        latest="$(ls -1t "${crash_dir}"/crash-*.log 2>/dev/null | head -1 || true)"
+        if [[ -n "${latest}" ]]; then
+            echo "---- ${latest} ----" >&2
+            cat "${latest}" >&2
+        fi
+    fi
     exit 2
 fi
 ok "Game running"
@@ -321,7 +354,7 @@ capture_screenshot() {
         fi
     fi
     dim "  ${name} (not captured — game window may not be visible)"
-    return 1
+    return 0
 }
 
 # Main menu (game starts here)
@@ -416,6 +449,7 @@ if kill -0 "${GAME_PID}" 2>/dev/null; then
     ok "Game: still running"
 else
     fail "Game: process died"
+    tail -n 20 "${LOGS}/game.log" >&2 || true
     exit 3
 fi
 

@@ -166,17 +166,19 @@ rpc() {
     payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
         "${id}" "$(json_quote "${method}")" "${params}")"
 
-    # `websocat -n` opens a fresh connection per call (stateless, idempotent).
-    local url
+    # `-n` is --no-close. Without `-1` the socket stays open and the
+    # server's push stream (scene frames, binary F3D prefixes) is appended
+    # to the JSON-RPC reply. jq then rejects that stream.
+    local url raw
     url="$(ws_url)"
 
-    # -1 = exit after one full duplex exchange, --protocol=... for the
-    # Sec-WebSocket-Protocol header if a server requires it. We always use
-    # the default protocol.
-    timeout "${RPC_TIMEOUT_SECONDS}" \
-        websocat -n --ping-interval 5 --ping-timeout 8 \
-            "${url}" < <(printf '%s\n' "${payload}") 2>/dev/null \
-        || true
+    raw="$(
+        timeout "${RPC_TIMEOUT_SECONDS}" \
+            websocat -1 -n -t --ping-interval 5 --ping-timeout 8 \
+                "${url}" < <(printf '%s\n' "${payload}") 2>/dev/null \
+            || true
+    )"
+    printf '%s\n' "${raw}" | tr -d '\000' | awk '/^\{"jsonrpc"/ { print; exit }'
 }
 
 json_quote() {

@@ -91,8 +91,11 @@ GAME_BIN="target/release/civ-standalone"
 
 if [[ "${QUICK}" -eq 0 ]]; then
     step "Building game client + server (release)..."
-    cargo build --locked --release -p civ-server -p civ-bevy-ref \
-        --bin civ-standalone --features bevy,egui,client-bins 2>&1 | tail -5
+    cargo build --locked --release -p civ-server --bin civ-server
+    cargo build --locked --release -p civ-bevy-ref \
+        --bin civ-standalone --features bevy,egui,client-bins
+    [[ -x "${SERVER_BIN}" ]] || { fail "Binary not found: ${SERVER_BIN}"; exit 1; }
+    [[ -x "${GAME_BIN}" ]] || { fail "Binary not found: ${GAME_BIN}"; exit 1; }
     ok "Build complete"
 else
     step "Skipping build (--quick)"

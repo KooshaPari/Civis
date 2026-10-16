@@ -77,9 +77,13 @@ jobs:
         run: |
           cargo build --locked --release \
             -p civ-server \
+            --bin civ-server
+          cargo build --locked --release \
             -p civ-bevy-ref \
             --bin civ-standalone \
             --features bevy,egui,client-bins
+          test -x target/release/civ-server
+          test -x target/release/civ-standalone
 
       - name: Start Xvfb
         run: |

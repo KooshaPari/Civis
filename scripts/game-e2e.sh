@@ -130,12 +130,29 @@ if [[ "${HEADLESS}" -eq 1 ]]; then
     XVFB_PID=$!
     sleep 1
 
-    # Force Mesa software rendering
-    export LIBGL_ALWAYS_SOFTWARE=1
-    export GALLIUM_DRIVER=llvmpipe
-    export MESA_GL_VERSION_OVERRIDE=3.3
-    export CIV_BEVY_BACKEND=gl
-    dim "Display: ${DISPLAY}, Driver: llvmpipe, Backend: GL"
+    # The client accepts dx12, vulkan, or metal. `gl` is ignored and the
+    # preflight then finds no adapter on a headless runner. lavapipe is the
+    # software Vulkan ICD.
+    if [[ "$(uname -s)" == "Linux" ]]; then
+        export CIV_BEVY_BACKEND=vulkan
+        icd=""
+        for candidate in \
+            /usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            /usr/share/vulkan/icd.d/lvp_icd.json
+        do
+            if [[ -f "${candidate}" ]]; then
+                icd="${candidate}"
+                break
+            fi
+        done
+        if [[ -z "${icd}" ]]; then
+            fail "lavapipe ICD missing; install mesa-vulkan-drivers"
+            exit 2
+        fi
+        export VK_ICD_FILENAMES="${icd}"
+        export VK_DRIVER_FILES="${icd}"
+        dim "Display: ${DISPLAY}, Backend: vulkan, ICD: ${icd}"
+    fi
 fi
 
 # ── Start server ─────────────────────────────────────────────────────

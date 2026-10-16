@@ -104,6 +104,8 @@ jobs:
         with:
           name: game-e2e-captures-${{ github.run_id }}
           path: .game-e2e/
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 14
 
       - name: Upload game logs

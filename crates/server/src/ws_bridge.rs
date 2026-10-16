@@ -1242,7 +1242,11 @@ async fn handle_jsonrpc_text(
                     let snap = sim.snapshot();
                     (Some(snap.population), None)
                 }
-                JsonRpcMethod::SimSnapshot => {
+                JsonRpcMethod::SimSnapshot | JsonRpcMethod::SimCaptureFrame => {
+                    // `sim.capture_frame` (issue #1599) reuses the exact same
+                    // world-snapshot interface as `sim.snapshot` — its
+                    // renderer draws from live `spectator`/`weather_grid`/
+                    // `climate` fields, not a separate data path.
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
                     (

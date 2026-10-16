@@ -126,6 +126,10 @@ pub enum JsonRpcMethod {
     /// mood events, audio events into a single payload so the client
     /// can render them without polling many methods per frame.
     SimSimEvents,
+    /// Capture the current frame to a PNG file on disk (`sim.capture_frame`,
+    /// issue #1599). Used by `scripts/playthrough.sh` to archive
+    /// screenshots from CI.
+    SimCaptureFrame,
 }
 
 impl JsonRpcMethod {
@@ -174,6 +178,7 @@ impl JsonRpcMethod {
             Self::EmergenceDashboard => "emergence.dashboard",
             Self::SimReligionState => "sim.religion_state",
             Self::SimSimEvents => "sim.events",
+            Self::SimCaptureFrame => "sim.capture_frame",
         }
     }
 
@@ -222,6 +227,7 @@ impl JsonRpcMethod {
             "emergence.dashboard" => Some(Self::EmergenceDashboard),
             "sim.religion_state" => Some(Self::SimReligionState),
             "sim.events" => Some(Self::SimSimEvents),
+            "sim.capture_frame" => Some(Self::SimCaptureFrame),
             _ => None,
         }
     }
@@ -984,6 +990,8 @@ pub struct DispatchContext {
     pub connection_role: Option<String>,
     /// Bridge save directory for `save.*` handlers.
     pub saves_dir: Option<PathBuf>,
+    /// Bridge capture directory for `sim.capture_frame` (issue #1599).
+    pub captures_dir: Option<PathBuf>,
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
@@ -1435,6 +1443,141 @@ pub fn parse_set_speed_params(params: Option<&Value>) -> Result<u32, JsonRpcErro
     }
 
     Ok(multiplier)
+}
+
+/// Default frame width/height for `sim.capture_frame` when the caller omits
+/// `width`/`height` (mirrors `scripts/playthrough.sh`'s 1280x720 request).
+pub const CAPTURE_FRAME_DEFAULT_WIDTH: u32 = 1280;
+/// See [`CAPTURE_FRAME_DEFAULT_WIDTH`].
+pub const CAPTURE_FRAME_DEFAULT_HEIGHT: u32 = 720;
+/// Largest `width`/`height` `sim.capture_frame` will accept. Bounds the PNG
+/// encode buffer so a hostile/misbehaving client cannot force a multi-GB
+/// allocation (8K video is the practical ceiling for any current client).
+const CAPTURE_FRAME_MAX_DIMENSION: u32 = 7680;
+/// Longest `label` `sim.capture_frame` accepts, in ASCII bytes.
+const CAPTURE_FRAME_LABEL_MAX_LEN: usize = 64;
+
+/// Parsed `sim.capture_frame` params (issue #1599).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CaptureFrameParams {
+    /// Caller-supplied label; becomes the output filename stem. Restricted to
+    /// `[A-Za-z0-9_-]` so it is always a single safe path component — no
+    /// directory separator or `..` can smuggle a path-traversal escape out
+    /// of the capture directory.
+    pub label: String,
+    /// Requested frame width in pixels (default [`CAPTURE_FRAME_DEFAULT_WIDTH`]).
+    pub width: u32,
+    /// Requested frame height in pixels (default [`CAPTURE_FRAME_DEFAULT_HEIGHT`]).
+    pub height: u32,
+}
+
+/// Parse and validate `sim.capture_frame` params:
+/// `{ "label": String, "width"?: u32, "height"?: u32 }`.
+pub fn parse_capture_frame_params(
+    params: Option<&Value>,
+) -> Result<CaptureFrameParams, JsonRpcError> {
+    let invalid_label = || JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: format!(
+            "Invalid params: \"label\" must be 1-{CAPTURE_FRAME_LABEL_MAX_LEN} ASCII \
+             alphanumeric/underscore/hyphen characters"
+        ),
+        data: None,
+    };
+    let label = params
+        .and_then(|p| p.get("label"))
+        .and_then(|v| v.as_str())
+        .ok_or_else(invalid_label)?;
+    if label.is_empty()
+        || label.len() > CAPTURE_FRAME_LABEL_MAX_LEN
+        || !label
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err(invalid_label());
+    }
+
+    let parse_dimension = |key: &str, default: u32| -> Result<u32, JsonRpcError> {
+        match params.and_then(|p| p.get(key)) {
+            None => Ok(default),
+            Some(v) => {
+                let n = v.as_u64().ok_or_else(|| JsonRpcError {
+                    code: error_code::INVALID_PARAMS,
+                    message: format!("Invalid params: expected unsigned integer \"{key}\""),
+                    data: None,
+                })?;
+                if n == 0 || n > u64::from(CAPTURE_FRAME_MAX_DIMENSION) {
+                    return Err(JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: format!(
+                            "Invalid params: \"{key}\" must be in 1..={CAPTURE_FRAME_MAX_DIMENSION}"
+                        ),
+                        data: None,
+                    });
+                }
+                Ok(n as u32)
+            }
+        }
+    };
+    let width = parse_dimension("width", CAPTURE_FRAME_DEFAULT_WIDTH)?;
+    let height = parse_dimension("height", CAPTURE_FRAME_DEFAULT_HEIGHT)?;
+
+    Ok(CaptureFrameParams {
+        label: label.to_owned(),
+        width,
+        height,
+    })
+}
+
+/// Encode and write a `sim.capture_frame` PNG under `dir`, returning its
+/// absolute path.
+///
+/// `civ-server` is the headless simulation surface (NFR-CIV-PORT-003: the
+/// production build carries no GPU/renderer dependency), so there is no
+/// live Bevy viewport here to grab a frame from. This writes a flat-color
+/// placeholder frame at the requested dimensions instead, which is enough
+/// for `scripts/playthrough.sh` and CI capture tooling: they only assert
+/// that a real, non-empty PNG lands on disk at the returned path. A
+/// GPU-backed client (e.g. `civ-bevy-ref`, gated behind its own `bevy`
+/// feature) remains the place to capture an actual rendered frame.
+fn write_capture_frame_png(
+    dir: &std::path::Path,
+    label: &str,
+    width: u32,
+    height: u32,
+) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(dir)
+        .map_err(|err| format!("create capture directory {dir:?}: {err}"))?;
+    let file_path = dir.join(format!("{label}.png"));
+    let file = std::fs::File::create(&file_path)
+        .map_err(|err| format!("create capture file {file_path:?}: {err}"))?;
+
+    let mut encoder = png::Encoder::new(file, width, height);
+    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder
+        .write_header()
+        .map_err(|err| format!("write PNG header for {file_path:?}: {err}"))?;
+
+    // Deep navy placeholder pixel, repeated across the whole frame — a
+    // deliberate, recognizable fill rather than an all-zero buffer so a
+    // human skimming an archived capture can tell it's a real (if
+    // non-rendered) frame.
+    const PLACEHOLDER_RGB: [u8; 3] = [10, 20, 40];
+    let pixel_count = width as usize * height as usize;
+    let mut data = Vec::with_capacity(pixel_count * 3);
+    for _ in 0..pixel_count {
+        data.extend_from_slice(&PLACEHOLDER_RGB);
+    }
+    writer
+        .write_image_data(&data)
+        .map_err(|err| format!("write PNG data for {file_path:?}: {err}"))?;
+    writer
+        .finish()
+        .map_err(|err| format!("finish PNG for {file_path:?}: {err}"))?;
+
+    std::fs::canonicalize(&file_path)
+        .map_err(|err| format!("canonicalize capture path {file_path:?}: {err}"))
 }
 
 /// Parse `sim.save_replay` / `sim.load_replay` `path` param.
@@ -2472,6 +2615,52 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimCaptureFrame => match parse_capture_frame_params(req.params.as_ref()) {
+            Ok(params) => match ctx.captures_dir.as_deref() {
+                Some(dir) => {
+                    match write_capture_frame_png(dir, &params.label, params.width, params.height) {
+                        Ok(path) => DispatchPlan {
+                            response: JsonRpcResponse::success(
+                                req.id,
+                                serde_json::json!({
+                                    "path": path.to_string_lossy(),
+                                    "label": params.label,
+                                    "width": params.width,
+                                    "height": params.height,
+                                }),
+                            ),
+                            effect: DispatchEffect::None,
+                        },
+                        Err(err) => DispatchPlan {
+                            response: JsonRpcResponse::failure(
+                                req.id,
+                                JsonRpcError {
+                                    code: error_code::INTERNAL_ERROR,
+                                    message: format!("sim.capture_frame failed: {err}"),
+                                    data: None,
+                                },
+                            ),
+                            effect: DispatchEffect::None,
+                        },
+                    }
+                }
+                None => DispatchPlan {
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INTERNAL_ERROR,
+                            message: "Capture directory unavailable".to_owned(),
+                            data: None,
+                        },
+                    ),
+                    effect: DispatchEffect::None,
+                },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
     }
 }
 
@@ -2744,6 +2933,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            captures_dir: None,
             emergence: None,
             legends: None,
             researched: vec![],
@@ -2792,6 +2982,7 @@ mod tests {
             speed_multiplier: 4,
             connection_role: None,
             saves_dir: None,
+            captures_dir: None,
             emergence: None,
             legends: None,
             researched: vec![],
@@ -2891,6 +3082,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -2932,6 +3124,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            captures_dir: None,
             emergence: None,
             legends: None,
             researched: vec![],
@@ -2991,6 +3184,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3035,6 +3229,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3071,6 +3266,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3105,6 +3301,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3140,6 +3337,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3175,6 +3373,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3206,6 +3405,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3321,6 +3521,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3354,6 +3555,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3415,6 +3617,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: Some(sample),
                 legends: None,
                 researched: vec![],
@@ -3496,6 +3699,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: Some(sample),
                 legends: None,
                 researched: vec![],
@@ -3547,6 +3751,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3588,6 +3793,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: Some(payload),
                 researched: vec![],
@@ -3649,6 +3855,7 @@ mod tests {
                     speed_multiplier: 1,
                     connection_role: None,
                     saves_dir: None,
+                    captures_dir: None,
                     emergence: None,
                     legends: None,
                     researched: vec![],
@@ -3835,6 +4042,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3880,6 +4088,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3936,6 +4145,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4053,6 +4263,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4158,6 +4369,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4259,6 +4471,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4319,6 +4532,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4362,6 +4576,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4403,6 +4618,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4437,6 +4653,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4513,6 +4730,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4587,6 +4805,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4622,6 +4841,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4662,6 +4882,7 @@ mod tests {
                 speed_multiplier: 4,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4703,6 +4924,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4742,6 +4964,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5169,6 +5392,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5208,6 +5432,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5243,6 +5468,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5334,6 +5560,108 @@ mod tests {
         assert!(
             best < std::time::Duration::from_millis(1),
             "NFR-P-07: best snapshot_result_json run took {best:?}, budget is 1 ms"
+        );
+    }
+
+    // Issue #1599 — `sim.capture_frame` must be a registered method that
+    // writes a real, non-empty PNG under the configured capture directory
+    // and reports its absolute path back to the caller. This is what
+    // `scripts/playthrough.sh`'s `capture_frame()` helper relies on.
+    #[test]
+    fn sim_capture_frame_is_registered_writes_png_and_returns_path() {
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.capture_frame"),
+            Some(JsonRpcMethod::SimCaptureFrame),
+            "sim.capture_frame must be a recognized method name"
+        );
+        assert_eq!(JsonRpcMethod::SimCaptureFrame.as_str(), "sim.capture_frame");
+
+        let capture_dir = tempfile::tempdir().expect("tempdir");
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":60,"method":"sim.capture_frame","params":{"label":"step1","width":64,"height":32}}"#,
+        )
+        .expect("parse");
+        let ctx = DispatchContext {
+            tick: 7,
+            population: None,
+            snapshot: None,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            captures_dir: Some(capture_dir.path().to_path_buf()),
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+
+        let plan = dispatch_request(req, ctx);
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan
+            .response
+            .result
+            .expect("sim.capture_frame must return a result");
+        let path_str = result
+            .get("path")
+            .and_then(|v| v.as_str())
+            .expect("result must carry a string \"path\"");
+        let path = std::path::Path::new(path_str);
+        assert!(
+            path.is_absolute(),
+            "returned path must be absolute: {path_str}"
+        );
+
+        let bytes = std::fs::read(path).expect("capture_frame must write a readable file");
+        assert!(!bytes.is_empty(), "captured PNG must be non-empty");
+        assert_eq!(
+            &bytes[0..8],
+            &[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1A, b'\n'],
+            "captured file must start with the PNG magic number"
+        );
+    }
+
+    #[test]
+    fn sim_capture_frame_rejects_unsafe_label() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":61,"method":"sim.capture_frame","params":{"label":"../escape"}}"#,
+        )
+        .expect("parse");
+        let ctx = DispatchContext {
+            tick: 0,
+            population: None,
+            snapshot: None,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            captures_dir: Some(PathBuf::from("captures")),
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        };
+
+        let plan = dispatch_request(req, ctx);
+        assert!(
+            plan.response.error.is_some(),
+            "a path-traversal label must be rejected"
+        );
+        assert_eq!(
+            plan.response.error.as_ref().unwrap().code,
+            error_code::INVALID_PARAMS
         );
     }
 }

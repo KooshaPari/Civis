@@ -1011,6 +1011,7 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir: tempfile::tempdir().expect("temp saves dir").keep(),
             replays_dir: replays_dir.path().to_path_buf(),
+            ..Default::default()
         },
     )
     .await;
@@ -2024,6 +2025,7 @@ async fn ws_jsonrpc_save_slot_roundtrip() {
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir: saves_dir.path().to_path_buf(),
             replays_dir: replays_dir.path().to_path_buf(),
+            ..Default::default()
         },
     )
     .await;

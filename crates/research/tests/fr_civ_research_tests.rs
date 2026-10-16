@@ -2,7 +2,7 @@
 //!
 //! Covers: FR-CIV-RESEARCH-001-SCENARIO, FR-CIV-RESEARCH-002-SNAPSHOT, FR-CIV-RESEARCH-003-EXPORT
 
-use civ_research::{TechCard, ValidationOutcome, SCHEMA_VERSION};
+use civ_research::{TechCard, ValidationOutcome};
 
 /// FR-CIV-RESEARCH-001-SCENARIO — TechCard can be constructed with all required fields.
 #[test]
@@ -27,7 +27,9 @@ fn fr_civ_research_001_scenario_tech_card_construction() {
 #[test]
 fn fr_civ_research_002_snapshot_validation_variants() {
     let accept = ValidationOutcome::Accept;
-    let reject = ValidationOutcome::Reject(civ_research::RejectReason::UnknownDependency("missing-law".into()));
+    let reject = ValidationOutcome::Reject(civ_research::RejectReason::UnknownDependency(
+        "missing-law".into(),
+    ));
     assert_ne!(format!("{accept:?}"), format!("{reject:?}"));
 }
 

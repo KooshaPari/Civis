@@ -8,7 +8,7 @@ mod fr_fr_civ_mod_005 {
     /// FR-CIV-MOD-005: ModHookEngine starts empty.
     #[test]
     fn hook_engine_starts_empty() {
-        use civ_mod_host::hooks::{ModHookEngine, ModHook};
+        use civ_mod_host::hooks::{ModHook, ModHookEngine};
         let engine = ModHookEngine::new();
         let regs = engine.get_registrations(&ModHook::OnTick(0));
         assert!(regs.is_empty());
@@ -17,7 +17,7 @@ mod fr_fr_civ_mod_005 {
     /// FR-CIV-MOD-005: Registering a hook makes it retrievable.
     #[test]
     fn register_makes_hook_retrievable() {
-        use civ_mod_host::hooks::{ModHookEngine, ModHook};
+        use civ_mod_host::hooks::{ModHook, ModHookEngine};
         let mut engine = ModHookEngine::new();
         engine.register("test-mod", ModHook::OnTick(0), 0);
         let regs = engine.get_registrations(&ModHook::OnTick(0));
@@ -28,7 +28,7 @@ mod fr_fr_civ_mod_005 {
     /// FR-CIV-MOD-005: Executing with no hooks returns Continue.
     #[test]
     fn execute_empty_returns_continue() {
-        use civ_mod_host::hooks::{ModHookEngine, ModHook, HookResult};
+        use civ_mod_host::hooks::{HookResult, ModHook, ModHookEngine};
         let mut engine = ModHookEngine::new();
         let result = engine.execute(ModHook::OnTick(0), "{}");
         assert!(matches!(result, HookResult::Continue));

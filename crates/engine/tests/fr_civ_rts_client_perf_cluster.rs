@@ -160,7 +160,11 @@ fn fr_civ_rts_001_move_order_steps_one_cell_toward_target() {
 
     let moves = tick_operational_movement(1, &config, &mut units, 1, &world);
 
-    assert_eq!(moves.len(), 2, "both ordered units step once per pulse: {moves:?}");
+    assert_eq!(
+        moves.len(),
+        2,
+        "both ordered units step once per pulse: {moves:?}"
+    );
     for step in &moves {
         let origin = if step.unit_index == 0 { (0, 0) } else { (4, 0) };
         let target = if step.unit_index == 0 { (4, 0) } else { (0, 0) };
@@ -183,7 +187,10 @@ fn fr_civ_rts_001_move_order_steps_one_cell_toward_target() {
     // The samples are written back in place, so a second pulse starts from the
     // new positions and does not teleport.
     assert_eq!(
-        units.iter().map(|u| (u.grid_x, u.grid_y)).collect::<Vec<_>>(),
+        units
+            .iter()
+            .map(|u| (u.grid_x, u.grid_y))
+            .collect::<Vec<_>>(),
         vec![(1, 0), (3, 0)],
         "FR-CIV-RTS-001: unit samples must reflect the applied move"
     );
@@ -227,7 +234,10 @@ fn fr_civ_rts_001_move_order_respects_cadence_and_pulse_budget() {
         "tick 3 is not a cadence boundary for cadence_ticks=4"
     );
     assert_eq!(
-        units.iter().map(|u| (u.grid_x, u.grid_y)).collect::<Vec<_>>(),
+        units
+            .iter()
+            .map(|u| (u.grid_x, u.grid_y))
+            .collect::<Vec<_>>(),
         vec![(0, 0), (6, 0)],
         "off-cadence ticks must not move units"
     );
@@ -240,9 +250,16 @@ fn fr_civ_rts_001_move_order_respects_cadence_and_pulse_budget() {
 
     // Cadence tick with 2 pulses: two cells of movement toward the target.
     let moves = tick_operational_movement(4, &config, &mut units, 2, &world);
-    assert_eq!(moves.len(), 4, "2 units x 2 pulses == 4 grid moves: {moves:?}");
     assert_eq!(
-        units.iter().map(|u| (u.grid_x, u.grid_y)).collect::<Vec<_>>(),
+        moves.len(),
+        4,
+        "2 units x 2 pulses == 4 grid moves: {moves:?}"
+    );
+    assert_eq!(
+        units
+            .iter()
+            .map(|u| (u.grid_x, u.grid_y))
+            .collect::<Vec<_>>(),
         vec![(2, 0), (4, 0)],
         "2 pulses must advance each unit exactly 2 cells"
     );
@@ -271,7 +288,10 @@ fn fr_civ_rts_001_path_preview_is_immediate_adjacent_and_deterministic() {
 
     let preview = bfs_next_step(from, to, 24).expect("path preview must be available immediately");
     let step_dist = (preview.0 - from.0).abs() + (preview.1 - from.1).abs();
-    assert_eq!(step_dist, 1, "preview step must be cardinally adjacent: {preview:?}");
+    assert_eq!(
+        step_dist, 1,
+        "preview step must be cardinally adjacent: {preview:?}"
+    );
     let before = (from.0 - to.0).abs() + (from.1 - to.1).abs();
     let after = (preview.0 - to.0).abs() + (preview.1 - to.1).abs();
     assert_eq!(after, before - 1, "preview must shorten the remaining path");
@@ -360,7 +380,10 @@ fn fr_civ_rts_001_simultaneous_orders_may_share_one_cell() {
     let moves = tick_operational_movement(1, &config, &mut units, 1, &world);
     assert_eq!(moves.len(), 2, "both units receive a move: {moves:?}");
     assert_eq!(
-        units.iter().map(|u| (u.grid_x, u.grid_y)).collect::<Vec<_>>(),
+        units
+            .iter()
+            .map(|u| (u.grid_x, u.grid_y))
+            .collect::<Vec<_>>(),
         vec![(2, 0), (2, 0)],
         "TODO(FR-CIV-RTS-001): pinned — both units currently step onto (2, 0)"
     );
@@ -378,8 +401,12 @@ fn fr_civ_rts_001_simultaneous_orders_may_share_one_cell() {
 #[test]
 fn fr_civ_rts_002_attack_orders_hold_until_cadence_boundary() {
     let mut sim = empty_sim();
-    let a = sim.world.spawn((military_unit(0, 0, 0, SURVIVABLE_HP_UNITS),));
-    let b = sim.world.spawn((military_unit(1, 1, 0, SURVIVABLE_HP_UNITS),));
+    let a = sim
+        .world
+        .spawn((military_unit(0, 0, 0, SURVIVABLE_HP_UNITS),));
+    let b = sim
+        .world
+        .spawn((military_unit(1, 1, 0, SURVIVABLE_HP_UNITS),));
     let (pin_a, pin_b) = (entity_pin(a), entity_pin(b));
 
     // Default war-bridge cadence is 16 ticks; nothing may land before it.
@@ -407,17 +434,17 @@ fn fr_civ_rts_002_attack_orders_hold_until_cadence_boundary() {
         pulses.iter().map(|p| (p.unit_a, p.unit_b)).collect();
     assert_eq!(
         pairs,
-        [
-            (Some(pin_a), Some(pin_b)),
-            (Some(pin_b), Some(pin_a))
-        ]
-        .into_iter()
-        .collect(),
+        [(Some(pin_a), Some(pin_b)), (Some(pin_b), Some(pin_a))]
+            .into_iter()
+            .collect(),
         "FR-CIV-RTS-002: engagements must be mutually addressed to the two hostile units"
     );
     for pulse in pulses {
         // Attendee cells: unit_a shoots unit_b.
-        let (shooter, target) = (pulse.unit_a.expect("shooter"), pulse.unit_b.expect("target"));
+        let (shooter, target) = (
+            pulse.unit_a.expect("shooter"),
+            pulse.unit_b.expect("target"),
+        );
         assert_ne!(shooter, target, "a unit must not attack itself");
     }
 }
@@ -430,8 +457,10 @@ fn fr_civ_rts_002_attack_orders_hold_until_cadence_boundary() {
 #[test]
 fn fr_civ_rts_002_attack_drains_exactly_the_configured_strength() {
     let mut sim = empty_sim();
-    sim.world.spawn((military_unit(0, 0, 0, SURVIVABLE_HP_UNITS),));
-    sim.world.spawn((military_unit(1, 1, 0, SURVIVABLE_HP_UNITS),));
+    sim.world
+        .spawn((military_unit(0, 0, 0, SURVIVABLE_HP_UNITS),));
+    sim.world
+        .spawn((military_unit(1, 1, 0, SURVIVABLE_HP_UNITS),));
 
     for _ in 0..16 {
         sim.tick();
@@ -465,9 +494,15 @@ fn fr_civ_rts_002_attack_drains_exactly_the_configured_strength() {
 #[test]
 fn fr_civ_rts_002_attack_orders_never_hit_allied_units() {
     let mut sim = empty_sim();
-    let ally_a = sim.world.spawn((military_unit(0, 0, 0, SURVIVABLE_HP_UNITS),));
-    let ally_b = sim.world.spawn((military_unit(0, 1, 0, SURVIVABLE_HP_UNITS),));
-    let hostile = sim.world.spawn((military_unit(1, 2, 0, SURVIVABLE_HP_UNITS),));
+    let ally_a = sim
+        .world
+        .spawn((military_unit(0, 0, 0, SURVIVABLE_HP_UNITS),));
+    let ally_b = sim
+        .world
+        .spawn((military_unit(0, 1, 0, SURVIVABLE_HP_UNITS),));
+    let hostile = sim
+        .world
+        .spawn((military_unit(1, 2, 0, SURVIVABLE_HP_UNITS),));
     let pin = |e: hecs::Entity| entity_pin(e);
     let faction_of = |id: u64| {
         if id == pin(hostile) {
@@ -494,7 +529,10 @@ fn fr_civ_rts_002_attack_orders_never_hit_allied_units() {
         );
         damage_total += 50_000;
     }
-    assert_eq!(damage_total, 100_000, "two engagements of 50_000 strength each");
+    assert_eq!(
+        damage_total, 100_000,
+        "two engagements of 50_000 strength each"
+    );
 
     // The lone hostile takes exactly one drain (the second allied volley is
     // absorbed by the single-damage-per-target rule), so it cannot die twice.
@@ -617,7 +655,10 @@ fn fr_client_001_click_to_build_lands_on_grid_and_survives_a_tick() {
     // Clicked normalized coords map onto the hex grid immediately (same tick);
     // (0.5, 0.5) is the map centre and (1.0, 0.0) the north-east corner.
     let (placed_position, unit) = {
-        let placed = sim.world.get::<&Building>(building).expect("building spawned");
+        let placed = sim
+            .world
+            .get::<&Building>(building)
+            .expect("building spawned");
         let unit_ref = sim
             .world
             .get::<&MilitaryUnit>(military)
@@ -628,11 +669,7 @@ fn fr_client_001_click_to_build_lands_on_grid_and_survives_a_tick() {
     assert_eq!(unit.position, Position { x: 63, y: -64 });
     assert_eq!(unit.faction_id, 0);
     assert_eq!(unit.unit_type, UnitType::Knight);
-    assert_eq!(
-        unit.hp.to_bits(),
-        bits_of(10),
-        "spawn palette grants 10 hp"
-    );
+    assert_eq!(unit.hp.to_bits(), bits_of(10), "spawn palette grants 10 hp");
     assert_eq!(
         unit_type_label(UnitType::Knight),
         "Vehicle",
@@ -640,7 +677,10 @@ fn fr_client_001_click_to_build_lands_on_grid_and_survives_a_tick() {
     );
 
     let snapshot = sim.snapshot();
-    assert_eq!(snapshot.building_count, 1, "build result reflected in the same-tick snapshot");
+    assert_eq!(
+        snapshot.building_count, 1,
+        "build result reflected in the same-tick snapshot"
+    );
     assert_eq!(snapshot.military_count, 1);
 
     sim.tick();
@@ -691,13 +731,23 @@ fn fr_client_001_click_coordinates_map_onto_the_hex_grid() {
 fn fr_client_002_spectator_payload_is_stable_and_json_round_trips() {
     let sim = Simulation::with_seed(0x00C0_FFEE_u64);
     let view = sim.spectator_view();
-    assert_eq!(view, sim.spectator_view(), "same tick must produce the same payload");
-    assert!(!view.civ_pins.is_empty(), "faction civilians are rendered as pins");
+    assert_eq!(
+        view,
+        sim.spectator_view(),
+        "same tick must produce the same payload"
+    );
+    assert!(
+        !view.civ_pins.is_empty(),
+        "faction civilians are rendered as pins"
+    );
     assert!(!view.factions.is_empty());
 
     let json = serde_json::to_string(&view).expect("spectator payload serializes");
     let decoded: civ_engine::SpectatorView = serde_json::from_str(&json).expect("round-trips");
-    assert_eq!(decoded, view, "FR-CLIENT-002: payload must survive the client transport");
+    assert_eq!(
+        decoded, view,
+        "FR-CLIENT-002: payload must survive the client transport"
+    );
     assert!(
         json.contains("\"civ_pins\""),
         "web client reads the civ_pins field from the payload"
@@ -766,11 +816,11 @@ fn fr_client_003_role_enforcement_absent_commands_carry_no_role() {
         tick_issued: 0,
     };
     let mut queue = CommandQueue::new(4);
-        assert!(
-            queue.push(command).is_ok(),
-            "TODO(FR-CLIENT-003): a research-tier client would be rejected here; currently \
+    assert!(
+        queue.push(command).is_ok(),
+        "TODO(FR-CLIENT-003): a research-tier client would be rejected here; currently \
              any client id may submit a policy override"
-        );
+    );
 
     // Exhaustive `CommandKind` match: adding a role-scoped variant breaks compilation.
     let kind = queue.pop().expect("command enqueued");
@@ -889,7 +939,11 @@ fn fr_core_009_axial_coordinates_are_map_keys_and_hexx_dep_is_absent() {
         "equal axial coordinates must address the same map entry"
     );
     map.insert(PositionAxial::new(1, -1), 9);
-    assert_eq!(map.len(), 1, "equal coordinates collide instead of duplicating");
+    assert_eq!(
+        map.len(),
+        1,
+        "equal coordinates collide instead of duplicating"
+    );
     assert_eq!(map.get(&PositionAxial::new(1, -1)), Some(&9));
     assert_eq!(map.get(&PositionAxial::new(-1, 1)), None);
 

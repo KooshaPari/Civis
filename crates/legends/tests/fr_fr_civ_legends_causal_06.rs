@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_causal_06 {
-    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+    use civ_legends::{EventKind, RawSimEvent, SagaGraph, SourceCrate};
 
     /// FR-CIV-LEGENDS-CAUSAL-06: Consecutive events at close ticks are linked.
     #[test]
@@ -32,7 +32,10 @@ mod fr_fr_civ_legends_causal_06 {
         let now = graph.current_epoch();
         let gaps = graph.gap_reports(now);
         // Engine is active, so no gap for Engine
-        let engine_gaps: Vec<_> = gaps.iter().filter(|g| g.source == SourceCrate::Engine).collect();
+        let engine_gaps: Vec<_> = gaps
+            .iter()
+            .filter(|g| g.source == SourceCrate::Engine)
+            .collect();
         assert!(engine_gaps.is_empty());
     }
 

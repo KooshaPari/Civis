@@ -6,11 +6,11 @@ use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::live_stream::ServerBridge;
+#[cfg(test)]
+use crate::ws_client::SimPerfData;
 #[cfg(feature = "egui")]
 use crate::ws_client::{branching_alert, storm_summary};
 use crate::ws_client::{WsClient, WsClientConfig};
-#[cfg(test)]
-use crate::ws_client::SimPerfData;
 use crate::{
     resolve_live_ws_url, AttachMode, LiveHudSnapshot, MusicCues, OutcomeProgressHud,
     WsSpectatorMeta,

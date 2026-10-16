@@ -6,15 +6,13 @@
 //! (persona,event)-cached). Generates only on state-change near camera/feed;
 //! hard concurrency cap.
 
-use civ_ai::{
-    AiCache, DummyAiProvider, GenOutput, GenRequest, ProviderRegistry, ProviderRole,
-};
+use civ_ai::{AiCache, DummyAiProvider, GenOutput, GenRequest, ProviderRegistry, ProviderRole};
 use std::sync::Arc;
 
 #[cfg(test)]
 mod fr_fr_civ_ai_014 {
-    use civ_ai::AiProvider;
     use super::*;
+    use civ_ai::AiProvider;
 
     /// FR-CIV-AI-014 — Chatter generation produces persona-stable output.
     /// The same (persona, event) pair must yield identical text across calls.

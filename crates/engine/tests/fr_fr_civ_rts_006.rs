@@ -23,7 +23,7 @@ mod fr_fr_civ_rts_006 {
     /// Building struct exists with position and HP.
     #[test]
     fn building_has_position_and_hp() {
-        use civ_engine::{Building, BuildingType, Position, Fixed};
+        use civ_engine::{Building, BuildingType, Fixed, Position};
         let b = Building {
             building_type: BuildingType::House,
             position: Position { x: 0, y: 0 },

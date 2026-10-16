@@ -16,7 +16,7 @@ mod fr_fr_thry_003 {
     #[test]
     fn population_delta_balanced_after_tick() {
         let mut sim = Simulation::with_seed(33);
-        let pop_before = sim.state.population;
+        let _pop_before = sim.state.population;
         sim.tick();
         let result = invariants::check_tick_invariants(&sim);
         assert!(

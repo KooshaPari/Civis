@@ -20,10 +20,7 @@ mod fr_fr_civ_rts_011 {
         let mut ws = civ_engine::WorldState::default();
         ws.faction_treasury
             .insert(1, civ_engine::Fixed::from_num(1000));
-        assert_eq!(
-            ws.faction_treasury[&1],
-            civ_engine::Fixed::from_num(1000)
-        );
+        assert_eq!(ws.faction_treasury[&1], civ_engine::Fixed::from_num(1000));
     }
 
     /// Deep diplomacy state exists for persistent inter-faction tracking.

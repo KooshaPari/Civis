@@ -102,7 +102,10 @@ impl Plugin for FactionHudPlugin {
             .init_resource::<FactionHudOpenedAt>()
             .init_resource::<FactionCrestAssets>()
             .add_systems(Startup, queue_faction_crest_handles)
-            .add_systems(Update, (toggle_faction_hud, track_faction_hud_open_edge).chain())
+            .add_systems(
+                Update,
+                (toggle_faction_hud, track_faction_hud_open_edge).chain(),
+            )
             // Register crests before draw (Bevy 0.18: avoid `.chain()` on 2-tuples).
             .add_systems(
                 EguiPrimaryContextPass,

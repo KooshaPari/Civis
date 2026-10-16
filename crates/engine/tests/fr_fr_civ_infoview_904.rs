@@ -24,7 +24,10 @@ mod fr_fr_civ_infoview_904 {
     fn different_clusters_different_colors() {
         let c1 = cluster_color(1);
         let c2 = cluster_color(2);
-        assert_ne!(c1, c2, "different cluster ids should produce different colors");
+        assert_ne!(
+            c1, c2,
+            "different cluster ids should produce different colors"
+        );
     }
 
     /// FR-CIV-INFOVIEW-904 — Color values are in [0, 1] per channel.
@@ -33,8 +36,10 @@ mod fr_fr_civ_infoview_904 {
         for id in 0..100 {
             let c = cluster_color(id);
             for channel in &c {
-                assert!(*channel >= 0.0 && *channel <= 1.0,
-                    "color channel {channel} out of range for cluster {id}");
+                assert!(
+                    *channel >= 0.0 && *channel <= 1.0,
+                    "color channel {channel} out of range for cluster {id}"
+                );
             }
         }
     }

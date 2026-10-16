@@ -219,7 +219,10 @@ mod tests {
     // coupled resets (e.g., a refactor that turns ssao off also disables ssr).
 
     fn check_flag(name: &'static str, off: PostFxSettings) {
-        assert!(off.is_off(name), "{name} should be off when explicitly disabled");
+        assert!(
+            off.is_off(name),
+            "{name} should be off when explicitly disabled"
+        );
         for other in [
             "aces",
             "tonemapping",
@@ -243,21 +246,48 @@ mod tests {
     #[test]
     fn post_fx_settings_each_flag_can_be_off_independently() {
         let _ = PostFxSettings::default();
-        check_flag("aces", PostFxSettings { aces: false, ..PostFxSettings::default() });
+        check_flag(
+            "aces",
+            PostFxSettings {
+                aces: false,
+                ..PostFxSettings::default()
+            },
+        );
         check_flag(
             "tonemapping",
-            PostFxSettings { tonemapping: false, ..PostFxSettings::default() },
+            PostFxSettings {
+                tonemapping: false,
+                ..PostFxSettings::default()
+            },
         );
         check_flag(
             "color_grading",
-            PostFxSettings { color_grading: false, ..PostFxSettings::default() },
+            PostFxSettings {
+                color_grading: false,
+                ..PostFxSettings::default()
+            },
         );
         check_flag(
             "bloom",
-            PostFxSettings { bloom: false, ..PostFxSettings::default() },
+            PostFxSettings {
+                bloom: false,
+                ..PostFxSettings::default()
+            },
         );
-        check_flag("ssao", PostFxSettings { ssao: false, ..PostFxSettings::default() });
-        check_flag("ssr", PostFxSettings { ssr: false, ..PostFxSettings::default() });
+        check_flag(
+            "ssao",
+            PostFxSettings {
+                ssao: false,
+                ..PostFxSettings::default()
+            },
+        );
+        check_flag(
+            "ssr",
+            PostFxSettings {
+                ssr: false,
+                ..PostFxSettings::default()
+            },
+        );
         check_flag(
             "volumetric_fog",
             PostFxSettings {
@@ -265,7 +295,13 @@ mod tests {
                 ..PostFxSettings::default()
             },
         );
-        check_flag("taa", PostFxSettings { taa: false, ..PostFxSettings::default() });
+        check_flag(
+            "taa",
+            PostFxSettings {
+                taa: false,
+                ..PostFxSettings::default()
+            },
+        );
     }
 
     #[test]

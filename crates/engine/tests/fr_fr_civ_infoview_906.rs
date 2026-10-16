@@ -38,8 +38,11 @@ mod fr_fr_civ_infoview_906 {
             OverlayGroup::Infrastructure,
             OverlayGroup::Hazard,
         ];
-        assert_eq!(hk.group_keys.len(), groups.len(),
-            "one hotkey per overlay group");
+        assert_eq!(
+            hk.group_keys.len(),
+            groups.len(),
+            "one hotkey per overlay group"
+        );
     }
 
     /// FR-CIV-INFOVIEW-906 — OverlayGroup has exactly six variants.

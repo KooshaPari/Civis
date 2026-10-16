@@ -220,7 +220,11 @@ fn hex_digest(bytes: &[u8]) -> String {
 fn canonical_listing_bytes(components: &[ComponentDigest]) -> Vec<u8> {
     let mut buf = Vec::new();
     for c in components {
-        for field in [c.component.as_str(), c.blake3.as_str(), c.len.to_string().as_str()] {
+        for field in [
+            c.component.as_str(),
+            c.blake3.as_str(),
+            c.len.to_string().as_str(),
+        ] {
             buf.extend_from_slice(&(field.len() as u64).to_le_bytes());
             buf.extend_from_slice(field.as_bytes());
         }
@@ -244,11 +248,7 @@ fn compute_integrity_manifest(
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {
             let name = entry.file_name().to_string_lossy().into_owned();
-            entry
-                .file_type()
-                .ok()
-                .filter(|t| t.is_file())
-                .map(|_| name)
+            entry.file_type().ok().filter(|t| t.is_file()).map(|_| name)
         })
         .filter(|name| name != INTEGRITY_FILE && name != "metadata.json")
         .collect();
@@ -384,9 +384,9 @@ fn is_plain_component_name(name: &str) -> bool {
     // string matching keeps the check aligned with the platform's own path
     // grammar rather than a hand-rolled allowlist of separators.
     let mut components = Path::new(name).components();
-    matches!(components.next(), Some(std::path::Component::Normal(_))) && components.next().is_none()
+    matches!(components.next(), Some(std::path::Component::Normal(_)))
+        && components.next().is_none()
 }
-
 
 fn archive_err(message: impl std::fmt::Display) -> SaveBundleError {
     SaveBundleError::Archive(message.to_string())
@@ -716,7 +716,8 @@ impl CivSaveBundle {
                     component: INTEGRITY_FILE,
                 });
             }
-            let raw = fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
+            let raw =
+                fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
             let manifest: SaveIntegrityManifest =
                 serde_json::from_str(&raw).map_err(SaveBundleError::Json)?;
             if manifest.spec_id != CIVSAVE_SPEC_ID {
@@ -786,8 +787,7 @@ impl CivSaveBundle {
             // phase_policy_econ resume with the same authoritative
             // post-save values.
             sim.institutions = sim.state.institutions.clone();
-            sim.institution_levels_emitted =
-                sim.state.institution_levels_emitted.clone();
+            sim.institution_levels_emitted = sim.state.institution_levels_emitted.clone();
             sim.build_sites = sim.state.build_sites.clone();
             sim.econ_focus = sim.state.econ_focus.clone();
             // Mirror persisted culture, ideology, aggression, and
@@ -797,8 +797,7 @@ impl CivSaveBundle {
             sim.cluster_cultures = sim.state.cluster_cultures.clone();
             sim.faction_ideologies = sim.state.faction_ideologies.clone();
             sim.faction_aggression = sim.state.faction_aggression.clone();
-            sim.unrest_settlement_gini =
-                sim.state.unrest_settlement_gini.clone();
+            sim.unrest_settlement_gini = sim.state.unrest_settlement_gini.clone();
             // Mirror persisted riot/migrant accumulators and scenario
             // taxation back onto the live Simulation so phase_unrest /
             // apply_scenario_taxation resume with the same authoritative
@@ -1184,7 +1183,11 @@ mod tests {
         assert_eq!(manifest.spec_id, CIVSAVE_SPEC_ID);
         assert_eq!(manifest.format_version, CIVSAVE_FORMAT_VERSION);
         assert_eq!(manifest.tick, sim.state.tick);
-        assert_eq!(manifest.root.len(), 64, "root must be a hex BLAKE3-256 digest");
+        assert_eq!(
+            manifest.root.len(),
+            64,
+            "root must be a hex BLAKE3-256 digest"
+        );
 
         let on_disk: BTreeSet<String> = fs::read_dir(&save)
             .expect("read_dir")
@@ -1203,7 +1206,10 @@ mod tests {
             if name == INTEGRITY_FILE || name == "metadata.json" {
                 continue;
             }
-            assert!(listed.contains(name), "{name} on disk is missing from the manifest");
+            assert!(
+                listed.contains(name),
+                "{name} on disk is missing from the manifest"
+            );
         }
         assert!(listed.contains("world_state.json"));
         assert!(listed.contains("replay.civreplay"));
@@ -1222,7 +1228,10 @@ mod tests {
         // Recomputing the manifest from the same directory is deterministic.
         let again = compute_integrity_manifest(&save, CIVSAVE_FORMAT_VERSION, sim.state.tick)
             .expect("recompute");
-        assert_eq!(again, manifest, "manifest computation must be deterministic");
+        assert_eq!(
+            again, manifest,
+            "manifest computation must be deterministic"
+        );
     }
 
     #[test]
@@ -1253,8 +1262,7 @@ mod tests {
             bytes[mid] ^= 0x01;
             fs::write(&target, &bytes).expect("write tampered component");
 
-            let err = CivSaveBundle::load_dir(&save)
-                .expect_err("tampered save must not load");
+            let err = CivSaveBundle::load_dir(&save).expect_err("tampered save must not load");
             match err {
                 SaveBundleError::HashMismatch { component: c, .. } => {
                     assert_eq!(c, component, "mismatch must name the tampered component");
@@ -1309,7 +1317,10 @@ mod tests {
             .clone();
         let victim_path = extracted.join(&victim);
         let mut payload = fs::read(&victim_path).expect("read victim component");
-        assert!(!payload.is_empty(), "victim component must have bytes to corrupt");
+        assert!(
+            !payload.is_empty(),
+            "victim component must have bytes to corrupt"
+        );
         let last = payload.len() - 1;
         payload[last] = payload[last].wrapping_add(0x7f);
         fs::write(&victim_path, &payload).expect("write tampered component");
@@ -1325,8 +1336,11 @@ mod tests {
         // archive entry point is covered and not just the directory loader.
         let tampered_archive = dir.path().join("tampered.civsave.zst");
         let tar_bytes = tar_dir(&extracted).expect("tar the tampered dir");
-        fs::write(&tampered_archive, encode_all(tar_bytes.as_slice(), 3).expect("compress"))
-            .expect("write tampered archive");
+        fs::write(
+            &tampered_archive,
+            encode_all(tar_bytes.as_slice(), 3).expect("compress"),
+        )
+        .expect("write tampered archive");
         let arch_err = CivSaveBundle::load_archive(&tampered_archive)
             .expect_err("a tampered archive must not load");
         assert!(
@@ -1470,10 +1484,14 @@ mod tests {
 
         fs::write(save.join("injected_state.json"), "{}").expect("write injected file");
 
-        let err =
-            CivSaveBundle::load_dir(&save).expect_err("an unlisted component must fail verification");
+        let err = CivSaveBundle::load_dir(&save)
+            .expect_err("an unlisted component must fail verification");
         match err {
-            SaveBundleError::UnlistedComponent { component, manifest, .. } => {
+            SaveBundleError::UnlistedComponent {
+                component,
+                manifest,
+                ..
+            } => {
                 assert_eq!(component, "injected_state.json");
                 assert_eq!(manifest, INTEGRITY_FILE);
             }

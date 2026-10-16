@@ -353,12 +353,7 @@ impl CivilizationState {
     /// - Records a time-series data point.
     ///
     /// Returns any events emitted during this tick.
-    pub fn tick(
-        &mut self,
-        tick: u64,
-        concentration_bp: i64,
-        population: u32,
-    ) -> TickResult {
+    pub fn tick(&mut self, tick: u64, concentration_bp: i64, population: u32) -> TickResult {
         let mut events = TickResult::default();
 
         // FR-INST-002: Accumulate capture score.

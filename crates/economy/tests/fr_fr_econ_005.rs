@@ -132,7 +132,12 @@ mod fr_fr_econ_005 {
         let zero = compute_waste_heat(1_000, &WasteHeatConfig { fraction_bp: 0 });
         assert_eq!((zero.waste_joules, zero.productive_joules), (0, 1_000));
 
-        let full = compute_waste_heat(1_000, &WasteHeatConfig { fraction_bp: 10_000 });
+        let full = compute_waste_heat(
+            1_000,
+            &WasteHeatConfig {
+                fraction_bp: 10_000,
+            },
+        );
         assert_eq!((full.waste_joules, full.productive_joules), (1_000, 0));
     }
 }

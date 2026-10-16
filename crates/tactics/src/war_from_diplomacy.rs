@@ -208,8 +208,16 @@ mod tests {
                 energy,
                 tick,
             } => {
-                assert_eq!(*attacker, PolityId::new(3), "attacker is the shooter faction");
-                assert_eq!(*defender, PolityId::new(5), "defender is the target faction");
+                assert_eq!(
+                    *attacker,
+                    PolityId::new(3),
+                    "attacker is the shooter faction"
+                );
+                assert_eq!(
+                    *defender,
+                    PolityId::new(5),
+                    "defender is the target faction"
+                );
                 assert_eq!(*energy, 250, "damage energy carried through");
                 assert_eq!(*tick, 77, "reporting tick carried through");
             }

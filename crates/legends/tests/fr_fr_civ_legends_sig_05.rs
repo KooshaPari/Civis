@@ -5,8 +5,8 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_sig_05 {
-    use civ_legends::significance::*;
     use civ_legends::model::{EventKind, Role};
+    use civ_legends::significance::*;
 
     /// FR-CIV-LEGENDS-SIG-05: Significance accumulator starts empty.
     #[test]

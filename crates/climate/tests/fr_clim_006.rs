@@ -41,8 +41,14 @@ fn more_investment_more_reduction() {
     let r2 = t.invest(10_000, &cfg);
     let r3 = t.invest(10_000, &cfg);
 
-    assert!(r2.reduction_bp > r1.reduction_bp, "Second investment should add reduction");
-    assert!(r3.reduction_bp > r2.reduction_bp, "Third investment should add reduction");
+    assert!(
+        r2.reduction_bp > r1.reduction_bp,
+        "Second investment should add reduction"
+    );
+    assert!(
+        r3.reduction_bp > r2.reduction_bp,
+        "Third investment should add reduction"
+    );
 }
 
 /// FR-CLIM-006: Diminishing returns — marginal effectiveness decreases.

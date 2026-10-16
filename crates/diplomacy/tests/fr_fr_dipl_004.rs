@@ -4,8 +4,8 @@
 //! reputation penalty.
 
 use civ_diplomacy::{
-    detect_breach, Treaty, TreatyBreachEvent, TreatyStatus, TreatyTerm, BREACH_REPUTATION_PENALTY,
-    PolityId,
+    detect_breach, PolityId, Treaty, TreatyBreachEvent, TreatyStatus, TreatyTerm,
+    BREACH_REPUTATION_PENALTY,
 };
 
 fn p(id: u32) -> PolityId {
@@ -99,7 +99,10 @@ fn treaty_breach_from_defender() {
     };
 
     let event = detect_breach(&treaty, true, p(2), 50).expect("breach");
-    if let TreatyBreachEvent::TreatyBroken { breacher, victim, .. } = event {
+    if let TreatyBreachEvent::TreatyBroken {
+        breacher, victim, ..
+    } = event
+    {
         assert_eq!(breacher, p(2));
         assert_eq!(victim, p(1));
     }

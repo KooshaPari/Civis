@@ -5,8 +5,8 @@
 //! FR-CIV-PSYCHE-006 (social behavior)
 
 use civ_agents::{
-    Interaction, RelationLabel, SocialEvent, SocialGraph, Tie, apply_social_event,
-    decay_social_graph, relation_label, MAX_TIES,
+    apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,
+    SocialEvent, SocialGraph, Tie, MAX_TIES,
 };
 
 // ---------------------------------------------------------------------------

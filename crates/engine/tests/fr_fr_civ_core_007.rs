@@ -14,14 +14,10 @@ mod fr_fr_civ_core_007 {
         sim.tick();
         let original = sim.state.clone();
         let json = serde_json::to_string(&original).expect("serialize");
-        let restored: civ_engine::WorldState =
-            serde_json::from_str(&json).expect("deserialize");
+        let restored: civ_engine::WorldState = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(original.tick, restored.tick);
         assert_eq!(original.population, restored.population);
-        assert_eq!(
-            original.energy_budget_joules,
-            restored.energy_budget_joules
-        );
+        assert_eq!(original.energy_budget_joules, restored.energy_budget_joules);
         assert_eq!(original.factions, restored.factions);
     }
 

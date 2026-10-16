@@ -124,7 +124,10 @@ fn joule_priority_allocation_conserves_the_budget_and_fills_subsistence_first() 
     assert_eq!(granted.len(), 3, "one grant per demand, in input order");
     assert_eq!(granted[2], 500, "subsistence joules are filled first");
     assert_eq!(granted[1], 100, "the basic tier receives the remainder");
-    assert_eq!(granted[0], 0, "luxury is starved while higher tiers are unmet");
+    assert_eq!(
+        granted[0], 0,
+        "luxury is starved while higher tiers are unmet"
+    );
     assert_eq!(
         granted.iter().sum::<i64>(),
         budget,
@@ -134,7 +137,11 @@ fn joule_priority_allocation_conserves_the_budget_and_fills_subsistence_first() 
     // An abundant budget satisfies every tier and still creates nothing.
     let abundant = allocate_by_priority(&JouleAllocator, 5_000, &demands);
     assert_eq!(abundant, vec![300, 200, 500]);
-    assert_eq!(abundant.iter().sum::<i64>(), 1_000, "sum equals total demand");
+    assert_eq!(
+        abundant.iter().sum::<i64>(),
+        1_000,
+        "sum equals total demand"
+    );
 }
 
 /// The `Joule` regime is the single dispatch point callers use; it must route to
@@ -170,7 +177,11 @@ fn joule_allocation_is_deterministic_across_repeated_runs() {
 
     // Subsistence 11 filled fully, Basic takes 12 of 17, nothing left below.
     assert_eq!(first, vec![0, 11, 0, 12]);
-    assert_eq!(first.iter().sum::<i64>(), 23, "the budget is fully consumed");
+    assert_eq!(
+        first.iter().sum::<i64>(),
+        23,
+        "the budget is fully consumed"
+    );
 
     for run in 0..64 {
         assert_eq!(
@@ -211,8 +222,15 @@ fn macro_joule_budget_is_never_driven_negative_by_consumption() {
         economy.energy_budget_joules, 0,
         "consumption exceeding the budget must clamp at zero, not go negative"
     );
-    assert_eq!(economy.ledger.len(), 1, "the applied drain is recorded once");
-    assert_eq!(economy.ledger[0].debit, 100, "only the available joules are booked");
+    assert_eq!(
+        economy.ledger.len(),
+        1,
+        "the applied drain is recorded once"
+    );
+    assert_eq!(
+        economy.ledger[0].debit, 100,
+        "only the available joules are booked"
+    );
 
     let mut economy = EconomyState::with_energy_budget(100);
     drain_energy_budget(&mut economy, 40);
@@ -269,7 +287,10 @@ fn auction_clearing_conserves_institution_joules() {
     let trade = &trades[0];
     assert_eq!(trade.good, "food");
     assert_eq!(trade.quantity, 4, "supply is the binding side");
-    assert_eq!(trade.price, 100, "clearing price is the midpoint of 120 and 80");
+    assert_eq!(
+        trade.price, 100,
+        "clearing price is the midpoint of 120 and 80"
+    );
     assert!(
         !trade.rationed,
         "a crossing book clears by trade, not by rationing"
@@ -350,7 +371,10 @@ fn joule_rationing_never_exceeds_the_supply_on_the_book() {
     assert_eq!(trade.price, 75, "price signal is (best bid + best ask) / 2");
     assert!(trade.price >= 0, "a price signal is never negative");
 
-    assert_eq!(ledger.institution_balance(INSTITUTION_TREASURY), 2_000 - 300);
+    assert_eq!(
+        ledger.institution_balance(INSTITUTION_TREASURY),
+        2_000 - 300
+    );
     assert_eq!(ledger.institution_balance(INSTITUTION_MARKET), 2_000 + 300);
     assert_eq!(
         institution_total(&ledger),
@@ -505,7 +529,10 @@ fn joule_budget_loop_spends_every_joule_and_stays_conserved_across_ticks() {
             economy.energy_budget_joules >= 0,
             "tick {expected_tick}: the joule budget went negative"
         );
-        assert_eq!(economy.tick, expected_tick, "one economy tick per iteration");
+        assert_eq!(
+            economy.tick, expected_tick,
+            "one economy tick per iteration"
+        );
         verify_ledger_conservation(&economy).unwrap_or_else(|error| {
             panic!("tick {expected_tick}: conservation violated: {error:?}")
         });
@@ -529,6 +556,7 @@ fn joule_budget_loop_spends_every_joule_and_stays_conserved_across_ticks() {
 #[test]
 fn auction_clearing_is_replay_deterministic_across_independent_runs() {
     // Returns (per-trade signature, (treasury, market, institution total)).
+    #[allow(clippy::type_complexity)] // test-local report tuple; factoring adds noise
     fn run() -> (Vec<(String, i64, i64, bool)>, (i64, i64, i64)) {
         let mut economy = EconomyState::with_energy_budget(10_000);
         let mut ledger = InstitutionLedger::with_defaults();
@@ -578,7 +606,14 @@ fn auction_clearing_is_replay_deterministic_across_independent_runs() {
         let trades = allocator.clear(&mut economy, &mut ledger);
         let signature = trades
             .iter()
-            .map(|trade| (trade.good.clone(), trade.quantity, trade.price, trade.rationed))
+            .map(|trade| {
+                (
+                    trade.good.clone(),
+                    trade.quantity,
+                    trade.price,
+                    trade.rationed,
+                )
+            })
             .collect();
         let balances = (
             ledger.institution_balance(INSTITUTION_TREASURY),
@@ -644,15 +679,15 @@ fn gdp_sums_regional_net_joule_throughput_at_the_fixed_rate() {
     let result = compute_gdp(&regions);
 
     assert_eq!(result.region_count, 3);
-    assert_eq!(result.regions, regions, "region order and ids are preserved");
+    assert_eq!(
+        result.regions, regions,
+        "region order and ids are preserved"
+    );
     let expected = 900 + 450 + 250;
     assert_eq!(result.total_gdp, expected, "aggregate is the regional sum");
     assert_eq!(
         result.total_gdp,
-        regions
-            .iter()
-            .map(RegionGdp::net_throughput)
-            .sum::<i64>(),
+        regions.iter().map(RegionGdp::net_throughput).sum::<i64>(),
         "aggregate GDP equals the exact sum of net throughput"
     );
     for region in &result.regions {
@@ -798,11 +833,7 @@ fn gdp_aggregation_is_exact_integer_arithmetic() {
     assert_eq!(result.region_count, 100_000);
     assert_eq!(total, 700_000, "100_000 regions x 7 net joules, exactly");
     assert_ne!(total, 7, "the aggregate is a sum, not an average");
-    let rebuilt: i64 = result
-        .regions
-        .iter()
-        .map(RegionGdp::gdp_contribution)
-        .sum();
+    let rebuilt: i64 = result.regions.iter().map(RegionGdp::gdp_contribution).sum();
     assert_eq!(rebuilt, total, "no drift between aggregate and parts");
 }
 
@@ -1005,8 +1036,14 @@ fn subsistence_threshold_boundaries_are_consistent() {
     assert!(negative_threshold.update(-6));
 
     let mut extremes = SubsistenceMode::with_threshold(100);
-    assert!(extremes.update(i64::MIN), "the most overdrawn reserve activates");
-    assert!(!extremes.update(i64::MAX), "the largest reserve deactivates");
+    assert!(
+        extremes.update(i64::MIN),
+        "the most overdrawn reserve activates"
+    );
+    assert!(
+        !extremes.update(i64::MAX),
+        "the largest reserve deactivates"
+    );
 }
 
 /// Two modes fed the same reserve trajectory stay in lock-step, and the

@@ -11,12 +11,11 @@
 //   - ToolPalette: set_selected respects availability + schema version is stable.
 
 use civ_voxel::hud::{
-    HUB_PALETTE_SCHEMA_VERSION, ToolCategory, ToolEntry, ToolPalette,
-    ToolPaletteError,
+    ToolCategory, ToolEntry, ToolPalette, ToolPaletteError, HUB_PALETTE_SCHEMA_VERSION,
 };
 use civ_voxel::material_pbr::{
-    AttestationError, Cc0Source, LicenseAttestation, LodDistanceConfig,
-    LodRenderPlan, MaterialMode, MaterialSeedManifest, RenderMode,
+    AttestationError, Cc0Source, LicenseAttestation, LodDistanceConfig, LodRenderPlan,
+    MaterialMode, MaterialSeedManifest, RenderMode,
 };
 
 #[test]
@@ -93,25 +92,37 @@ fn lod_distance_config_validate_accepts_default_and_rejects_garbage() {
 
     // Equal thresholds are valid (collapse to single band at the boundary).
     assert!(
-        LodDistanceConfig { near_chunks: 4, mid_chunks: 4, far_chunks: 4 }
-            .validate()
-            .is_ok(),
+        LodDistanceConfig {
+            near_chunks: 4,
+            mid_chunks: 4,
+            far_chunks: 4
+        }
+        .validate()
+        .is_ok(),
         "collapsed thresholds should still validate"
     );
 
     // Reject when near > mid
     assert!(
-        LodDistanceConfig { near_chunks: 8, mid_chunks: 4, far_chunks: 12 }
-            .validate()
-            .is_err(),
+        LodDistanceConfig {
+            near_chunks: 8,
+            mid_chunks: 4,
+            far_chunks: 12
+        }
+        .validate()
+        .is_err(),
         "near > mid must be rejected"
     );
 
     // Reject when mid > far
     assert!(
-        LodDistanceConfig { near_chunks: 2, mid_chunks: 12, far_chunks: 8 }
-            .validate()
-            .is_err(),
+        LodDistanceConfig {
+            near_chunks: 2,
+            mid_chunks: 12,
+            far_chunks: 8
+        }
+        .validate()
+        .is_err(),
         "mid > far must be rejected"
     );
 }
@@ -184,9 +195,7 @@ fn tool_palette_set_selected_respects_availability() {
     let mut p = ToolPalette::default();
 
     // Insert a tier-1 build tool.
-    p.insert(
-        ToolEntry::new("build_road", "Road", ToolCategory::Build).with_tier(1),
-    );
+    p.insert(ToolEntry::new("build_road", "Road", ToolCategory::Build).with_tier(1));
 
     // set_selected to an inserted entry succeeds.
     assert!(p.set_selected("build_road").is_ok());

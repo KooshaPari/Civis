@@ -419,8 +419,7 @@ impl EspionageEngine {
         }
         let network = &self.networks[network_id];
         let risk = action.risk_factor();
-        let probability =
-            self.config.base_detection_chance * (1.0 - network.cover) * risk;
+        let probability = self.config.base_detection_chance * (1.0 - network.cover) * risk;
         Ok(probability.clamp(0.0, 1.0))
     }
 

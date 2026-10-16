@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_046 {
-    use civ_engine::lod::{aggregate_strategic, ZoomLevel, project_zoom};
+    use civ_engine::lod::{aggregate_strategic, project_zoom, ZoomLevel};
 
     /// FR-CIV-VEHICLE-046 -- LOD aggregation produces aggregate without per-vehicle detail.
     #[test]

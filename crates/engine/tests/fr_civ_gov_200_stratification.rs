@@ -4,8 +4,8 @@
 //! settlement seeding APIs and asserts on per-settlement reports, Gini, and
 //! class-mobility (Promotion/Demotion) events.
 
-use civ_engine::Simulation;
 use civ_engine::social_types::{StratBand, StratificationEventKind};
+use civ_engine::Simulation;
 
 /// Seed one settlement with 10 households of linearly increasing wealth.
 fn seeded_sim() -> Simulation {
@@ -28,7 +28,11 @@ fn stratification_report_computed_per_settlement() {
         .last_tick_stratification_report(1)
         .expect("settlement 1 must have a stratification report");
     assert_eq!(report.settlement_id, 1);
-    assert!(report.gini > 0.0, "linear wealth spread must give gini > 0, got {}", report.gini);
+    assert!(
+        report.gini > 0.0,
+        "linear wealth spread must give gini > 0, got {}",
+        report.gini
+    );
     assert!(report.gini <= 1.0);
 
     // Quantiles must partition the 10 households across the 4 bands.

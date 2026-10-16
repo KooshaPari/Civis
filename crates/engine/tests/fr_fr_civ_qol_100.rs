@@ -20,6 +20,9 @@ mod fr_fr_civ_qol_100 {
     fn tutorial_progress_exists() {
         let progress = civ_engine::TutorialProgress::default();
         // Default progress starts at FirstFaction.
-        assert!(matches!(progress.current, civ_engine::TutorialMilestone::FirstFaction));
+        assert!(matches!(
+            progress.current,
+            civ_engine::TutorialMilestone::FirstFaction
+        ));
     }
 }

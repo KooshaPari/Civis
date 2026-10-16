@@ -32,7 +32,9 @@ impl Plugin for PerfHudPlugin {
             .init_resource::<PerfMetrics>()
             .add_systems(
                 Update,
-                (toggle_perf_hud, draw_perf_hud).chain().run_if(in_playing_state),
+                (toggle_perf_hud, draw_perf_hud)
+                    .chain()
+                    .run_if(in_playing_state),
             );
     }
 }

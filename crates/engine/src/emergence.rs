@@ -1398,10 +1398,7 @@ mod tests {
             !code.contains("rand::random"),
             "unseeded rand::random in emergence.rs"
         );
-        assert!(
-            !code.contains("OsRng"),
-            "unseeded OsRng in emergence.rs"
-        );
+        assert!(!code.contains("OsRng"), "unseeded OsRng in emergence.rs");
         // Every ChaCha8Rng construction in the module seeds from the world
         // seed or a deterministic XOR extension of it.
         for line in code.lines() {
@@ -1418,7 +1415,9 @@ mod tests {
             run_ticks(&mut sim, 3);
             let mut sig = 0u64;
             for (_, dna) in sim.world.query::<&Dna>().iter() {
-                sig = sig.wrapping_mul(31).wrapping_add(dna_class_fingerprint(dna));
+                sig = sig
+                    .wrapping_mul(31)
+                    .wrapping_add(dna_class_fingerprint(dna));
             }
             sig
         };

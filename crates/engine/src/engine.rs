@@ -1765,7 +1765,7 @@ impl Simulation {
         &self.weather_grid
     }
 
-// FR-CIV-ENGINE-REPLAY-003
+    // FR-CIV-ENGINE-REPLAY-003
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
         self.replay_log.record_damage(self.state.tick, event);
@@ -1952,7 +1952,7 @@ impl Simulation {
         &mut self.building_graph
     }
 
-// FR-CIV-ENGINE-INT-014
+    // FR-CIV-ENGINE-INT-014
     /// Borrow the most recent cohort diffusion statistics.
     pub fn last_cohort_stats(&self) -> Option<&CohortStats> {
         self.last_cohort_stats.as_ref()
@@ -2467,10 +2467,7 @@ impl Simulation {
     ///
     /// Used by the Bevy in-process client that maintains its own `CaGrid`
     /// for GPU-backed terrain simulation.
-    pub fn tick_with_emergence_source(
-        &mut self,
-        _ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>,
-    ) {
+    pub fn tick_with_emergence_source(&mut self, _ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>) {
         // The external CaGrid is currently informational — the core tick
         // phases read from `self.voxel` (the kernel-side VoxelWorld).
         // When the client wires its CA grid into the simulation, this
@@ -2788,7 +2785,7 @@ impl Simulation {
         }
     }
 
-// FR-CIV-ENGINE-INT-011
+    // FR-CIV-ENGINE-INT-011
     /// Top-level buildings (layouts) phase (FR-CIV-ARCH wiring).
     ///
     /// Iterates over each settlement's stored list of
@@ -3220,10 +3217,7 @@ impl Simulation {
         &self.faction_languages
     }
 
-    pub fn set_faction_languages(
-        &mut self,
-        faction_languages: BTreeMap<u32, LanguageState>,
-    ) {
+    pub fn set_faction_languages(&mut self, faction_languages: BTreeMap<u32, LanguageState>) {
         self.faction_languages = faction_languages;
         self.language_state = self
             .faction_languages

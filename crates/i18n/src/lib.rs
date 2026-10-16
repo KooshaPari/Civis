@@ -15,9 +15,7 @@
 #![forbid(unsafe_code)]
 
 use std::borrow::Cow;
-use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::Path;
 use thiserror::Error;
 
 // ---------------------------------------------------------------------------
@@ -25,9 +23,10 @@ use thiserror::Error;
 // ---------------------------------------------------------------------------
 
 /// Supported locales.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Locale {
     /// English (default)
+    #[default]
     En,
     /// Persian (فارسی) — RTL
     Fa,
@@ -41,7 +40,13 @@ pub enum Locale {
 
 impl Locale {
     /// All supported locales, in priority order for auto-detection.
-    pub const ALL: &[Locale] = &[Locale::En, Locale::Fa, Locale::FaLatn, Locale::ZhCN, Locale::ZhTW];
+    pub const ALL: &[Locale] = &[
+        Locale::En,
+        Locale::Fa,
+        Locale::FaLatn,
+        Locale::ZhCN,
+        Locale::ZhTW,
+    ];
 
     /// BCP-47 tag.
     pub fn as_str(self) -> &'static str {
@@ -64,8 +69,15 @@ impl Locale {
             "zh" => {
                 // If exact tag is zh-CN or zh-TW, prefer it
                 match s {
-                    x if x.eq_ignore_ascii_case("zh-CN") || x.eq_ignore_ascii_case("zh-Hans") => Some(Locale::ZhCN),
-                    x if x.eq_ignore_ascii_case("zh-TW") || x.eq_ignore_ascii_case("zh-HK") || x.eq_ignore_ascii_case("zh-Hant") => Some(Locale::ZhTW),
+                    x if x.eq_ignore_ascii_case("zh-CN") || x.eq_ignore_ascii_case("zh-Hans") => {
+                        Some(Locale::ZhCN)
+                    }
+                    x if x.eq_ignore_ascii_case("zh-TW")
+                        || x.eq_ignore_ascii_case("zh-HK")
+                        || x.eq_ignore_ascii_case("zh-Hant") =>
+                    {
+                        Some(Locale::ZhTW)
+                    }
                     _ => Some(Locale::ZhCN), // default Simplified
                 }
             }
@@ -76,12 +88,6 @@ impl Locale {
     /// Returns `true` if the locale requires right-to-left text layout.
     pub fn is_rtl(self) -> bool {
         matches!(self, Locale::Fa)
-    }
-}
-
-impl Default for Locale {
-    fn default() -> Self {
-        Locale::En
     }
 }
 
@@ -426,7 +432,7 @@ mod tests {
     /// Count how many English keys are present (and non-empty) in `other`.
     fn en_keys_present_in(other: &Bundle) -> usize {
         en_keys_iter()
-            .filter(|k| other.get(&k).map(str::len).unwrap_or(0) > 0)
+            .filter(|k| other.get(k).map(str::len).unwrap_or(0) > 0)
             .count()
     }
 }

@@ -72,10 +72,7 @@ impl Plugin for TutorialPlugin {
 
 /// On startup, honour the persisted "skipped tutorial" preference so the
 /// hint is not re-shown on every launch once the player dismisses it.
-fn apply_persisted_tutorial_skip(
-    mut state: ResMut<TutorialState>,
-    settings: Res<GameSettings>,
-) {
+fn apply_persisted_tutorial_skip(mut state: ResMut<TutorialState>, settings: Res<GameSettings>) {
     if settings.tutorial_skipped {
         state.enabled = false;
         state.step = 0;
@@ -250,7 +247,10 @@ mod tests {
             let completed = advance(&mut state);
             assert!(!completed, "step {expected} must not complete the tutorial");
             assert_eq!(state.step, expected, "step advances to {expected}");
-            assert!(!state.acknowledged, "acknowledgement resets for the fresh hint");
+            assert!(
+                !state.acknowledged,
+                "acknowledgement resets for the fresh hint"
+            );
             assert!(should_show(&state), "hint panel stays visible mid-ladder");
             assert!(
                 !HINTS[state.step as usize].is_empty(),
@@ -262,7 +262,14 @@ mod tests {
         let completed = advance(&mut state);
         assert!(completed, "advancing past hint 6 completes the tutorial");
         assert!(!state.enabled, "completed tutorial disables itself");
-        assert_eq!(state.step as usize, HINTS.len() - 1, "step holds at the final hint");
-        assert!(!should_show(&state), "completed tutorial stops showing hints");
+        assert_eq!(
+            state.step as usize,
+            HINTS.len() - 1,
+            "step holds at the final hint"
+        );
+        assert!(
+            !should_show(&state),
+            "completed tutorial stops showing hints"
+        );
     }
 }

@@ -196,7 +196,10 @@ fn fr_civ_0001_tick_post_conditions_hold_and_planet_phase_is_tick_driven() {
         check_tick_invariants(&sim).expect("post-tick invariants must hold");
 
         let snapshot = sim.snapshot();
-        assert_eq!(snapshot.climate.tick, expected, "climate is re-derived per tick");
+        assert_eq!(
+            snapshot.climate.tick, expected,
+            "climate is re-derived per tick"
+        );
         assert_eq!(
             snapshot.climate.day_phase,
             (expected % 24_000) as f32 / 24_000.0,
@@ -247,9 +250,16 @@ fn fr_civ_act_003_job_assignment_is_total_pure_and_uniform() {
         );
         *counts.entry(format!("{job:?}")).or_insert(0_u32) += 1;
     }
-    assert_eq!(counts.len(), 7, "all seven labor categories are reachable: {counts:?}");
+    assert_eq!(
+        counts.len(),
+        7,
+        "all seven labor categories are reachable: {counts:?}"
+    );
     for (job, count) in counts {
-        assert_eq!(count, 100, "{job} must be assigned to exactly 100 of ids 0..700");
+        assert_eq!(
+            count, 100,
+            "{job} must be assigned to exactly 100 of ids 0..700"
+        );
     }
 }
 
@@ -369,7 +379,11 @@ fn fr_civ_act_004_citizen_wellbeing_scalar_is_initialised_and_bounded() {
             expected_welfare_bits,
             "fresh citizens start at welfare = 0.7"
         );
-        assert_eq!(citizen.health.to_bits(), one, "fresh citizens start at full health");
+        assert_eq!(
+            citizen.health.to_bits(),
+            one,
+            "fresh citizens start at full health"
+        );
     }
 
     let mut sim = sim;
@@ -409,7 +423,10 @@ fn fr_civ_act_004_happiness_scalar_absent_from_actor_payloads_todo() {
     let spectator = serde_json::to_string(&sim.spectator_view()).expect("serialize spectator view");
     let snapshot = serde_json::to_string(&sim.snapshot()).expect("serialize snapshot");
 
-    for (label, payload) in [("SpectatorView", &spectator), ("SimulationSnapshot", &snapshot)] {
+    for (label, payload) in [
+        ("SpectatorView", &spectator),
+        ("SimulationSnapshot", &snapshot),
+    ] {
         for forbidden in ["happiness", "standard_of_living", "standardOfLiving"] {
             assert!(
                 !payload.contains(forbidden),
@@ -445,7 +462,10 @@ fn fr_civ_act_005_home_pressure_inverts_settlement_quality() {
     assert_eq!(half, 0.5, "half the food doubles into half the pressure");
 
     let none = home_pressure(&settlement(0.0, 10), &config);
-    assert_eq!(none, 1.0, "deprivation saturates at the documented upper bound");
+    assert_eq!(
+        none, 1.0,
+        "deprivation saturates at the documented upper bound"
+    );
 
     // Social bonds dampen pressure by exactly half the social weight.
     let bonded = MigrationConfig {
@@ -527,9 +547,18 @@ fn fr_civ_act_005_eligibility_boundary_is_inclusive_at_delay() {
     let config = migration_config();
     assert_eq!(config.eligibility_delay, 10);
 
-    assert!(!is_eligible(&agent_at(0, 9), &config), "9 < 10 is ineligible");
-    assert!(is_eligible(&agent_at(0, 10), &config), "age == delay is eligible");
-    assert!(is_eligible(&agent_at(0, 11), &config), "11 > 10 is eligible");
+    assert!(
+        !is_eligible(&agent_at(0, 9), &config),
+        "9 < 10 is ineligible"
+    );
+    assert!(
+        is_eligible(&agent_at(0, 10), &config),
+        "age == delay is eligible"
+    );
+    assert!(
+        is_eligible(&agent_at(0, 11), &config),
+        "11 > 10 is eligible"
+    );
 
     let no_delay = MigrationConfig {
         eligibility_delay: 0,
@@ -575,7 +604,10 @@ fn fr_civ_act_005_decision_boundary_is_strict_with_pull_floor() {
         6,
     )
     .expect("migration");
-    assert_eq!(best.target_settlement, 1, "index of the best candidate entry");
+    assert_eq!(
+        best.target_settlement, 1,
+        "index of the best candidate entry"
+    );
     assert_eq!(best.target_pull, 0.9);
 
     // A full destination loses to a modest one with room, even with better quality.
@@ -596,8 +628,14 @@ fn fr_civ_act_005_decision_boundary_is_strict_with_pull_floor() {
         ..config
     };
     assert!(
-        evaluate_migration(&agent, &settlement(1.0, 10), &[settlement(0.001, 10)], &floor, 7)
-            .is_none(),
+        evaluate_migration(
+            &agent,
+            &settlement(1.0, 10),
+            &[settlement(0.001, 10)],
+            &floor,
+            7
+        )
+        .is_none(),
         "pull below the 0.01 floor must not migrate"
     );
 
@@ -645,7 +683,10 @@ fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
         "the agent really lives in settlement 1"
     );
     assert_eq!(event.source_pressure, 1.0, "home pressure saturates");
-    assert_eq!(event.target_pull, 1.0, "settlement 2 is the attractive candidate");
+    assert_eq!(
+        event.target_pull, 1.0,
+        "settlement 2 is the attractive candidate"
+    );
     assert_eq!(
         event.target_settlement, 1,
         "ACTUAL (defective): filtered-list index, not the settlement index"
@@ -675,9 +716,9 @@ fn fr_civ_act_005_tick_events_are_valid_and_conserve_population() {
         ..migration_config()
     };
     let settlements = vec![
-        settlement(0.0, 10),  // 0: starving home of the desperate agents
-        settlement(1.0, 20),  // 1: the attractive destination
-        settlement(0.9, -3),  // 2: attractive on paper, but full
+        settlement(0.0, 10), // 0: starving home of the desperate agents
+        settlement(1.0, 20), // 1: the attractive destination
+        settlement(0.9, -3), // 2: attractive on paper, but full
     ];
     let agents = vec![
         agent_at(0, 40),
@@ -769,7 +810,10 @@ fn fr_civ_act_005_default_config_is_pinned() {
 fn fr_civ_arch_001_tile_registry_is_deterministic_and_complete() {
     let first = civ_engine::architecture_tile_sets();
     let second = civ_engine::architecture_tile_sets();
-    assert_eq!(first, second, "the registry is lazily built but never varies");
+    assert_eq!(
+        first, second,
+        "the registry is lazily built but never varies"
+    );
     assert_eq!(first.len(), 24, "4 cultures x 6 eras");
 
     let ids: Vec<u16> = first.iter().map(|profile| profile.id).collect();
@@ -786,7 +830,10 @@ fn fr_civ_arch_001_tile_registry_is_deterministic_and_complete() {
             profile.id
         );
         assert!(
-            profile.facade.name.ends_with(&format!("-c{}", profile.culture)),
+            profile
+                .facade
+                .name
+                .ends_with(&format!("-c{}", profile.culture)),
             "tile-set {} facade {:?} must encode culture {}",
             profile.id,
             profile.facade.name,
@@ -800,7 +847,11 @@ fn fr_civ_arch_001_tile_registry_is_deterministic_and_complete() {
         );
         assert_eq!(profile.wealth_bucket, 0);
     }
-    assert_eq!(pairs.len(), 24, "every (culture, era) combination is covered");
+    assert_eq!(
+        pairs.len(),
+        24,
+        "every (culture, era) combination is covered"
+    );
 
     // The registry is the engine's single source of truth for the solver.
     let vector = civ_build::CultureEraWealthVector::new(2, 3, 0);
@@ -829,8 +880,14 @@ fn selected_id(
     signals: &DemandSignals,
     tile_sets: &[TileSetProfile],
 ) -> u16 {
-    pick_tile_set(vector, signals, tile_sets, ArchitectureMode::Canonical, None)
-        .expect("canonical mode resolves a tile-set for every culture/era")
+    pick_tile_set(
+        vector,
+        signals,
+        tile_sets,
+        ArchitectureMode::Canonical,
+        None,
+    )
+    .expect("canonical mode resolves a tile-set for every culture/era")
 }
 
 /// Covers FR-CIV-ARCH-001.
@@ -899,7 +956,11 @@ fn fr_civ_arch_002_tile_selection_decrates_the_graph_without_replacing_it() {
     };
     let origin = WorldCoord { x: 0, y: 0, z: 0 };
     let allocated = allocator.allocate(&mut graph, &signals, 3, origin, 16);
-    assert_eq!(allocated.len(), 4, "one parcel per saturated demand channel");
+    assert_eq!(
+        allocated.len(),
+        4,
+        "one parcel per saturated demand channel"
+    );
 
     let parcels_before: Vec<_> = graph
         .parcels
@@ -918,7 +979,13 @@ fn fr_civ_arch_002_tile_selection_decrates_the_graph_without_replacing_it() {
 
     let tile_sets = civ_engine::architecture_tile_sets();
     let vector = civ_build::CultureEraWealthVector::new(1, 3, 0);
-    let via_fn = pick_tile_set(&vector, &signals, tile_sets, ArchitectureMode::Canonical, None);
+    let via_fn = pick_tile_set(
+        &vector,
+        &signals,
+        tile_sets,
+        ArchitectureMode::Canonical,
+        None,
+    );
     let via_allocator = Allocator::select_tile_set_id(
         &vector,
         &signals,
@@ -952,8 +1019,15 @@ fn fr_civ_arch_002_tile_selection_decrates_the_graph_without_replacing_it() {
             "facade is recorded against the graph parcel id"
         );
     }
-    assert_eq!(graph.total_capacity(), 4, "one residential parcel = 4 housing slots");
-    assert!(facade.name.contains("-biome"), "biome bias is applied on top: {facade:?}");
+    assert_eq!(
+        graph.total_capacity(),
+        4,
+        "one residential parcel = 4 housing slots"
+    );
+    assert!(
+        facade.name.contains("-biome"),
+        "biome bias is applied on top: {facade:?}"
+    );
 }
 
 /// Covers FR-CIV-ARCH-002.
@@ -964,7 +1038,11 @@ fn fr_civ_arch_002_tile_selection_decrates_the_graph_without_replacing_it() {
 #[test]
 fn fr_civ_arch_002_engine_graph_grows_on_cadence_with_referentially_intact_facades() {
     let mut sim = Simulation::with_seed(11);
-    assert_eq!(sim.building_graph().parcels.len(), 0, "no parcels before the first tick");
+    assert_eq!(
+        sim.building_graph().parcels.len(),
+        0,
+        "no parcels before the first tick"
+    );
 
     tick_n(&mut sim, 15);
     assert_eq!(
@@ -975,7 +1053,10 @@ fn fr_civ_arch_002_engine_graph_grows_on_cadence_with_referentially_intact_facad
 
     sim.tick(); // tick 16
     let after_first = sim.building_graph().parcels.len();
-    assert!(after_first > 0, "the first cadence boundary allocates parcels");
+    assert!(
+        after_first > 0,
+        "the first cadence boundary allocates parcels"
+    );
 
     tick_n(&mut sim, 16); // tick 32
     let after_second = sim.building_graph().parcels.len();
@@ -987,7 +1068,11 @@ fn fr_civ_arch_002_engine_graph_grows_on_cadence_with_referentially_intact_facad
     let graph = sim.building_graph();
     let parcel_ids: std::collections::BTreeSet<_> =
         graph.parcels.iter().map(|parcel| parcel.id).collect();
-    assert_eq!(parcel_ids.len(), graph.parcels.len(), "parcel ids are unique");
+    assert_eq!(
+        parcel_ids.len(),
+        graph.parcels.len(),
+        "parcel ids are unique"
+    );
     let mut kinds = std::collections::HashSet::new();
     for parcel in &graph.parcels {
         kinds.insert(parcel.kind);
@@ -1093,7 +1178,11 @@ fn fr_civ_l5_spawn_lands_in_spectator_pins_with_job_label() {
     attach_citizen_to_agents(&mut sim.world);
 
     let view = sim.spectator_view();
-    assert_eq!(view.civ_pins.len(), 129, "the spawned civilian is a new pin");
+    assert_eq!(
+        view.civ_pins.len(),
+        129,
+        "the spawned civilian is a new pin"
+    );
     let pin = view
         .civ_pins
         .iter()
@@ -1107,13 +1196,19 @@ fn fr_civ_l5_spawn_lands_in_spectator_pins_with_job_label() {
         "42_007 % 7 == 0 assigns Farmer to the spawned pin"
     );
     assert!(
-        view.civ_pins.windows(2).all(|pair| pair[0].idx <= pair[1].idx),
+        view.civ_pins
+            .windows(2)
+            .all(|pair| pair[0].idx <= pair[1].idx),
         "pins are published in ascending id order"
     );
-    assert!(view.civ_pins.len() <= 256, "pin payload is capped at 256 entries");
     assert!(
-        view.civ_pins.iter().all(|pin| (0.0..=1.0).contains(&pin.x)
-            && (0.0..=1.0).contains(&pin.y)),
+        view.civ_pins.len() <= 256,
+        "pin payload is capped at 256 entries"
+    );
+    assert!(
+        view.civ_pins
+            .iter()
+            .all(|pin| (0.0..=1.0).contains(&pin.x) && (0.0..=1.0).contains(&pin.y)),
         "pin coordinates are normalised"
     );
 }
@@ -1139,11 +1234,7 @@ fn fr_civ_l5_faction_and_building_pins_are_tick_driven() {
         );
     }
 
-    let faction_pins: Vec<_> = startup
-        .buildings
-        .iter()
-        .filter(|pin| pin.id < 12)
-        .collect();
+    let faction_pins: Vec<_> = startup.buildings.iter().filter(|pin| pin.id < 12).collect();
     assert_eq!(faction_pins.len(), 12, "4 factions x 3 building pins");
     for faction in 0..4_u32 {
         let owned: Vec<_> = faction_pins
@@ -1161,7 +1252,10 @@ fn fr_civ_l5_faction_and_building_pins_are_tick_driven() {
             ],
             "pin kinds cycle per faction at tick 0"
         );
-        assert!(owned.iter().all(|pin| pin.era == 0), "pre-120 ticks is era 0");
+        assert!(
+            owned.iter().all(|pin| pin.era == 0),
+            "pre-120 ticks is era 0"
+        );
     }
     assert!(
         startup.buildings.iter().any(|pin| pin.id >= 9_000),
@@ -1205,9 +1299,15 @@ fn fr_civ_res_001_baseline_scenario_loads_with_canonical_values() {
     assert_eq!(scenario.military.engage_range_grid, Some(10));
     assert_eq!(
         scenario.mods,
-        vec!["mods/example-policy".to_owned(), "mods/example-economic".to_owned()]
+        vec![
+            "mods/example-policy".to_owned(),
+            "mods/example-economic".to_owned()
+        ]
     );
-    assert_eq!(scenario.seeds, vec!["scenarios/canonical_seeds.ron".to_owned()]);
+    assert_eq!(
+        scenario.seeds,
+        vec!["scenarios/canonical_seeds.ron".to_owned()]
+    );
     assert_eq!(scenario.active_seed.as_deref(), Some("raw_organism"));
     assert_eq!(scenario.policy.kind, "noop");
     assert!(scenario.objectives.is_empty());
@@ -1229,7 +1329,10 @@ fn fr_civ_res_001_omitted_blocks_fall_back_to_documented_defaults() {
     let dir = tempfile::tempdir().expect("temp dir");
     let scenario = load_scenario_body(dir.path(), &scenario_yaml("")).expect("minimal scenario");
 
-    assert_eq!(scenario.version, 1, "version defaults to the schema version");
+    assert_eq!(
+        scenario.version, 1,
+        "version defaults to the schema version"
+    );
     assert_eq!(scenario.starting_conditions.civilians_per_faction, 32);
     assert_eq!(scenario.starting_conditions.faction_count, 4);
     assert_eq!(scenario.starting_conditions.quadrant_spread, 2_500);
@@ -1261,8 +1364,14 @@ fn fr_civ_res_001_validation_rejects_each_invalid_field() {
     let cases: [(&str, String); 9] = [
         ("name", scenario_yaml_full("'   '", 100, "1.0", "")),
         ("population", scenario_yaml_full("unit-test", 0, "1.0", "")),
-        ("scarcity_multiplier", scenario_yaml_full("unit-test", 100, "-0.5", "")),
-        ("divergence_override", scenario_yaml("divergence_override: 1.5\n")),
+        (
+            "scarcity_multiplier",
+            scenario_yaml_full("unit-test", 100, "-0.5", ""),
+        ),
+        (
+            "divergence_override",
+            scenario_yaml("divergence_override: 1.5\n"),
+        ),
         (
             "starting_conditions.faction_count",
             scenario_yaml("starting_conditions:\n  faction_count: 0\n"),
@@ -1295,7 +1404,8 @@ fn fr_civ_res_001_validation_rejects_each_invalid_field() {
     }
 
     // A zero `seed_mix` weight is refused as well.
-    let body = scenario_yaml("starting_conditions:\n  seed_mix:\n    - seed: Ardani\n      weight: 0.0\n");
+    let body =
+        scenario_yaml("starting_conditions:\n  seed_mix:\n    - seed: Ardani\n      weight: 0.0\n");
     match load_scenario_body(dir.path(), &body) {
         Err(ScenarioError::Validation { field, .. }) => {
             assert_eq!(field, "starting_conditions.seed_mix")
@@ -1351,7 +1461,10 @@ fn fr_civ_res_001_presets_are_enumerable_and_all_load() {
         let path = preset_scenario_path(name);
         let scenario = load_scenario(&path)
             .unwrap_or_else(|err| panic!("enumerated preset {name} must load: {err}"));
-        assert_eq!(scenario.name, *name, "preset file name matches its `name` field");
+        assert_eq!(
+            scenario.name, *name,
+            "preset file name matches its `name` field"
+        );
         assert_eq!(scenario.version, SCENARIO_SCHEMA_VERSION);
         assert!(scenario.population > 0);
     }

@@ -80,7 +80,10 @@ fn distinct_seeds_produce_distinct_streams() {
         a.state.rng_seed, b.state.rng_seed,
         "each run carries its own seed"
     );
-    assert_eq!(a.state.tick, b.state.tick, "tick clock is independent of the stream");
+    assert_eq!(
+        a.state.tick, b.state.tick,
+        "tick clock is independent of the stream"
+    );
 }
 
 /// A fresh simulation is usable and reports its own seed.

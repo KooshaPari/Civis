@@ -27,7 +27,12 @@ mod fr_fr_civ_0104_004 {
         };
 
         for tick in 1..=100 {
-            state.update(tick, Fixed::from_num(7) / Fixed::from_num(10), &params, &result);
+            state.update(
+                tick,
+                Fixed::from_num(7) / Fixed::from_num(10),
+                &params,
+                &result,
+            );
         }
 
         assert_eq!(
@@ -51,7 +56,12 @@ mod fr_fr_civ_0104_004 {
         };
 
         for tick in 1..=10 {
-            let snap = state.update(tick, Fixed::from_num(7) / Fixed::from_num(10), &params, &result);
+            let snap = state.update(
+                tick,
+                Fixed::from_num(7) / Fixed::from_num(10),
+                &params,
+                &result,
+            );
             assert_eq!(snap.tick, tick);
         }
 
@@ -74,7 +84,12 @@ mod fr_fr_civ_0104_004 {
             c5_coalition_compatible: ConstraintCheck::Ok,
         };
 
-        let snap = state.update(42, Fixed::from_num(7) / Fixed::from_num(10), &params, &result);
+        let snap = state.update(
+            42,
+            Fixed::from_num(7) / Fixed::from_num(10),
+            &params,
+            &result,
+        );
         assert_eq!(snap.tick, 42);
         assert_eq!(state.stability_snapshots[0].tick, 42);
     }

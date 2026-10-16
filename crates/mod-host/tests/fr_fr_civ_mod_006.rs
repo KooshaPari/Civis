@@ -8,7 +8,7 @@ mod fr_fr_civ_mod_006 {
     /// FR-CIV-MOD-006: HookEngine clear removes all registrations.
     #[test]
     fn clear_removes_all_registrations() {
-        use civ_mod_host::hooks::{ModHookEngine, ModHook};
+        use civ_mod_host::hooks::{ModHook, ModHookEngine};
         let mut engine = ModHookEngine::new();
         engine.register("mod-a", ModHook::OnTick(0), 0);
         engine.register("mod-b", ModHook::OnTick(0), 1);
@@ -20,7 +20,7 @@ mod fr_fr_civ_mod_006 {
     /// FR-CIV-MOD-006: Unregistering a hook removes it.
     #[test]
     fn unregister_removes_hook() {
-        use civ_mod_host::hooks::{ModHookEngine, ModHook};
+        use civ_mod_host::hooks::{ModHook, ModHookEngine};
         let mut engine = ModHookEngine::new();
         engine.register("mod-a", ModHook::OnTick(0), 0);
         engine.unregister("mod-a", &ModHook::OnTick(0));

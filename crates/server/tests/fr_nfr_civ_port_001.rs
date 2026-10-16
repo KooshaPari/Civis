@@ -60,7 +60,12 @@ fn platform_id(spec_platform: &str) -> &'static str {
 
 /// Spec-backend label (`DX12 (DLSS/Solari path)`) → portability identifier (`dx12`).
 fn backend_id(spec_backend: &str) -> &'static str {
-    match spec_backend.split_whitespace().next().unwrap_or_default().to_ascii_lowercase().as_str()
+    match spec_backend
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+        .as_str()
     {
         "vulkan" => "vulkan",
         "dx12" => "dx12",
@@ -101,7 +106,11 @@ fn spec_rows() -> Vec<(String, String, String)> {
 #[test]
 fn platform_matrix_matches_nfr_spec_table_row_for_row() {
     let spec = spec_rows();
-    assert_eq!(spec.len(), 4, "spec table must have exactly 4 rows: {spec:?}");
+    assert_eq!(
+        spec.len(),
+        4,
+        "spec table must have exactly 4 rows: {spec:?}"
+    );
     assert_eq!(
         PLATFORM_MATRIX.len(),
         spec.len(),

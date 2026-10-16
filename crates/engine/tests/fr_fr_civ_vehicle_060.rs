@@ -18,8 +18,22 @@ mod fr_fr_civ_vehicle_060 {
         let congestion = 1.0;
 
         // Transport cost is inversely proportional to speed
-        let highway_speed = effective_speed(base, LaneClass::Highway.speed_mult(), vehicle, coupling, load, congestion);
-        let trail_speed = effective_speed(base, LaneClass::Trail.speed_mult(), vehicle, coupling, load, congestion);
+        let highway_speed = effective_speed(
+            base,
+            LaneClass::Highway.speed_mult(),
+            vehicle,
+            coupling,
+            load,
+            congestion,
+        );
+        let trail_speed = effective_speed(
+            base,
+            LaneClass::Trail.speed_mult(),
+            vehicle,
+            coupling,
+            load,
+            congestion,
+        );
 
         let local_price = 10.0;
         let distance = 100.0;
@@ -32,7 +46,10 @@ mod fr_fr_civ_vehicle_060 {
         let delivered_trail = local_price + transport_trail;
 
         // Highway route has lower delivered price
-        assert!(delivered_highway < delivered_trail, "highway delivered must be cheaper");
+        assert!(
+            delivered_highway < delivered_trail,
+            "highway delivered must be cheaper"
+        );
         // Both are above local price
         assert!(delivered_highway > local_price);
         assert!(delivered_trail > local_price);

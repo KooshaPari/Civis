@@ -10,8 +10,8 @@
 
 #[cfg(test)]
 mod fr_fr_civ_3d_014 {
-    use civ_engine::WorldState;
     use civ_engine::Fixed;
+    use civ_engine::WorldState;
 
     /// WorldState provides all required simulation state for rendering.
     #[test]

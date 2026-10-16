@@ -5,7 +5,9 @@
 
 #[cfg(test)]
 mod fr_fr_civ_proto_003 {
-    use civ_protocol_3d::{encode_frame3d_binary, decode_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
+    use civ_protocol_3d::{
+        decode_frame3d_binary, encode_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC,
+    };
 
     #[test]
     fn verify_fr_civ_proto_003_basic() {

@@ -17,6 +17,11 @@ mod fr_fr_civ_vehicle_020 {
         let expected = base * lane * vehicle;
 
         let actual = effective_speed(base, lane, vehicle, 1.0, 0.0, 1.0);
-        assert!((actual - expected).abs() < 0.001, "expected {}, got {}", expected, actual);
+        assert!(
+            (actual - expected).abs() < 0.001,
+            "expected {}, got {}",
+            expected,
+            actual
+        );
     }
 }

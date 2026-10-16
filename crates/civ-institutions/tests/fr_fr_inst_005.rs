@@ -52,7 +52,9 @@ fn governance_transition_recorded_in_series() {
     let mut state = CivilizationState::new(1, GovernanceType::Democracy);
     state.tick(0, 0, 100);
     // Force collapse.
-    state.legitimacy.apply_outcome(civ_institutions::GovernanceOutcome::poor(0.9));
+    state
+        .legitimacy
+        .apply_outcome(civ_institutions::GovernanceOutcome::poor(0.9));
     state.tick(1, 0, 100);
     // The second point should reflect the collapsed type.
     let point = &state.time_series.points[1];

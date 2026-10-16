@@ -86,8 +86,12 @@ fn main() {
     let mut pass2: Vec<serde_json::Value> = Vec::new();
     for (file, needle) in contracts {
         let path = bevy_ref.join(file);
-        let present2 = std::fs::read_to_string(&path).map(|s| s.contains(needle)).unwrap_or(false);
-        if present2 { found2 += 1; }
+        let present2 = std::fs::read_to_string(&path)
+            .map(|s| s.contains(needle))
+            .unwrap_or(false);
+        if present2 {
+            found2 += 1;
+        }
         pass2.push(serde_json::json!({"file": file, "needle": needle, "present2": present2}));
     }
     let deterministic = found_count == found2;

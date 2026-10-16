@@ -14,7 +14,11 @@ mod fr_fr_civ_infoview_903 {
     /// FR-CIV-INFOVIEW-903 — Three render kinds exist.
     #[test]
     fn three_render_kinds_exist() {
-        let kinds = [RenderKind::LatticeRecolor, RenderKind::Gizmo, RenderKind::EntityTint];
+        let kinds = [
+            RenderKind::LatticeRecolor,
+            RenderKind::Gizmo,
+            RenderKind::EntityTint,
+        ];
         assert_eq!(kinds.len(), 3);
     }
 

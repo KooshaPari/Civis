@@ -5,15 +5,13 @@
 //! (grammar+Markov inline; SLM seeds a per-culture grammar once, batch).
 //! Zero per-name model calls; grammar cached on the culture record.
 
-use civ_ai::{
-    AiCache, DummyAiProvider, GenOutput, GenRequest, ProviderRegistry, ProviderRole,
-};
+use civ_ai::{AiCache, DummyAiProvider, GenOutput, GenRequest, ProviderRegistry, ProviderRole};
 use std::sync::Arc;
 
 #[cfg(test)]
 mod fr_fr_civ_ai_011 {
-    use civ_ai::AiProvider;
     use super::*;
+    use civ_ai::AiProvider;
 
     /// FR-CIV-AI-011 — Naming grammar-seed cache key is derived from
     /// (culture_id, language_params_hash), not from per-name prompts.

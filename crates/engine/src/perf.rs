@@ -147,7 +147,8 @@ mod tests {
             unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
                 let ptr = System.alloc(layout);
                 if !ptr.is_null() {
-                    self.allocated.fetch_add(layout.size() as u64, Ordering::Relaxed);
+                    self.allocated
+                        .fetch_add(layout.size() as u64, Ordering::Relaxed);
                 }
                 ptr
             }

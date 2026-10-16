@@ -29,11 +29,7 @@ use civ_server::spawn_ws_bridge;
 use futures::StreamExt;
 use tokio::net::TcpStream;
 use tokio::time::{timeout, timeout_at, Instant as TokioInstant};
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::Message,
-    MaybeTlsStream, WebSocketStream,
-};
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
 /// NFR requires **> 100** concurrent clients — 101 is the smallest
 /// integer that satisfies the strict inequality, and it doubles as the

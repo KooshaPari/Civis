@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod fr_fr_civ_emergence_001 {
     use civ_emergence_metrics::branching::{
-        BranchingLedger, BranchingRegime, classify_regime, rolling_mean_sigma, sigma_a,
+        classify_regime, rolling_mean_sigma, sigma_a, BranchingLedger, BranchingRegime,
         DEFAULT_BRANCHING_WINDOW, SIGMA_EDGE_LOW, SIGMA_SUBCRITICAL,
     };
 

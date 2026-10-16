@@ -3,7 +3,10 @@
 //! Verifies the logarithmic forcing formula produces physically plausible temperatures.
 
 use civ_climate::co2::PRE_INDUSTRIAL_CO2_PPM;
-use civ_climate::temperature::{temperature_anomaly_from_co2, temperature_from_co2, TemperatureConfig, TemperatureTracker, BASELINE_TEMP_C};
+use civ_climate::temperature::{
+    temperature_anomaly_from_co2, temperature_from_co2, TemperatureConfig, TemperatureTracker,
+    BASELINE_TEMP_C,
+};
 
 /// FR-CLIM-002: Temperature is derived from CO₂ via parameterised formula.
 #[test]
@@ -36,7 +39,10 @@ fn monotonic_increase() {
     let mut prev_t = 0.0;
     for &co2 in &co2_levels {
         let t = temperature_from_co2(co2, &config);
-        assert!(t > prev_t, "Temperature should increase: {co2} ppm → {t} °C");
+        assert!(
+            t > prev_t,
+            "Temperature should increase: {co2} ppm → {t} °C"
+        );
         prev_t = t;
     }
 }

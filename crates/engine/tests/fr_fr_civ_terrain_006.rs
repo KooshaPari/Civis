@@ -15,8 +15,7 @@ mod fr_fr_civ_terrain_006 {
             sim.tick();
         }
         let json = serde_json::to_string(&sim.state).expect("serialize");
-        let restored: civ_engine::WorldState =
-            serde_json::from_str(&json).expect("deserialize");
+        let restored: civ_engine::WorldState = serde_json::from_str(&json).expect("deserialize");
         // All numeric fields must match
         assert_eq!(sim.state.tick, restored.tick);
         assert_eq!(sim.state.population, restored.population);

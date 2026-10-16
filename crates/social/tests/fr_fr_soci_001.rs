@@ -3,7 +3,7 @@
 //! Ideological alignment SHALL be tracked per-citizen cohort as a
 //! continuous score.
 
-use civ_social::{IdeologyScore};
+use civ_social::IdeologyScore;
 
 #[test]
 fn per_cohort_continuous() {

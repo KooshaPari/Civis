@@ -93,10 +93,7 @@ pub fn compute_damage(
 ///
 /// Returns the effective production after damage reduction.
 #[must_use]
-pub fn apply_damage_to_production(
-    base_production_joules: i64,
-    damage: &DamageResult,
-) -> i64 {
+pub fn apply_damage_to_production(base_production_joules: i64, damage: &DamageResult) -> i64 {
     (base_production_joules * damage.production_multiplier_bp / BP_DENOM).max(0)
 }
 
@@ -163,7 +160,10 @@ mod tests {
     fn damage_at_threshold() {
         let cfg = DamageConfig::default();
         let result = compute_damage(2.0, &cfg, 0);
-        assert!(!result.active, "exactly at threshold should not trigger damage");
+        assert!(
+            !result.active,
+            "exactly at threshold should not trigger damage"
+        );
     }
 
     #[test]

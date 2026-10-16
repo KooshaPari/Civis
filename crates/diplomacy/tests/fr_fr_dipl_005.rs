@@ -73,7 +73,10 @@ fn espionage_detection_scales_with_risk() {
         .detection_probability(EspionageAction::AssassinateLeader, 0)
         .unwrap();
 
-    assert!(prob_assassinate > prob_intel, "high risk = higher detection");
+    assert!(
+        prob_assassinate > prob_intel,
+        "high risk = higher detection"
+    );
     assert!((prob_intel - 0.15).abs() < 1e-6);
     assert!((prob_assassinate - 0.50).abs() < 1e-6);
 }

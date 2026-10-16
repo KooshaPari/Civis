@@ -23,7 +23,10 @@ use std::path::{Path, PathBuf};
 
 /// Resolve a repository-root-relative path from the engine crate manifest.
 fn repo_path(rel: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join(rel)
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(rel)
 }
 
 /// Read a repository-root-relative file as UTF-8, panicking with the path.

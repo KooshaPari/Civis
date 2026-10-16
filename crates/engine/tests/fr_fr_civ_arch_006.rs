@@ -12,7 +12,7 @@ mod fr_fr_civ_arch_006 {
     fn world_state_is_public_and_defaultable() {
         let ws = civ_engine::WorldState::default();
         assert_eq!(ws.tick, 0);
-        assert!(ws.population == 0 || ws.population > 0); // population is u64, always non-negative
+        assert!(ws.population >= 0); // population is u64, always non-negative
     }
 
     /// FR-CIV-ARCH-006: Simulation::with_seed creates a valid simulation.

@@ -5,7 +5,7 @@
 //!
 //! FR-CIV-TACTICS-025-: Tactics and strategy — Doctrine fitness scoring.
 
-use civ_tactics::{FactionEngagementStats, score_doctrine_fitness, Doctrine};
+use civ_tactics::{score_doctrine_fitness, Doctrine, FactionEngagementStats};
 
 #[cfg(test)]
 mod fr_fr_civ_tactics_025_ {

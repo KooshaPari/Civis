@@ -169,7 +169,12 @@ pub fn effective_speed(
     };
     let congestion = congestion.clamp(0.01, 1.0);
 
-    base_walk_speed * lane_speed_mult * vehicle_speed_mult * medium_coupling * load_factor * congestion
+    base_walk_speed
+        * lane_speed_mult
+        * vehicle_speed_mult
+        * medium_coupling
+        * load_factor
+        * congestion
 }
 
 // ── Lane class (§3.1) ────────────────────────────────────────────────────────
@@ -370,6 +375,9 @@ pub fn default_archetype_catalog() -> Vec<VehicleArchetype> {
 }
 
 /// Find an archetype by kind in the catalog.
-pub fn find_archetype(catalog: &[VehicleArchetype], kind: VehicleKind) -> Option<&VehicleArchetype> {
+pub fn find_archetype(
+    catalog: &[VehicleArchetype],
+    kind: VehicleKind,
+) -> Option<&VehicleArchetype> {
     catalog.iter().find(|a| a.kind == kind)
 }

@@ -19,7 +19,10 @@ mod fr_fr_civ_core_det_003 {
         // Replay log events or RNG seeds should differ
         let differs = sim_a.state.rng_seed != sim_b.state.rng_seed
             || sim_a.replay_log().events.len() != sim_b.replay_log().events.len();
-        assert!(differs, "different seeds should produce different replay state");
+        assert!(
+            differs,
+            "different seeds should produce different replay state"
+        );
     }
 
     /// Same seed always produces same state (idempotency).

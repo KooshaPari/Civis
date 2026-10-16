@@ -3,7 +3,7 @@
 //! Covers: FR-METRICS-001/002/003, FR-CIV-METRICS-001/001-TIMESERIES,
 //! FR-REPLAY-002, NFR-CIV-DET-001/002/003
 
-use civ_engine::metrics::{compute, compute_fixed, Metrics, MetricsFixed};
+use civ_engine::metrics::{compute, compute_fixed, MetricsFixed};
 use civ_engine::replay::ReplayEvent;
 use civ_engine::Fixed;
 
@@ -46,7 +46,12 @@ fn fr_metrics_002_fixed_matches_float_tyranny() {
         Fixed::from_num(consumption as i64),
     );
     let diff = (float_m.tyranny_index - fixed_m.tyranny_index.to_num::<f64>()).abs();
-    assert!(diff < 0.01, "tyranny index mismatch: float={} fixed={}", float_m.tyranny_index, fixed_m.tyranny_index.to_num::<f64>());
+    assert!(
+        diff < 0.01,
+        "tyranny index mismatch: float={} fixed={}",
+        float_m.tyranny_index,
+        fixed_m.tyranny_index.to_num::<f64>()
+    );
 }
 
 // ===========================================================================
@@ -59,8 +64,11 @@ fn fr_metrics_003_tyranny_clamped() {
     for budget in [0.0, 1.0, 100.0, 10000.0] {
         for consumption in [0.0, 50.0, 500.0, 50000.0] {
             let m = compute(budget, consumption);
-            assert!(m.tyranny_index >= 0.0 && m.tyranny_index <= 1.0,
-                "tyranny out of range: {budget}/{consumption} = {}", m.tyranny_index);
+            assert!(
+                m.tyranny_index >= 0.0 && m.tyranny_index <= 1.0,
+                "tyranny out of range: {budget}/{consumption} = {}",
+                m.tyranny_index
+            );
         }
     }
 }
@@ -73,16 +81,28 @@ fn fr_metrics_003_tyranny_clamped() {
 #[test]
 fn fr_civ_metrics_001_nan_inputs_produce_valid() {
     let m = compute(f64::NAN, f64::NAN);
-    assert!(m.waste_joules.is_finite(), "waste must be finite with NaN input");
-    assert!(m.surplus_joules.is_finite(), "surplus must be finite with NaN input");
-    assert!(m.tyranny_index.is_finite(), "tyranny must be finite with NaN input");
+    assert!(
+        m.waste_joules.is_finite(),
+        "waste must be finite with NaN input"
+    );
+    assert!(
+        m.surplus_joules.is_finite(),
+        "surplus must be finite with NaN input"
+    );
+    assert!(
+        m.tyranny_index.is_finite(),
+        "tyranny must be finite with NaN input"
+    );
 }
 
 /// FR-CIV-METRICS-001 — Infinity inputs produce clamped metrics.
 #[test]
 fn fr_civ_metrics_001_infinity_inputs_clamped() {
     let m = compute(f64::INFINITY, f64::INFINITY);
-    assert!(m.tyranny_index <= 1.0, "tyranny must be <= 1.0 with inf input");
+    assert!(
+        m.tyranny_index <= 1.0,
+        "tyranny must be <= 1.0 with inf input"
+    );
 }
 
 // ===========================================================================

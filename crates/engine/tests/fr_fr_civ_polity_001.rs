@@ -31,7 +31,10 @@ mod fr_fr_civ_polity_001 {
         let outcome = ws.faction_relations.apply_signal(0u32, 1u32, signal);
         assert_eq!(outcome.score, 0.3, "score should reflect trade volume");
         // Score goes from 0.0 (Neutral) to 0.3 (Trade) - this IS a threshold crossing
-        assert_ne!(outcome.before, outcome.after, "score crosses Neutral->Trade threshold");
+        assert_ne!(
+            outcome.before, outcome.after,
+            "score crosses Neutral->Trade threshold"
+        );
         assert_eq!(outcome.before, civ_agents::RelationKind::Neutral);
         assert_eq!(outcome.after, civ_agents::RelationKind::Trade);
         let record = ws.faction_relations.record(0u32, 1u32);

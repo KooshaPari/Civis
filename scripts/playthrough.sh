@@ -267,7 +267,7 @@ step4_spawn_civilians() {
     while (( i < target )) && (( i < ${#coords[@]} )); do
         local params x y faction body
         read -r x y faction <<<"${coords[$i]}"
-        params="$(printf '{"x":%s,"y":%s,"faction":%s}' "${x}" "${y}" "${faction}")"
+        params="$(printf '{"x":%s,"y":%s,"faction":%s,"role":"operator"}' "${x}" "${y}" "${faction}")"
         body="$(rpc $((10 + i)) sim.spawn_civilian "${params}")"
         if [[ "$(json_ok "${body}")" != "true" ]]; then
             fail "spawn_civilian #${i} failed: ${body}"

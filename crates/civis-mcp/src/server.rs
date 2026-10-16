@@ -1263,12 +1263,7 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let status = forward_rpc(
-            &transport,
-            "sim.status",
-            json!({}),
-            "civis_get_tick",
-        )?;
+        let status = forward_rpc(&transport, "sim.status", json!({}), "civis_get_tick")?;
         Ok(Json(RpcForwardResult {
             method: "civis_get_tick".to_string(),
             url: status.url,
@@ -1290,12 +1285,7 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let snapshot = forward_rpc(
-            &transport,
-            "sim.snapshot",
-            json!({}),
-            "civis_factions",
-        )?;
+        let snapshot = forward_rpc(&transport, "sim.snapshot", json!({}), "civis_factions")?;
         let factions = snapshot
             .result
             .get("factions")
@@ -1320,12 +1310,7 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let snapshot = forward_rpc(
-            &transport,
-            "sim.snapshot",
-            json!({}),
-            "civis_resources",
-        )?;
+        let snapshot = forward_rpc(&transport, "sim.snapshot", json!({}), "civis_resources")?;
         let market_prices = snapshot
             .result
             .get("market_prices")
@@ -2433,12 +2418,7 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let snapshot = forward_rpc(
-            &transport,
-            "sim.snapshot",
-            json!({}),
-            "sim_get_factions",
-        )?;
+        let snapshot = forward_rpc(&transport, "sim.snapshot", json!({}), "sim_get_factions")?;
         let factions = snapshot
             .result
             .get("factions")
@@ -2462,12 +2442,7 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let snapshot = forward_rpc(
-            &transport,
-            "sim.snapshot",
-            json!({}),
-            "sim_get_resources",
-        )?;
+        let snapshot = forward_rpc(&transport, "sim.snapshot", json!({}), "sim_get_resources")?;
         let market_prices = snapshot
             .result
             .get("market_prices")
@@ -2544,12 +2519,7 @@ impl CivisMcpServer {
         &self,
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
-        let snapshot = forward_rpc(
-            &transport,
-            "sim.snapshot",
-            json!({}),
-            "sim_get_diplomacy",
-        )?;
+        let snapshot = forward_rpc(&transport, "sim.snapshot", json!({}), "sim_get_diplomacy")?;
         let factions = snapshot
             .result
             .get("factions")
@@ -2743,8 +2713,9 @@ impl CivisMcpServer {
             .map_err(|e| format!("sim_run_until: {e}"))?;
             ticks += 1;
 
-            let should_poll =
-                ticks.is_multiple_of(poll_every) || (ticks >= max_ticks) || (final_outcome != "ongoing");
+            let should_poll = ticks.is_multiple_of(poll_every)
+                || (ticks >= max_ticks)
+                || (final_outcome != "ongoing");
             if should_poll {
                 let outcome = forward_rpc(
                     &transport,
@@ -3305,7 +3276,10 @@ mod tests {
         assert!((params["x"].as_f64().expect("x") - 0.25).abs() < 1e-9);
         assert!((params["y"].as_f64().expect("y") - 0.75).abs() < 1e-9);
         assert_eq!(params["count"], 5);
-        assert_eq!(params["target_faction"], 2, "faction maps to target_faction");
+        assert_eq!(
+            params["target_faction"], 2,
+            "faction maps to target_faction"
+        );
         assert_eq!(params["radius"], 4, "legacy radius key retained");
         assert_eq!(
             params["radius_voxels"], 4,
@@ -3326,10 +3300,19 @@ mod tests {
     /// `sim.god_action` JSON-RPC method accepts.
     #[test]
     fn fr_civ_godtool_001_wire_names_match_god_action_catalog() {
-        assert_eq!(GodActionKind::MultiplyCreatures.wire_name(), "multiply_creatures");
+        assert_eq!(
+            GodActionKind::MultiplyCreatures.wire_name(),
+            "multiply_creatures"
+        );
         assert_eq!(GodActionKind::Smite.wire_name(), "smite");
         assert_eq!(GodActionKind::Earthquake.wire_name(), "earthquake");
-        assert_eq!(GodActionKind::LifeSpawnOrganism.wire_name(), "life.spawn_organism");
-        assert_eq!(GodActionKind::DisasterWildfire.wire_name(), "disaster.wildfire");
+        assert_eq!(
+            GodActionKind::LifeSpawnOrganism.wire_name(),
+            "life.spawn_organism"
+        );
+        assert_eq!(
+            GodActionKind::DisasterWildfire.wire_name(),
+            "disaster.wildfire"
+        );
     }
 }

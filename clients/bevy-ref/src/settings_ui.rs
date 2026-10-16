@@ -1931,12 +1931,9 @@ fn network_tab(
     ui.add_space(4.0);
     ui.horizontal(|ui| {
         ui.label(
-            egui::RichText::new(format!(
-                "Effective URL: {}",
-                network.resolved_url()
-            ))
-            .color(ui_theme::ACCENT)
-            .small(),
+            egui::RichText::new(format!("Effective URL: {}", network.resolved_url()))
+                .color(ui_theme::ACCENT)
+                .small(),
         );
     });
     ui.horizontal(|ui| {
@@ -1953,10 +1950,7 @@ fn network_tab(
                 .on_hover_text("Send sim.reset (force a fresh session)")
                 .clicked()
             {
-                bridge.send_rpc(
-                    "sim.reset",
-                    serde_json::json!({ "seed": 0 }),
-                );
+                bridge.send_rpc("sim.reset", serde_json::json!({ "seed": 0 }));
             }
         } else {
             ui.label(

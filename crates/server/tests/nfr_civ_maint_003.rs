@@ -5,9 +5,9 @@
 use std::path::PathBuf;
 
 fn quality_gate_script() -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scripts/quality/quality-gate.sh");
-    std::fs::read_to_string(&path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", path.display()))
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scripts/quality/quality-gate.sh");
+    std::fs::read_to_string(&path).unwrap_or_else(|err| panic!("read {}: {err}", path.display()))
 }
 
 // NFR-CIV-MAINT-003 — quality-gate.sh wires a jscpd duplication gate with a

@@ -53,24 +53,15 @@ mod fr_fr_civ_0104_008 {
     fn c4_params_match_spec_defaults() {
         let p = MinimalConstraintParams::default();
         assert_eq!(p.c4.a_min_base, Fixed::from_num(4) / Fixed::from_num(100));
-        assert_eq!(
-            p.c4.cd_max,
-            Fixed::from_num(25) / Fixed::from_num(100)
-        );
+        assert_eq!(p.c4.cd_max, Fixed::from_num(25) / Fixed::from_num(100));
     }
 
     /// C5 params have correct default values per spec.
     #[test]
     fn c5_params_match_spec_defaults() {
         let p = MinimalConstraintParams::default();
-        assert_eq!(
-            p.c5.c0_ceiling,
-            Fixed::from_num(95) / Fixed::from_num(100)
-        );
-        assert_eq!(
-            p.c5.l0_ceiling,
-            Fixed::from_num(95) / Fixed::from_num(100)
-        );
+        assert_eq!(p.c5.c0_ceiling, Fixed::from_num(95) / Fixed::from_num(100));
+        assert_eq!(p.c5.l0_ceiling, Fixed::from_num(95) / Fixed::from_num(100));
         assert_eq!(p.c5.coalition_min_members, 3);
     }
 

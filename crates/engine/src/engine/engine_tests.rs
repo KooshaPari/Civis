@@ -224,7 +224,9 @@ mod tests {
         let mut query = sim.world.query::<&MilitaryUnit>();
         let survivors: Vec<(hecs::Entity, &MilitaryUnit)> = query.iter().collect();
         assert!(
-            survivors.iter().all(|(_, unit)| unit.hp > Fixed::from_num(0)),
+            survivors
+                .iter()
+                .all(|(_, unit)| unit.hp > Fixed::from_num(0)),
             "dead units must be despawned, not left at 0 hp"
         );
         assert!(
@@ -258,7 +260,10 @@ mod tests {
         let json = serde_json::to_string(&unit).expect("MilitaryUnit serializes");
         let back: MilitaryUnit = serde_json::from_str(&json).expect("MilitaryUnit deserializes");
         assert_eq!(back.hp, max_hp, "hp survives the pin export exactly");
-        assert_eq!(back.max_hp, max_hp, "max_hp survives the pin export exactly");
+        assert_eq!(
+            back.max_hp, max_hp,
+            "max_hp survives the pin export exactly"
+        );
         assert_eq!(back, unit, "full round-trip is lossless");
 
         // hp is an independent ECS field: draining it leaves max_hp as the ceiling.
@@ -267,7 +272,11 @@ mod tests {
         assert!(drained.hp < drained.max_hp, "drained hp sits below max_hp");
         assert_eq!(drained.max_hp, max_hp, "max_hp unchanged by hp drain");
         assert!(drained.hp >= Fixed::from_num(0), "hp bounded below by zero");
-        assert_eq!(drained.hp, Fixed::from_num(1), "hp keeps exact Fixed resolution");
+        assert_eq!(
+            drained.hp,
+            Fixed::from_num(1),
+            "hp keeps exact Fixed resolution"
+        );
     }
 
     /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
@@ -521,14 +530,20 @@ mod tests {
     // institutions into per-settlement fabric snapshots with tiered fabric.
     #[test]
     fn fr_civ_cohesion_001_phase_aggregates_kinship_trust_into_settlement_fabric() {
-        use crate::KinshipEdge;
         use crate::social_types::KinshipKind;
+        use crate::KinshipEdge;
 
         let mut sim = Simulation::with_seed(11);
         // Actor 1: bonded (kin + trust). Actor 2: isolated (no kin/trust).
         sim.set_settlement_actor(1, 1);
         sim.set_settlement_actor(2, 1);
-        sim.register_kinship(1, KinshipEdge { kind: KinshipKind::Family, target: 2 });
+        sim.register_kinship(
+            1,
+            KinshipEdge {
+                kind: KinshipKind::Family,
+                target: 2,
+            },
+        );
         sim.add_trust(1, 2, 40);
         // Institutions lift fabric for actor 1 only.
         sim.set_actor_in_settlement_institutions(1, true, false);
@@ -540,9 +555,15 @@ mod tests {
             .expect("cohesion snapshot after tick");
         assert_eq!(snapshot.settlement_id, 1);
         assert_eq!(snapshot.kin_count, 1, "only actor 1 has kinship edges");
-        assert_eq!(snapshot.trust_sum, 40, "trust sums across settlement actors");
+        assert_eq!(
+            snapshot.trust_sum, 40,
+            "trust sums across settlement actors"
+        );
         assert_eq!(snapshot.faction_count, 2, "both actors counted");
-        assert_eq!(snapshot.fragmentations, 0, "healthy fabric does not fragment");
+        assert_eq!(
+            snapshot.fragmentations, 0,
+            "healthy fabric does not fragment"
+        );
         // Positive fabric (kin*10 + trust + temple=30) must land above the
         // strained tier, proving tiered fabric classification runs.
         assert_eq!(snapshot.fabric, FabricTier::Tight);
@@ -2052,8 +2073,7 @@ mod tests {
         for x in 100..103 {
             for y in 100..103 {
                 for z in 100..103 {
-                    sim.voxel
-                        .write(civ_voxel::WorldCoord { x, y, z }, stone);
+                    sim.voxel.write(civ_voxel::WorldCoord { x, y, z }, stone);
                 }
             }
         }
@@ -2080,12 +2100,16 @@ mod tests {
         assert!(sim.chronicle().is_empty());
 
         // Push a researched tech into the cache.
-        sim.research_cache.researched.push("Bronze Working".to_string());
+        sim.research_cache
+            .researched
+            .push("Bronze Working".to_string());
         sim.phase_chronicle();
 
         assert_eq!(sim.chronicle().len(), 1);
         assert!(sim.chronicle()[0].contains("Bronze Working"));
-        assert!(sim.research_progress().contains(&"Bronze Working".to_string()));
+        assert!(sim
+            .research_progress()
+            .contains(&"Bronze Working".to_string()));
     }
 
     /// FR-CIV-0100 — chronicle length stays bounded at CHRONICLE_MAX_LEN.
@@ -2095,9 +2119,7 @@ mod tests {
 
         // Push more entries than the cap.
         for i in 0..crate::engine::CHRONICLE_MAX_LEN + 50 {
-            sim.research_cache
-                .researched
-                .push(format!("tech_{i}"));
+            sim.research_cache.researched.push(format!("tech_{i}"));
         }
         sim.phase_chronicle();
 
@@ -2113,7 +2135,9 @@ mod tests {
         let mut sim = Simulation::with_seed(42);
 
         // Record the same tech twice at the same tick — should dedup.
-        sim.research_cache.researched.push("Iron Smelting".to_string());
+        sim.research_cache
+            .researched
+            .push("Iron Smelting".to_string());
         sim.phase_chronicle();
         let len_after_first = sim.chronicle().len();
 
@@ -2127,7 +2151,9 @@ mod tests {
 
         // The chronicle_age must have the entry recorded.
         assert!(
-            sim.state.chronicle_age.contains_key("research:Iron Smelting"),
+            sim.state
+                .chronicle_age
+                .contains_key("research:Iron Smelting"),
             "chronicle_age must track the research entry"
         );
     }
@@ -4319,14 +4345,20 @@ mod tests {
         // settlement keeps its own kin/trust/actor aggregates.
         #[test]
         fn fr_civ_cohesion_001_separates_settlement_fabric_snapshots() {
-            use crate::KinshipEdge;
             use crate::social_types::KinshipKind;
+            use crate::KinshipEdge;
 
             let mut sim = Simulation::with_seed(23);
             // Settlement 1: actor 1 bonded into actor 2 with kin + trust + temple.
             sim.set_settlement_actor(1, 1);
             sim.set_settlement_actor(2, 1);
-            sim.register_kinship(1, KinshipEdge { kind: KinshipKind::Family, target: 2 });
+            sim.register_kinship(
+                1,
+                KinshipEdge {
+                    kind: KinshipKind::Family,
+                    target: 2,
+                },
+            );
             sim.add_trust(1, 2, 40);
             sim.set_actor_in_settlement_institutions(1, true, false);
             // Settlement 2: actor 3 isolated — no kin, no trust, no institutions.
@@ -4398,8 +4430,16 @@ mod tests {
             assert_ne!(ardani, velthari, "Ardani and Velthari must differ");
             assert_ne!(ardani, grundak, "Ardani and Grundak must differ");
             assert_ne!(velthari, grundak, "Velthari and Grundak must differ");
-            assert_eq!(ardani.0.len(), velthari.0.len(), "genome lengths must match");
-            assert_eq!(velthari.0.len(), grundak.0.len(), "genome lengths must match");
+            assert_eq!(
+                ardani.0.len(),
+                velthari.0.len(),
+                "genome lengths must match"
+            );
+            assert_eq!(
+                velthari.0.len(),
+                grundak.0.len(),
+                "genome lengths must match"
+            );
         }
     }
 }

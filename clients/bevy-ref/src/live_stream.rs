@@ -2161,7 +2161,10 @@ mod tests {
         let mut keys_b: Vec<u64> = scene_b.chunks.keys().copied().collect();
         keys_a.sort_unstable();
         keys_b.sort_unstable();
-        assert_eq!(keys_a, keys_b, "identical deltas map to identical chunk sets");
+        assert_eq!(
+            keys_a, keys_b,
+            "identical deltas map to identical chunk sets"
+        );
 
         let voxels_a = scene_a
             .chunk_voxels
@@ -2171,7 +2174,10 @@ mod tests {
             .chunk_voxels
             .get_chunk(chunk_id)
             .expect("scene B caches the voxel payload");
-        assert_eq!(voxels_a, voxels_b, "voxel caches are identical across scenes");
+        assert_eq!(
+            voxels_a, voxels_b,
+            "voxel caches are identical across scenes"
+        );
         assert_eq!(voxels_a.len(), CHUNK_VOXELS, "full chunk payload cached");
 
         // Clearing resets the shared scene for the next WorldGen boot.

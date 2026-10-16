@@ -291,7 +291,10 @@ mod tests {
         let top = focus.world_to_uv(0.0, 50.0);
         assert!(top[1].abs() < 1e-6, "world +Z edge maps to UI top");
         let bottom = focus.world_to_uv(0.0, -50.0);
-        assert!((bottom[1] - 1.0).abs() < 1e-6, "world -Z edge maps to UI bottom");
+        assert!(
+            (bottom[1] - 1.0).abs() < 1e-6,
+            "world -Z edge maps to UI bottom"
+        );
 
         // Full-panel layout centres a dot regardless of which path spawned it.
         let layout = MinimapDotLayout::FullPanel { panel_size: 100.0 };

@@ -36,6 +36,11 @@ pub mod audio;
 pub mod camera;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
+/// Phase 6.1 — Custom GPU compute post-FX passes (SSAO + Bloom). See the
+/// module docs for the architecture; the [`CivPostFxToggle`] resource exposes
+/// the menubar `postfx_enabled` flag.
+#[cfg(feature = "bevy")]
+pub mod civ_postfx;
 /// Shared civilian names for Bevy labels and the optional egui HUD.
 #[cfg(feature = "bevy")]
 pub mod civilian_name;
@@ -106,9 +111,9 @@ pub mod minimap;
 #[cfg(feature = "bevy")]
 pub mod native_backend;
 #[cfg(feature = "bevy")]
-pub mod native_window_lifecycle;
-#[cfg(feature = "bevy")]
 pub mod native_renderer;
+#[cfg(feature = "bevy")]
+pub mod native_window_lifecycle;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod notifications;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -131,9 +136,9 @@ pub mod replay_controls;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod sandbox_event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod scenario_objectives;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod scenario_objectives;
 pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod settings_ui;
@@ -159,11 +164,6 @@ pub mod ui_holo;
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
-/// Phase 6.1 — Custom GPU compute post-FX passes (SSAO + Bloom). See the
-/// module docs for the architecture; the [`CivPostFxToggle`] resource exposes
-/// the menubar `postfx_enabled` flag.
-#[cfg(feature = "bevy")]
-pub mod civ_postfx;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
@@ -180,6 +180,8 @@ pub mod window_icon;
 pub mod world_faction_glyphs;
 
 pub use civ_agents::NeedAction;
+#[cfg(feature = "bevy")]
+pub use civ_postfx::{CivPostFxDispatcher, CivPostFxPlugin, CivPostFxStats, CivPostFxToggle};
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
@@ -195,10 +197,6 @@ pub use outcome_overlay::{
 pub use perf_hud::PerfHudPlugin;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub use tutorial::TutorialPlugin;
-#[cfg(feature = "bevy")]
-pub use civ_postfx::{
-    CivPostFxDispatcher, CivPostFxPlugin, CivPostFxStats, CivPostFxToggle,
-};
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -2124,8 +2122,14 @@ mod tests {
         );
 
         // Clear colour + ambient interpolate between the night and day endpoints.
-        assert_eq!(presentation_clear_color_rgb(0.0), PRESENTATION_NIGHT_CLEAR_RGB);
-        assert_eq!(presentation_clear_color_rgb(1.0), PRESENTATION_DAY_CLEAR_RGB);
+        assert_eq!(
+            presentation_clear_color_rgb(0.0),
+            PRESENTATION_NIGHT_CLEAR_RGB
+        );
+        assert_eq!(
+            presentation_clear_color_rgb(1.0),
+            PRESENTATION_DAY_CLEAR_RGB
+        );
         assert_eq!(
             presentation_ambient_brightness(0.0),
             PRESENTATION_NIGHT_AMBIENT_BRIGHTNESS
@@ -2149,7 +2153,10 @@ mod tests {
         // Fresh snapshot: no server frame has arrived yet.
         assert_eq!(snap.tick, None, "no tick before the first frame");
         assert!(!snap.connected, "not connected before the first frame");
-        assert_eq!(snap.ws_rtt_ms, None, "RTT unknown until sim.snapshot is measured");
+        assert_eq!(
+            snap.ws_rtt_ms, None,
+            "RTT unknown until sim.snapshot is measured"
+        );
 
         snap.connection = WsConnectionState::Reconnecting;
         snap.connected = true;
@@ -2164,14 +2171,21 @@ mod tests {
         assert!(line.contains("tick: 1234"), "tick exposed: {line}");
         assert!(line.contains("reconnecting"), "connection exposed: {line}");
         assert!(line.contains("P:480"), "civilian count exposed: {line}");
-        assert!(line.contains("C:4 A:512"), "chunk and agent counts exposed: {line}");
+        assert!(
+            line.contains("C:4 A:512"),
+            "chunk and agent counts exposed: {line}"
+        );
         assert!(line.contains("B:96"), "building count exposed: {line}");
         assert!(line.contains("G:16"), "graph parcel count exposed: {line}");
-        assert!(line.contains("RTT: 12ms"), "sim.snapshot RTT exposed: {line}");
+        assert!(
+            line.contains("RTT: 12ms"),
+            "sim.snapshot RTT exposed: {line}"
+        );
 
         // Wire round-trip preserves every HUD field.
         let json = serde_json::to_string(&snap).expect("serialize LiveHudSnapshot");
-        let back: LiveHudSnapshot = serde_json::from_str(&json).expect("deserialize LiveHudSnapshot");
+        let back: LiveHudSnapshot =
+            serde_json::from_str(&json).expect("deserialize LiveHudSnapshot");
         assert_eq!(back, snap, "HUD snapshot survives serde round-trip");
     }
 }

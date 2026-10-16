@@ -22,7 +22,7 @@
 //! * 921 — undo + blueprint: the god-action audit log is the undo-stack
 //!   source, and a captured voxel region can be re-stamped bit-exactly.
 
-use civ_engine::engine::{GOD_ACTION_AUDIT_CAP, Simulation};
+use civ_engine::engine::{Simulation, GOD_ACTION_AUDIT_CAP};
 use civ_engine::godtools::{
     DisasterRequest, GodToolReceipt, GodToolRequest, InspectRequest, LifeRequest, MaterialOp,
     MaterialRequest, ProbeRequest, SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual,
@@ -636,7 +636,11 @@ fn flood_sets_water_initial_conditions_in_the_exact_physical_sphere() {
     assert_eq!(sim.voxel().read(voxel(0, 5, 0)), WATER);
     assert_eq!(sim.voxel().read(voxel(0, 0, 5)), WATER);
     assert_eq!(sim.voxel().read(voxel(6, 0, 0)), AIR, "radius is exactly 5");
-    assert_eq!(sim.voxel().read(voxel(5, 5, 0)), AIR, "corner is outside 5²");
+    assert_eq!(
+        sim.voxel().read(voxel(5, 5, 0)),
+        AIR,
+        "corner is outside 5²"
+    );
 
     assert_eq!(ball_volume(5), 515);
     assert_eq!(
@@ -777,7 +781,8 @@ fn tick_is_the_deterministic_speed_unit() {
             sim.tick();
         }
         (
-            sim.hash_chain_root().expect("ticks record a hash-chain root"),
+            sim.hash_chain_root()
+                .expect("ticks record a hash-chain root"),
             sim.current_tick(),
         )
     };
@@ -1016,7 +1021,11 @@ fn blueprint_paste_at_offset_preserves_layout_and_leaves_the_source_intact() {
     let mut captured_pattern: Vec<((i64, i64), MaterialId)> = Vec::new();
     for dx in -1..=1i64 {
         for dz in -1..=1i64 {
-            let material = if (dx + dz).rem_euclid(2) == 0 { STONE } else { WOOD };
+            let material = if (dx + dz).rem_euclid(2) == 0 {
+                STONE
+            } else {
+                WOOD
+            };
             let coord = voxel(dx, 0, dz);
             sim.push_voxel_write(coord, material);
             blueprint.push((coord, material));
@@ -1079,13 +1088,15 @@ fn blueprint_paste_at_offset_preserves_layout_and_leaves_the_source_intact() {
     // inspect/god-hand read path, not only to raw voxel reads.
     let pasted_centre = voxel(0, 0, 0);
     let probe = sim
-        .apply_god_tool(GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest {
-            pos: WorldCoord {
-                x: pasted_centre.x + paste_shift,
-                y: pasted_centre.y,
-                z: pasted_centre.z,
+        .apply_god_tool(GodToolRequest::Inspect(InspectRequest::Probe(
+            ProbeRequest {
+                pos: WorldCoord {
+                    x: pasted_centre.x + paste_shift,
+                    y: pasted_centre.y,
+                    z: pasted_centre.z,
+                },
             },
-        })))
+        )))
         .expect("inspect.probe should succeed");
     match probe {
         GodToolReceipt::Inspect { report } => {

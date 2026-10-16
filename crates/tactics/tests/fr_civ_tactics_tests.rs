@@ -3,8 +3,7 @@
 //! Covers: FR-CIV-TACTICS-025, 051, 065, 076
 
 use civ_tactics::{
-    FogOfWar, FormationKind, MoraleState, UnitStance,
-    FactionEngagementStats, formation_offsets,
+    formation_offsets, FactionEngagementStats, FogOfWar, FormationKind, MoraleState, UnitStance,
 };
 
 /// FR-CIV-TACTICS-025 — FogOfWar can be constructed with grid size.
@@ -35,7 +34,10 @@ fn fr_civ_tactics_051_formation_offsets_column() {
 fn fr_civ_tactics_065_different_formations_differ() {
     let line = formation_offsets(FormationKind::Line, 4);
     let column = formation_offsets(FormationKind::Column, 4);
-    assert_ne!(line, column, "line and column should produce different offsets");
+    assert_ne!(
+        line, column,
+        "line and column should produce different offsets"
+    );
 }
 
 /// FR-CIV-TACTICS-076 — MoraleState can be constructed for a unit.

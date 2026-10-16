@@ -3,7 +3,7 @@
 //! Civilizations SHALL be able to declare war, producing
 //! `diplomacy.war.declared.v1` events.
 
-use civ_diplomacy::{PolityId, War, WarDeclarationManager, WarError, WarEvent};
+use civ_diplomacy::{PolityId, WarDeclarationManager, WarError, WarEvent};
 
 fn p(id: u32) -> PolityId {
     PolityId::new(id)
@@ -15,7 +15,12 @@ fn war_declare_emits_event() {
     let mut mgr = WarDeclarationManager::new();
     let event = mgr.declare_war(p(1), p(2), 10).expect("declare war");
     assert!(matches!(event, WarEvent::WarDeclared { .. }));
-    if let WarEvent::WarDeclared { aggressor, defender, tick } = event {
+    if let WarEvent::WarDeclared {
+        aggressor,
+        defender,
+        tick,
+    } = event
+    {
         assert_eq!(aggressor, p(1));
         assert_eq!(defender, p(2));
         assert_eq!(tick, 10);
@@ -60,7 +65,13 @@ fn war_end_war_emits_event() {
     mgr.declare_war(p(1), p(2), 1).expect("declare");
     let pair = civ_diplomacy::Pair::new(p(1), p(2));
     let event = mgr.end_war(pair, true, 100).expect("end war");
-    assert!(matches!(event, WarEvent::WarEnded { via_treaty: true, .. }));
+    assert!(matches!(
+        event,
+        WarEvent::WarEnded {
+            via_treaty: true,
+            ..
+        }
+    ));
 }
 
 /// FR-DIPL-001: War duration is computed correctly.
@@ -68,7 +79,7 @@ fn war_end_war_emits_event() {
 fn war_duration_computed() {
     let mut mgr = WarDeclarationManager::new();
     mgr.declare_war(p(1), p(2), 10).expect("declare");
-    let pair = civ_diplomacy::Pair::new(p(1), p(2));
+    let _pair = civ_diplomacy::Pair::new(p(1), p(2));
     let war = mgr.get_war(p(1), p(2)).unwrap();
     assert_eq!(war.duration_ticks(50), 40);
     assert_eq!(war.total_casualties(), 0);

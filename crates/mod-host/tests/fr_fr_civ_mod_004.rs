@@ -20,6 +20,9 @@ mod fr_fr_civ_mod_004 {
     #[test]
     fn unknown_mod_defaults_to_active() {
         let host = civ_mod_host::ModHost::new();
-        assert_eq!(host.mod_status("nonexistent"), civ_mod_host::ModStatus::Active);
+        assert_eq!(
+            host.mod_status("nonexistent"),
+            civ_mod_host::ModStatus::Active
+        );
     }
 }

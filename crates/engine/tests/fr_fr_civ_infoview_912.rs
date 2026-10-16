@@ -1,4 +1,4 @@
-﻿//! Tests for FR-CIV-INFOVIEW-912 - Info View Extended
+//! Tests for FR-CIV-INFOVIEW-912 - Info View Extended
 //!
 //! Epic: FR-CIV-FRAME
 //! Info view extended entity and region display capabilities.

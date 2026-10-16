@@ -112,10 +112,7 @@ mod tests {
     // error, for both a present input and a valid output dir.
     #[test]
     fn export_svg_scaffold_reports_encode_error_for_valid_paths() {
-        let dir = std::env::temp_dir().join(format!(
-            "asset-pipeline-002-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("asset-pipeline-002-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("create output dir");
         let input = dir.join("source.svg");
         std::fs::write(&input, "<svg viewBox=\"0 0 1 1\"/>").expect("write input svg");
@@ -142,7 +139,7 @@ mod tests {
     #[test]
     fn export_svg_missing_output_dir_is_io_error() {
         let input = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
-        let missing = PathBuf::from(format!("/nonexistent/asset-pipeline-002-out"));
+        let missing = PathBuf::from("/nonexistent/asset-pipeline-002-out");
         let err = export_svg(&input, &missing).expect_err("missing output dir");
         assert!(
             matches!(err, ExportError::Io { .. }),

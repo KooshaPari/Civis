@@ -72,6 +72,8 @@ pub fn tick_over_budget(profile: &TickProfile, budget_micros: u64) -> bool {
 }
 
 #[cfg(test)]
+// Tests build state via Default::default() + explicit assignments for readability.
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 
@@ -147,7 +149,8 @@ mod tests {
             unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
                 let ptr = System.alloc(layout);
                 if !ptr.is_null() {
-                    self.allocated.fetch_add(layout.size() as u64, Ordering::Relaxed);
+                    self.allocated
+                        .fetch_add(layout.size() as u64, Ordering::Relaxed);
                 }
                 ptr
             }

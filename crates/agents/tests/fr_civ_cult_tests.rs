@@ -8,8 +8,7 @@
 //! - FR-CIV-CULT-003: Cultural identity (ideology convergence, divergence over isolation)
 
 use civ_agents::culture::{
-    cultural_distance, language_divergence_from_isolation, ContactEdge,
-    CultureProfile, TraitVector,
+    cultural_distance, language_divergence_from_isolation, ContactEdge, CultureProfile, TraitVector,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -29,10 +28,7 @@ fn seeded_rng(seed: u64) -> ChaCha8Rng {
 fn cult001_new_profile_initializes_traits_from_seed() {
     let seed: TraitVector = [0.1, 0.3, 0.7, 0.9];
     let profile = CultureProfile::new(seed);
-    assert_eq!(
-        profile.traits, seed,
-        "traits must match the seed vector"
-    );
+    assert_eq!(profile.traits, seed, "traits must match the seed vector");
     assert_eq!(
         profile.language, seed,
         "language must initially mirror the seed vector"
@@ -57,7 +53,10 @@ fn cult001_new_profile_defaults_contact_and_kinship_to_zero() {
 fn cult001_different_seeds_produce_distinct_profiles() {
     let a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
     let b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
-    assert_ne!(a.traits, b.traits, "different seeds must yield different traits");
+    assert_ne!(
+        a.traits, b.traits,
+        "different seeds must yield different traits"
+    );
     assert_ne!(
         a.language, b.language,
         "different seeds must yield different language vectors"
@@ -137,9 +136,9 @@ fn cult002_contact_drift_converges_cultural_traits() {
         &mut profiles,
         &edges,
         &mut rng,
-        0.0,   // zero mutation so only diffusion acts
-        0.5,   // moderate diffusion rate
-        0.25,  // creole threshold
+        0.0,  // zero mutation so only diffusion acts
+        0.5,  // moderate diffusion rate
+        0.25, // creole threshold
     );
 
     let dist_after = cultural_distance(profiles[0].traits, profiles[1].traits);
@@ -204,14 +203,8 @@ fn cult002_kinship_resists_cultural_diffusion() {
         0.25,
     );
 
-    let shift_no_resist = cultural_distance(
-        profiles_no_resist[0].traits,
-        [0.0, 0.0, 0.0, 0.0],
-    );
-    let shift_high_resist = cultural_distance(
-        profiles_high_resist[0].traits,
-        [0.0, 0.0, 0.0, 0.0],
-    );
+    let shift_no_resist = cultural_distance(profiles_no_resist[0].traits, [0.0, 0.0, 0.0, 0.0]);
+    let shift_high_resist = cultural_distance(profiles_high_resist[0].traits, [0.0, 0.0, 0.0, 0.0]);
 
     assert!(
         shift_high_resist < shift_no_resist,

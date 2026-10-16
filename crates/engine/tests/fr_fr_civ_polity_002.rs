@@ -21,7 +21,11 @@ mod fr_fr_civ_polity_002 {
             scarcity_pressure: 0.0,
         };
         let outcome = ws.faction_relations.apply_signal(0u32, 1u32, signal);
-        assert_eq!(outcome.after, civ_agents::RelationKind::Alliance, "should cross to alliance");
+        assert_eq!(
+            outcome.after,
+            civ_agents::RelationKind::Alliance,
+            "should cross to alliance"
+        );
     }
 
     /// Verify combat grievance pushes score negative.

@@ -245,7 +245,10 @@ fn nfr_scale_02_node_budget_is_enforced_and_keeps_promoted_legends() {
         g.node_count(),
         g.config.max_graph_nodes
     );
-    assert!(g.entity(hero).is_some(), "promoted legend survives eviction");
+    assert!(
+        g.entity(hero).is_some(),
+        "promoted legend survives eviction"
+    );
     // Side indices stay consistent: no dangling entity resolution.
     assert!(
         g.entity_for_sim(SourceCrate::Tactics, SimRuntimeId(1)) == Some(hero),
@@ -273,7 +276,10 @@ fn nfr_scale_02_eviction_spares_entities_reaching_a_promoted_legend() {
     let settlement = g
         .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(50))
         .expect("settlement resolved");
-    assert!(g.entity(settlement).unwrap().promoted, "settlement promoted");
+    assert!(
+        g.entity(settlement).unwrap().promoted,
+        "settlement promoted"
+    );
 
     // A non-promoted agent that becomes part of the settlement's spine. §5.3
     // says an entity reaching a promoted entity is never pruned.
@@ -311,7 +317,10 @@ fn nfr_scale_02_eviction_spares_entities_reaching_a_promoted_legend() {
         g.node_count(),
         g.config.max_graph_nodes
     );
-    assert!(g.entity(settlement).is_some(), "promoted settlement survives");
+    assert!(
+        g.entity(settlement).is_some(),
+        "promoted settlement survives"
+    );
     assert!(
         g.entity(kinsman).is_some(),
         "entity reaching a promoted legend survives eviction"

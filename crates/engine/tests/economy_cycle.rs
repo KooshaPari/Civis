@@ -401,10 +401,7 @@ fn snapshot_prices(market: &MarketState) -> Vec<(String, i64)> {
     market.prices.iter().map(|(k, v)| (k.clone(), *v)).collect()
 }
 
-fn resource_drift_total(
-    prev: &BTreeMap<u32, Resources>,
-    curr: &BTreeMap<u32, Resources>,
-) -> i64 {
+fn resource_drift_total(prev: &BTreeMap<u32, Resources>, curr: &BTreeMap<u32, Resources>) -> i64 {
     let mut total = 0i64;
     for (faction, prev_res) in prev {
         if let Some(curr_res) = curr.get(faction) {

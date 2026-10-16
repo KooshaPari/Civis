@@ -18,7 +18,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn repo_path(rel: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join(rel)
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(rel)
 }
 
 fn read_repo(rel: &str) -> String {
@@ -89,9 +92,7 @@ fn matrix_table_shape_has_four_rows_and_three_distinct_triples() {
     let section = port_001_section();
     let triple_rows: Vec<&str> = section
         .lines()
-        .filter(|l| {
-            l.starts_with("| ") && (l.contains("`x86_64") || l.contains("`aarch64"))
-        })
+        .filter(|l| l.starts_with("| ") && (l.contains("`x86_64") || l.contains("`aarch64")))
         .collect();
     assert_eq!(
         triple_rows.len(),
@@ -102,9 +103,7 @@ fn matrix_table_shape_has_four_rows_and_three_distinct_triples() {
 
     let mut triples: Vec<&str> = triple_rows
         .iter()
-        .filter_map(|row| {
-            row.split('`').nth(1)
-        })
+        .filter_map(|row| row.split('`').nth(1))
         .collect();
     triples.sort_unstable();
     triples.dedup();

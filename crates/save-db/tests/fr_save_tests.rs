@@ -15,9 +15,14 @@ fn fr_save_001_slot_save_roundtrip() {
     let id = db
         .record_slot_save("sess-1", "slot-a", 100, "/tmp/save1.bin", 4096)
         .expect("record_slot_save failed");
-    assert!(!id.is_empty(), "record_slot_save must return a non-empty id");
+    assert!(
+        !id.is_empty(),
+        "record_slot_save must return a non-empty id"
+    );
 
-    let records = db.list_for_session("sess-1").expect("list_for_session failed");
+    let records = db
+        .list_for_session("sess-1")
+        .expect("list_for_session failed");
     assert_eq!(records.len(), 1, "expected exactly 1 record for session");
     match &records[0] {
         SessionSaveRecord::Slot(slot) => {
@@ -60,10 +65,17 @@ fn fr_save_004_slot_overwrite_updates_tick() {
         .expect("second save (overwrite)");
 
     let records = db.list_for_session("sess-ver").expect("list");
-    assert_eq!(records.len(), 1, "overwrite should produce exactly 1 record");
+    assert_eq!(
+        records.len(),
+        1,
+        "overwrite should produce exactly 1 record"
+    );
     if let SessionSaveRecord::Slot(slot) = &records[0] {
         assert_eq!(slot.tick, 20, "tick should reflect latest save");
-        assert_eq!(slot.file_path, "/v2.bin", "file_path should reflect latest save");
+        assert_eq!(
+            slot.file_path, "/v2.bin",
+            "file_path should reflect latest save"
+        );
         assert_eq!(slot.byte_size, 200, "byte_size should reflect latest save");
     } else {
         panic!("expected Slot");
@@ -82,7 +94,9 @@ fn fr_save_005_autosave_independent_of_slots() {
     let records = db.list_for_session("sess-integ").expect("list");
     assert_eq!(records.len(), 2, "should have 1 slot + 1 autosave");
 
-    let has_slot = records.iter().any(|r| matches!(r, SessionSaveRecord::Slot(_)));
+    let has_slot = records
+        .iter()
+        .any(|r| matches!(r, SessionSaveRecord::Slot(_)));
     let has_auto = records
         .iter()
         .any(|r| matches!(r, SessionSaveRecord::Autosave(_)));
@@ -99,9 +113,7 @@ fn fr_save_010_evict_autosaves_keeps_newest() {
             .expect("autosave");
     }
 
-    let evicted = db
-        .evict_autosaves("sess-evict", 2)
-        .expect("evict failed");
+    let evicted = db.evict_autosaves("sess-evict", 2).expect("evict failed");
     assert_eq!(evicted.len(), 3, "should evict 5 - 2 = 3 autosaves");
 
     // Evicted paths should be the oldest (tick 0, 1, 2)
@@ -122,8 +134,6 @@ fn fr_save_010_evict_autosaves_keeps_newest() {
 #[test]
 fn fr_save_001_empty_session_returns_no_records() {
     let db = temp_db();
-    let records = db
-        .list_for_session("nonexistent")
-        .expect("list failed");
+    let records = db.list_for_session("nonexistent").expect("list failed");
     assert!(records.is_empty(), "empty session should return no records");
 }

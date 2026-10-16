@@ -21,8 +21,16 @@ mod fr_fr_civ_infoview_918 {
             availability: OverlayAvailability::Near,
             legend_kind: LegendKind::Continuous,
             legend_stops: vec![
-                LegendStop { position: 0.0, label: "Light".into(), color: [0.6, 0.6, 0.6] },
-                LegendStop { position: 1.0, label: "Heavy".into(), color: [0.2, 0.2, 0.2] },
+                LegendStop {
+                    position: 0.0,
+                    label: "Light".into(),
+                    color: [0.6, 0.6, 0.6],
+                },
+                LegendStop {
+                    position: 1.0,
+                    label: "Heavy".into(),
+                    color: [0.2, 0.2, 0.2],
+                },
             ],
             description: "Traffic graph",
         };

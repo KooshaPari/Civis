@@ -43,7 +43,8 @@ mod fr_fr_civ_3d_011 {
                         format!("{:?}", b1),
                         format!("{:?}", b2),
                         "Biomes at positions {} and {} must be distinct",
-                        i, j
+                        i,
+                        j
                     );
                 }
             }

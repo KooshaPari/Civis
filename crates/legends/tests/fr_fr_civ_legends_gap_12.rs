@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_gap_12 {
-    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+    use civ_legends::{EventKind, RawSimEvent, SagaGraph, SourceCrate};
 
     /// FR-CIV-LEGENDS-GAP-12: Empty graph has no gap reports.
     #[test]

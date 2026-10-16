@@ -8,9 +8,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_0104_005 {
-    use civ_engine::constraints::{
-        run_all_checks, MinimalConstraintParams,
-    };
+    use civ_engine::constraints::{run_all_checks, MinimalConstraintParams};
     use civ_engine::Fixed;
     use std::collections::BTreeMap;
 
@@ -45,7 +43,10 @@ mod fr_fr_civ_0104_005 {
 
         let r1 = make_result();
         let r2 = make_result();
-        assert_eq!(r1, r2, "Deterministic: same inputs must produce same outputs");
+        assert_eq!(
+            r1, r2,
+            "Deterministic: same inputs must produce same outputs"
+        );
         assert_eq!(r1.all_satisfied(), r2.all_satisfied());
     }
 

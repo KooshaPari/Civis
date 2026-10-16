@@ -20,11 +20,8 @@ mod fr_fr_civ_perf_004 {
     /// Verify phases_over_budget filters correctly.
     #[test]
     fn phases_over_budget_filter() {
-        let timings: Vec<civ_engine::perf::PhaseTiming> = vec![
-            ("economy", 500),
-            ("social", 200),
-            ("military", 100),
-        ];
+        let timings: Vec<civ_engine::perf::PhaseTiming> =
+            vec![("economy", 500), ("social", 200), ("military", 100)];
         let over = civ_engine::perf::phases_over_budget(&timings, 300);
         assert_eq!(over.len(), 1);
         assert_eq!(over[0], ("economy", 500));

@@ -12,8 +12,30 @@ mod fr_fr_civ_polity_006 {
         use civ_agents::DiplomacySignal;
         let mut ws = civ_engine::WorldState::default();
         // Apply two signals involving faction 0
-        ws.faction_relations.apply_signal(0u32, 1u32, DiplomacySignal { trade_volume: 0.4, combat_grievance: 0.0, resource_competition: 0.0, proximity: 0.5, need_complementarity: 0.0, scarcity_pressure: 0.0 });
-        ws.faction_relations.apply_signal(0u32, 2u32, DiplomacySignal { trade_volume: 0.2, combat_grievance: 0.0, resource_competition: 0.0, proximity: 0.5, need_complementarity: 0.0, scarcity_pressure: 0.0 });
+        ws.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            DiplomacySignal {
+                trade_volume: 0.4,
+                combat_grievance: 0.0,
+                resource_competition: 0.0,
+                proximity: 0.5,
+                need_complementarity: 0.0,
+                scarcity_pressure: 0.0,
+            },
+        );
+        ws.faction_relations.apply_signal(
+            0u32,
+            2u32,
+            DiplomacySignal {
+                trade_volume: 0.2,
+                combat_grievance: 0.0,
+                resource_competition: 0.0,
+                proximity: 0.5,
+                need_complementarity: 0.0,
+                scarcity_pressure: 0.0,
+            },
+        );
         let mean = ws.faction_relations.mean_score_involving(0u32);
         assert!(mean.is_some(), "should have a mean for faction 0");
         let mean_val = mean.unwrap();

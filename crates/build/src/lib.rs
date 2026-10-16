@@ -68,17 +68,7 @@ pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 /// Stable identifier for a building parcel.
 // FR-CIV-ACTOR-001, FR-CIV-ACTOR-002
 #[derive(
-    Debug,
-    Default,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Serialize,
-    Deserialize,
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
 )]
 pub struct BuildingId(pub u64);
 

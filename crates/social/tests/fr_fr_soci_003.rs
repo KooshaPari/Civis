@@ -3,8 +3,8 @@
 //! Insurgency SHALL start when aggregate stress exceeds the configured
 //! threshold.
 
-use civ_social::{InsurgencyConfig, InsurgencyTracker};
 use civ_social::events::EventType;
+use civ_social::{InsurgencyConfig, InsurgencyTracker};
 
 #[test]
 fn starts_above_threshold() {

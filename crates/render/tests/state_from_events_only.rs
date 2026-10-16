@@ -19,7 +19,9 @@ fn state_from_events_only() {
         UiEvent::TickAdvanced { tick: 512 },
         UiEvent::CameraMoved { q: -3, r: 9 },
         UiEvent::SelectionChanged { unit: Some(11) },
-        UiEvent::Notification { message: "city founded".into() },
+        UiEvent::Notification {
+            message: "city founded".into(),
+        },
     ];
 
     let mut a = UiState::default();

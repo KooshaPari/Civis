@@ -2733,7 +2733,8 @@ mod tests {
     // simulation yet, includes it when present, and the dispatch is total.
     #[test]
     fn fr_civ_save_003_sim_status_population_omission() {
-        let req = parse_request(r#"{"jsonrpc":"2.0","id":11,"method":"sim.status"}"#).expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":11,"method":"sim.status"}"#).expect("parse");
         let ctx = DispatchContext {
             tick: 42,
             population: None,
@@ -2761,10 +2762,13 @@ mod tests {
             "population must be omitted pre-initialization"
         );
 
-        let plan = dispatch_request(req, DispatchContext {
-            population: Some(1_234),
-            ..ctx
-        });
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                population: Some(1_234),
+                ..ctx
+            },
+        );
         assert_eq!(
             plan.response.result,
             Some(serde_json::json!({ "tick": 42, "population": 1_234 })),
@@ -2777,7 +2781,8 @@ mod tests {
     // clients can poll, and returns the full payload once populated.
     #[test]
     fn fr_civ_save_003_sim_snapshot_fallback_and_full_payload() {
-        let req = parse_request(r#"{"jsonrpc":"2.0","id":12,"method":"sim.snapshot"}"#).expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":12,"method":"sim.snapshot"}"#).expect("parse");
         let ctx = DispatchContext {
             tick: 9,
             population: None,
@@ -2836,10 +2841,13 @@ mod tests {
             in_progress_tech: None,
             outcome_progress: Default::default(),
         };
-        let plan = dispatch_request(req, DispatchContext {
-            snapshot: Some(fields),
-            ..ctx
-        });
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                snapshot: Some(fields),
+                ..ctx
+            },
+        );
         let result = plan.response.result.expect("full snapshot payload");
         assert_eq!(result["tick"], 10);
         assert_eq!(result["population"], 777);
@@ -2946,7 +2954,8 @@ mod tests {
                 ..Default::default()
             },
         });
-        let req = parse_request(r#"{"jsonrpc":"2.0","id":31,"method":"sim.outcome"}"#).expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":31,"method":"sim.outcome"}"#).expect("parse");
         let plan = dispatch_request(req, ctx);
         assert_eq!(plan.effect, DispatchEffect::None);
         let result = plan.response.result.expect("success result");
@@ -5318,7 +5327,10 @@ mod tests {
 
         assert_eq!(json["tick"], 1_000, "snapshot must carry the tick");
         assert_eq!(json["population"], 1_000, "1k-citizens scenario population");
-        assert!(json.get("climate").is_some(), "climate block must be present");
+        assert!(
+            json.get("climate").is_some(),
+            "climate block must be present"
+        );
         assert!(
             best < std::time::Duration::from_millis(1),
             "NFR-P-07: best snapshot_result_json run took {best:?}, budget is 1 ms"

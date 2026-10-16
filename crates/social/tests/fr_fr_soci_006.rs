@@ -3,8 +3,8 @@
 //! A health crisis SHALL emit `social.health.crisis.v1` and reduce
 //! labor productivity.
 
-use civ_social::{compute_health, HealthConfig, HealthInputs, MAX_HEALTH_BP};
 use civ_social::events::EventType;
+use civ_social::{compute_health, HealthConfig, HealthInputs, MAX_HEALTH_BP};
 
 #[test]
 fn crisis_emits_event_reduces_labor() {

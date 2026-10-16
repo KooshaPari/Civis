@@ -1389,7 +1389,9 @@ mod tests {
             let tribute = TributeEffect { max_tribute: 50 };
 
             let cultural_events = cultural.apply(&mut world);
-            let embargo_event = embargo.impose(&mut world, p(1), p(2)).expect("first impose");
+            let embargo_event = embargo
+                .impose(&mut world, p(1), p(2))
+                .expect("first impose");
             let alliance_event = alliance.form(&mut world, p(1), p(2)).expect("first form");
             let tribute_event = tribute
                 .impose(&mut world, p(1), p(2), 40)

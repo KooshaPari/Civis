@@ -1,3 +1,7 @@
+#![allow(clippy::field_reassign_with_default)]
+// State built via Default::default() + explicit field assignments for readability;
+// restructuring into an initializer is out of scope for this no-behavior-change cleanup.
+
 //! Tests for FR-CIV-PERF-002
 //!
 //! Epic: FR-CIV-PERF

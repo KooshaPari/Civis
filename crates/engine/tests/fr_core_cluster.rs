@@ -243,7 +243,11 @@ fn fr_fr_core_009_distinct_hexes_stay_distinct() {
             );
         }
     }
-    assert_eq!(seen.len(), 13 * 13, "every hex in the block must be distinct");
+    assert_eq!(
+        seen.len(),
+        13 * 13,
+        "every hex in the block must be distinct"
+    );
 }
 
 // ---------------------------------------------------------------------------

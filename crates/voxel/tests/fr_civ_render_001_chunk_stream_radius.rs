@@ -254,10 +254,7 @@ fn fr_civ_render_001_seam_band_holds_the_boundary_ring() {
     policy.seam_chunks = 1;
 
     // Inside the mesh window.
-    assert_eq!(
-        policy.classify(cc(2, 0, 0), origin()),
-        ChunkState::Meshed
-    );
+    assert_eq!(policy.classify(cc(2, 0, 0), origin()), ChunkState::Meshed);
     // The seam band (ring 3) is still resident, just not meshed.
     let seam = policy.classify(cc(3, 0, 0), origin());
     assert_eq!(
@@ -267,10 +264,7 @@ fn fr_civ_render_001_seam_band_holds_the_boundary_ring() {
     );
     assert!(seam.is_resident() && !seam.has_mesh());
     // Past the seam: gone.
-    assert_eq!(
-        policy.classify(cc(4, 0, 0), origin()),
-        ChunkState::Unloaded
-    );
+    assert_eq!(policy.classify(cc(4, 0, 0), origin()), ChunkState::Unloaded);
 
     // With a fade configured the same band reports a fade countdown instead.
     policy.fade_ticks = 4;

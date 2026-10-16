@@ -109,7 +109,7 @@ fn tyranny_from_tax_rate_bp(tax_rate_bp: i64) -> i64 {
 /// This means moderate tyranny preserves most legitimacy, but high tyranny
 /// causes a rapid collapse. Returns basis points `[0, 10_000]`.
 fn legitimacy_from_tyranny_bp(tyranny_bp: i64) -> i64 {
-    let one_minus_t = BP_DENOM - tyranny_bp.max(0).min(BP_DENOM);
+    let one_minus_t = BP_DENOM - tyranny_bp.clamp(0, BP_DENOM);
     (one_minus_t * one_minus_t / BP_DENOM).max(0)
 }
 

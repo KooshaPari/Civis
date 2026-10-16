@@ -9,7 +9,11 @@ mod fr_fr_civ_road_900 {
     #[test]
     fn road_kind_speed_multipliers() {
         use civ_traffic::RoadKind;
-        assert_eq!(RoadKind::None.speed_multiplier(), 1.0, "bare ground = baseline");
+        assert_eq!(
+            RoadKind::None.speed_multiplier(),
+            1.0,
+            "bare ground = baseline"
+        );
         assert_eq!(RoadKind::Trail.speed_multiplier(), 1.25);
         assert_eq!(RoadKind::Road.speed_multiplier(), 1.8);
         assert_eq!(RoadKind::Highway.speed_multiplier(), 2.5);

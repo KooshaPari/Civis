@@ -277,9 +277,7 @@ impl Session {
     /// Add an observer to the session (FR-SESS-003).
     pub fn add_observer(&mut self, name: impl Into<String>) -> SessionResult<PlayerId> {
         if self.mode == GameMode::Challenge {
-            return Err(SessionError::ModeMismatch {
-                mode: self.mode,
-            });
+            return Err(SessionError::ModeMismatch { mode: self.mode });
         }
         self.add_player(name, PlayerKind::Observer)
     }
@@ -296,7 +294,11 @@ impl Session {
         }
         let id = Uuid::new_v4();
         let civ_index = if matches!(kind, PlayerKind::Human | PlayerKind::Ai) {
-            let idx = self.players.iter().filter(|p| p.kind != PlayerKind::Observer).count() as u32;
+            let idx = self
+                .players
+                .iter()
+                .filter(|p| p.kind != PlayerKind::Observer)
+                .count() as u32;
             Some(idx)
         } else {
             None
@@ -380,9 +382,7 @@ impl Session {
         submitted_at: u64,
     ) -> SessionResult<Uuid> {
         if self.mode != GameMode::Challenge {
-            return Err(SessionError::ModeMismatch {
-                mode: self.mode,
-            });
+            return Err(SessionError::ModeMismatch { mode: self.mode });
         }
         let id = Uuid::new_v4();
         self.challenge_submissions.push(ChallengeSubmission {
@@ -398,25 +398,34 @@ impl Session {
     /// Get the current active player (hot-seat mode).
     #[must_use]
     pub fn active_player(&self) -> Option<&Player> {
-        self.active_player_index.and_then(|idx| self.players.get(idx))
+        self.active_player_index
+            .and_then(|idx| self.players.get(idx))
     }
 
     /// Check whether the given player is an observer (FR-SESS-003).
     #[must_use]
     pub fn is_observer(&self, player_id: PlayerId) -> bool {
-        self.players.iter().any(|p| p.id == player_id && p.kind == PlayerKind::Observer)
+        self.players
+            .iter()
+            .any(|p| p.id == player_id && p.kind == PlayerKind::Observer)
     }
 
     /// Get human players in the session.
     #[must_use]
     pub fn human_players(&self) -> Vec<&Player> {
-        self.players.iter().filter(|p| p.kind == PlayerKind::Human).collect()
+        self.players
+            .iter()
+            .filter(|p| p.kind == PlayerKind::Human)
+            .collect()
     }
 
     /// Get AI players in the session.
     #[must_use]
     pub fn ai_players(&self) -> Vec<&Player> {
-        self.players.iter().filter(|p| p.kind == PlayerKind::Ai).collect()
+        self.players
+            .iter()
+            .filter(|p| p.kind == PlayerKind::Ai)
+            .collect()
     }
 
     /// Serialize the session to JSON for persistence.
@@ -596,7 +605,10 @@ mod tests {
         let _o3 = session.add_observer("O3").expect("o3");
         session.start().expect("start");
         assert_eq!(session.players.len(), 3);
-        assert!(session.players.iter().all(|p| p.kind == PlayerKind::Observer));
+        assert!(session
+            .players
+            .iter()
+            .all(|p| p.kind == PlayerKind::Observer));
     }
 
     #[test]
@@ -637,7 +649,9 @@ mod tests {
     fn challenge_multiple_submissions() {
         let mut session = Session::new_challenge(1);
         let _s1 = session.submit_challenge(10, None, 100).expect("s1");
-        let _s2 = session.submit_challenge(20, Some("Bob".into()), 200).expect("s2");
+        let _s2 = session
+            .submit_challenge(20, Some("Bob".into()), 200)
+            .expect("s2");
         let _s3 = session.submit_challenge(30, None, 300).expect("s3");
         assert_eq!(session.challenge_submissions.len(), 3);
     }
@@ -645,7 +659,9 @@ mod tests {
     #[test]
     fn challenge_rejects_observer_add() {
         let mut session = Session::new_challenge(1);
-        let err = session.add_observer("Watcher").expect_err("observers not allowed in challenge");
+        let err = session
+            .add_observer("Watcher")
+            .expect_err("observers not allowed in challenge");
         assert!(matches!(err, SessionError::ModeMismatch { .. }));
     }
 

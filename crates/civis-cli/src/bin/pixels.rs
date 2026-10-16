@@ -34,12 +34,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data = match output.color_type {
         png::ColorType::Rgb => bytes.to_vec(),
         png::ColorType::Rgba => bytes
-            .as_chunks::<4>().0.iter()
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|px| [px[0], px[1], px[2]])
             .collect(),
         png::ColorType::Grayscale => bytes.iter().flat_map(|&v| [v, v, v]).collect(),
         png::ColorType::GrayscaleAlpha => bytes
-            .as_chunks::<2>().0.iter()
+            .as_chunks::<2>()
+            .0
+            .iter()
             .flat_map(|px| [px[0], px[0], px[0]])
             .collect(),
         png::ColorType::Indexed => {

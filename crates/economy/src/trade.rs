@@ -42,7 +42,12 @@ pub struct TradeAgreement {
 
 impl TradeAgreement {
     /// Create a new bilateral trade agreement.
-    pub fn new(from_party: ClusterId, to_party: ClusterId, joules: i64, milli_credits: i64) -> Self {
+    pub fn new(
+        from_party: ClusterId,
+        to_party: ClusterId,
+        joules: i64,
+        milli_credits: i64,
+    ) -> Self {
         Self {
             from_party,
             to_party,
@@ -181,7 +186,10 @@ mod tests {
         let states = vec![make_price_state(0, 1.0), make_price_state(1, 1.0)];
         let flows = compute_trade_flows(&states);
         let food_flows: Vec<_> = flows.iter().filter(|f| f.good == Good::Food).collect();
-        assert!(food_flows.is_empty(), "no flow when price differential is zero");
+        assert!(
+            food_flows.is_empty(),
+            "no flow when price differential is zero"
+        );
     }
 
     #[test]
@@ -263,7 +271,6 @@ mod tests {
             "a flow appears one ULP above the threshold"
         );
 
-
         // Just past the threshold a flow appears, priced at 10× the diff.
         let past_threshold = vec![make_price_state(0, 1.0), make_price_state(1, 1.3)];
         let food = compute_trade_flows(&past_threshold)
@@ -286,9 +293,7 @@ mod tests {
         // Every non-food good stays at identical prices ⇒ no spurious flows.
         let non_food = past_threshold
             .iter()
-            .flat_map(|state| {
-                compute_trade_flows(std::slice::from_ref(state))
-            })
+            .flat_map(|state| compute_trade_flows(std::slice::from_ref(state)))
             .count();
         assert_eq!(non_food, 0, "single cluster ⇒ no pairs ⇒ no flows");
     }

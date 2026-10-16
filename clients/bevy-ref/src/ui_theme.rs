@@ -107,8 +107,7 @@ pub const BANNER_HOLD_SECS: f32 = 4.0;
 pub const BANNER_FADE_OUT_SECS: f32 = 1.0;
 
 /// Total visible lifetime of a banner (fade-in + hold + fade-out).
-pub const BANNER_LIFETIME_SECS: f32 =
-    BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS;
+pub const BANNER_LIFETIME_SECS: f32 = BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS;
 
 /// Compute the alpha multiplier for an outcome/game-over banner given its
 /// age in seconds since it became visible.
@@ -1284,7 +1283,11 @@ mod tests {
         // Linear 1.0 -> 0.0 over BANNER_FADE_OUT_SECS.
         let mid_fade = BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS * 0.5;
         let mid = banner_alpha(mid_fade);
-        assert!((mid - 0.5).abs() < 0.01, "expected ~0.5 mid fade-out, got {}", mid);
+        assert!(
+            (mid - 0.5).abs() < 0.01,
+            "expected ~0.5 mid fade-out, got {}",
+            mid
+        );
         // End of lifetime -> 0.0.
         let just_before_end = BANNER_LIFETIME_SECS - 0.001;
         assert!(banner_alpha(just_before_end) < 0.01);
@@ -1295,7 +1298,8 @@ mod tests {
     fn banner_alpha_total_lifetime_is_consistent() {
         // BANNER_LIFETIME_SECS must equal the sum of its parts.
         assert!(
-            (BANNER_LIFETIME_SECS - (BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS))
+            (BANNER_LIFETIME_SECS
+                - (BANNER_FADE_IN_SECS + BANNER_HOLD_SECS + BANNER_FADE_OUT_SECS))
                 .abs()
                 < f32::EPSILON
         );

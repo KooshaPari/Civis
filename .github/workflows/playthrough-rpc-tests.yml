@@ -1,0 +1,97 @@
+name: Playthrough RPC tests
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "scripts/playthrough.sh"
+            - "scripts/tests/test_playthrough_rpc*.py"
+            - "scripts/tests/run_playthrough_fixture.py"
+            - "scripts/tests/test_playthrough_fixture.py"
+            - "crates/server/tests/operator_fixture.rs"
+            - ".github/workflows/playthrough-rpc-tests.yml"
+    pull_request:
+        paths:
+            - "scripts/playthrough.sh"
+            - "scripts/tests/test_playthrough_rpc*.py"
+            - "scripts/tests/run_playthrough_fixture.py"
+            - "scripts/tests/test_playthrough_fixture.py"
+            - "crates/server/tests/operator_fixture.rs"
+            - ".github/workflows/playthrough-rpc-tests.yml"
+
+permissions:
+    contents: read
+
+jobs:
+    parser-regressions:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 2
+        steps:
+            - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+            - name: Check Bash syntax
+              run: bash -n scripts/playthrough.sh
+            - name: Fetch pinned websocat for wire regressions
+              run: |
+                  curl --fail --silent --show-error --location --max-time 60 \
+                    https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl \
+                    --output "$RUNNER_TEMP/websocat"
+                  printf '%s  %s\n' \
+                    8f84c57103d33ab73888707041765e0e7e6a43a91fbb6e1828cd5eabc19ae32c \
+                    "$RUNNER_TEMP/websocat" | sha256sum --check
+                  chmod +x "$RUNNER_TEMP/websocat"
+            - name: Run mocked and real wire parser regressions
+              run: python3 -m unittest discover -s scripts/tests -p 'test_playthrough_rpc*.py' -v
+              env:
+                  WEBSOCAT_BIN: ${{ runner.temp }}/websocat
+    operator-input-fixture:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        env:
+            CARGO_BUILD_JOBS: "2"
+            CARGO_INCREMENTAL: "0"
+            CARGO_PROFILE_DEV_DEBUG: "0"
+            CARGO_PROFILE_TEST_DEBUG: "0"
+        steps:
+            - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: true
+            - name: Check required fixture tools
+              run: |
+                  for tool in bash cargo rustc python3 jq timeout curl sha256sum; do
+                    command -v "$tool"
+                  done
+            - name: Check owned-process cleanup and listener custody
+              run: python3 -m unittest discover -s scripts/tests -p 'test_playthrough_fixture.py' -v
+            - name: Fetch pinned websocat for the live fixture
+              run: |
+                  curl --fail --silent --show-error --location --max-time 60 \
+                    https://github.com/vi/websocat/releases/download/v1.13.0/websocat.x86_64-unknown-linux-musl \
+                    --output "$RUNNER_TEMP/websocat"
+                  printf '%s  %s\n' \
+                    8f84c57103d33ab73888707041765e0e7e6a43a91fbb6e1828cd5eabc19ae32c \
+                    "$RUNNER_TEMP/websocat" | sha256sum --check
+                  chmod +x "$RUNNER_TEMP/websocat"
+            - name: Build only the debug server
+              run: cargo build --locked -p civ-server --bin civ-server -j2
+            - name: Check supplied-role dispatch effects in one test binary
+              run: cargo test --locked -p civ-server --test operator_fixture -j2
+            - name: Run isolated operator-input playthrough fixture
+              run: |
+                  python3 scripts/tests/run_playthrough_fixture.py \
+                    --server-binary target/debug/civ-server \
+                    --websocat "$RUNNER_TEMP/websocat" \
+                    --report "$RUNNER_TEMP/operator-fixture-report.json"
+            - name: Preserve actual fixture receipts
+              if: ${{ always() && !cancelled() }}
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+              with:
+                  name: operator-input-fixture-receipts
+                  path: |
+                      ${{ runner.temp }}/operator-fixture-report.json
+                      ${{ runner.temp }}/civis-fixture-*/server.log
+                      ${{ runner.temp }}/civis-fixture-*/rpc-*.stdout
+                      ${{ runner.temp }}/civis-fixture-*/rpc-*.stderr
+                  retention-days: 7
+                  if-no-files-found: warn

@@ -82,7 +82,64 @@ pub struct FactionRelationRecord {
 // [unbound] FR-CIV-POLITY-001: The requirement is at docs/design/polities-markets.md:37-44: "FR-CIV-POLITY-001 -- Cohesion graph. A polity surface is computed as a weighted graph over clusters (nodes = ClusterId, edges = directed coordination weight)", with each edge weight a monotone blend of five named terms: coord(i->j) = w_colo*colocation + w_kin*kinship_overlap + w_cult*(1 - culture_distance) + w_econ*max(0, payoff_if_coordinated) + w_coer*coercion(i->j). The mandated artifact is a weighted GRAPH whose nodes are clusters and whose edges carry a computed five-term weight. `FactionRelations` is a single `rows: BTreeMap<(u32,u32), FactionRelationRecord>` where each record is just { score: f32, samples: u32 } (diplomacy.rs:61-63, 53-56). Its nodes are faction integer ids, not ClusterId; it has no edge weight; it has none of the five terms (no colocation, kinship overlap, culture distance, payoff, or coercion); and `apply_signal` (diplomacy.rs:83-101) computes only a single scalar relation score from trade_volume and combat_grievance. The struct's own doc comment calls it a "Stub faction-relation matrix" (diplomacy.rs:58) and engine.rs:802 calls it "a stub: an empty FactionRelations until DiplomacyMatrix schema is ...". A one-scalar relation score between factions is not a weighted cohesion graph over clusters. `git grep -rni "coordination_weight|CohesionGraph|colocation|culture_distance|kinship_overlap|reciprocity" -- crates/` returns only cluster_by_colocation (crates/agents/src/cluster.rs:71), which partitions positions into clusters and never computes an edge weight; no cohesion-graph builder exists, so the requirement has no implementing symbol. The id's own test file concedes the gap: crates/engine/tests/fr_fr_civ_polity_001.rs:5 says the FR "captures: Diplomacy relations matrix" rather than the cohesion graph, and its strongest assertion is that a default world has zero rows.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct FactionRelations {
+    #[serde(with = "relation_rows_serde")]
     rows: BTreeMap<(u32, u32), FactionRelationRecord>,
+}
+
+// JSON objects cannot represent tuple keys. Keep the original empty object
+// and binary map encoding, but encode populated human-readable maps as entries.
+mod relation_rows_serde {
+    use super::FactionRelationRecord;
+    use serde::de::{Error, MapAccess, SeqAccess, Visitor};
+    use serde::ser::SerializeSeq;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::collections::BTreeMap;
+    use std::fmt;
+
+    type Rows = BTreeMap<(u32, u32), FactionRelationRecord>;
+
+    pub fn serialize<S: Serializer>(rows: &Rows, serializer: S) -> Result<S::Ok, S::Error> {
+        if !serializer.is_human_readable() || rows.is_empty() {
+            return rows.serialize(serializer);
+        }
+        let mut entries = serializer.serialize_seq(Some(rows.len()))?;
+        for entry in rows {
+            entries.serialize_element(&entry)?;
+        }
+        entries.end()
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Rows, D::Error> {
+        if !deserializer.is_human_readable() {
+            return Rows::deserialize(deserializer);
+        }
+        struct RowsVisitor;
+        impl<'de> Visitor<'de> for RowsVisitor {
+            type Value = Rows;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("relation entries or a legacy empty object")
+            }
+
+            fn visit_seq<A: SeqAccess<'de>>(self, mut entries: A) -> Result<Rows, A::Error> {
+                let mut rows = Rows::new();
+                while let Some((key, record)) = entries.next_element()? {
+                    if rows.insert(key, record).is_some() {
+                        return Err(A::Error::custom("duplicate faction relation pair"));
+                    }
+                }
+                Ok(rows)
+            }
+
+            fn visit_map<A: MapAccess<'de>>(self, mut object: A) -> Result<Rows, A::Error> {
+                if object.next_key::<serde::de::IgnoredAny>()?.is_some() {
+                    return Err(A::Error::custom("legacy relation object must be empty"));
+                }
+                Ok(Rows::new())
+            }
+        }
+        deserializer.deserialize_any(RowsVisitor)
+    }
 }
 
 impl FactionRelations {
@@ -596,5 +653,87 @@ impl Simulation {
             faction_b: b,
             kind,
         });
+    }
+}
+
+#[cfg(test)]
+mod relation_rows_tests {
+    use super::{FactionRelationRecord, FactionRelations};
+    use serde::Serialize;
+    use std::collections::BTreeMap;
+
+    fn relations() -> FactionRelations {
+        FactionRelations {
+            rows: BTreeMap::from([
+                (
+                    (9, 2),
+                    FactionRelationRecord {
+                        score: -0.5,
+                        samples: 7,
+                    },
+                ),
+                (
+                    (2, 9),
+                    FactionRelationRecord {
+                        score: 0.25,
+                        samples: 3,
+                    },
+                ),
+            ]),
+        }
+    }
+
+    #[test]
+    fn relation_rows_json_roundtrip_preserves_order_and_direction() {
+        let original = relations();
+        let json = serde_json::to_string(&original).expect("serialize populated relations");
+        assert_eq!(
+            json,
+            r#"{"rows":[[[2,9],{"score":0.25,"samples":3}],[[9,2],{"score":-0.5,"samples":7}]]}"#
+        );
+        let restored: FactionRelations = serde_json::from_str(&json).expect("read entries");
+        assert_eq!(restored, original);
+    }
+
+    #[test]
+    fn relation_rows_json_preserves_legacy_empty_object() {
+        let restored: FactionRelations =
+            serde_json::from_str(r#"{"rows":{}}"#).expect("read legacy empty rows");
+        assert_eq!(restored, FactionRelations::default());
+        assert_eq!(serde_json::to_string(&restored).unwrap(), r#"{"rows":{}}"#);
+    }
+
+    #[test]
+    fn relation_rows_json_rejects_invalid_entries() {
+        for json in [
+            r#"{"rows":{"2,9":{"score":0.25,"samples":3}}}"#,
+            r#"{"rows":[[[2,9],{"score":0.25,"samples":3}],[[2,9],{"score":-0.5,"samples":7}]]}"#,
+            r#"{"rows":[[[2],{"score":0.25,"samples":3}]]}"#,
+            r#"{"rows":null}"#,
+        ] {
+            assert!(
+                serde_json::from_str::<FactionRelations>(json).is_err(),
+                "accepted invalid rows: {json}"
+            );
+        }
+    }
+
+    #[test]
+    fn relation_rows_bincode_preserves_native_map_encoding() {
+        #[derive(Serialize)]
+        struct LegacyRelations<'a> {
+            rows: &'a BTreeMap<(u32, u32), FactionRelationRecord>,
+        }
+        for original in [FactionRelations::default(), relations()] {
+            let legacy = bincode::serialize(&LegacyRelations {
+                rows: &original.rows,
+            })
+            .expect("serialize native map");
+            let current = bincode::serialize(&original).expect("serialize adapted map");
+            assert_eq!(current, legacy);
+            let restored: FactionRelations =
+                bincode::deserialize(&legacy).expect("read legacy binary map");
+            assert_eq!(restored, original);
+        }
     }
 }

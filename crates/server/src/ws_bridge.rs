@@ -5196,6 +5196,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn jsonrpc_save_slot_after_diplomacy_seed42_tick0() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
+        let mut connection_role = None;
+        for request in [
+            r#"{"jsonrpc":"2.0","id":2014,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,
+            r#"{"jsonrpc":"2.0","id":2015,"method":"sim.diplomacy_action","params":{"source_faction":0,"target_faction":1,"action":"offer_trade"}}"#,
+            r#"{"jsonrpc":"2.0","id":2016,"method":"save.slot","params":{"slot_name":"slot-2"}}"#,
+        ] {
+            let response = handle_jsonrpc_text(
+                request,
+                &state,
+                &mut connection_role,
+                test_subscription_filter(),
+                "save-regression",
+            )
+            .await;
+            let value: serde_json::Value = serde_json::from_str(&response).unwrap();
+            let input: serde_json::Value = serde_json::from_str(request).unwrap();
+            assert_eq!(value["id"], input["id"]);
+            assert!(value.get("error").is_none(), "{response}");
+            if input["method"] == "save.slot" {
+                assert_eq!(value["result"]["saved"], true);
+                assert_eq!(value["result"]["tick"], 0);
+            }
+        }
+        let loaded =
+            civ_engine::CivSaveBundle::load_archive(&state.saves_dir.join("slot-2.civsave.zst"))
+                .expect("saved relation archive loads");
+        assert_eq!(loaded.faction_relations, sim.lock().await.faction_relations);
+        assert_eq!(loaded.state.tick, 0);
+    }
+
+    #[tokio::test]
     async fn jsonrpc_save_slot_records_save_db_and_replay_bus() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(7)));
         {

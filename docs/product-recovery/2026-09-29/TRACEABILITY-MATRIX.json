@@ -1,0 +1,29 @@
+{
+  "schema": "recovery-trace-v1",
+  "repository": "KooshaPari/Civis",
+  "program": "gaming-pair-20260929",
+  "intent": "Playable civilization/god-game/warfare mega-simulation with emergence and deep physics; persistence is continuity spine, not product identity.",
+  "journeys": ["C-J01","C-J02","C-J03","C-J04","C-J05","C-J06","C-J07","C-J08","C-J09","C-J10","C-J11","C-J12","C-J13","C-J14"],
+  "design_spine": ["authoritative causal-state ownership","semantic component persistence","mod compatibility before guest-state import","staged generation publication","CURRENT-last acceptance","explicit reconciliation","causal ablation oracles","LOD transfer invariants"],
+  "state_denominator": {
+    "Simulation_fields": 125,
+    "WorldState_fields": 48,
+    "terminal_dispositions": ["DURABLE_CANONICAL","DURABLE_EXTERNAL_BINDING","DERIVED_DETERMINISTIC","CACHE_REBUILDABLE","EPHEMERAL_ACCEPTED","AUDIT_ONLY","MIRROR","UNSUPPORTED_REMOVED"],
+    "rule": "Any non-terminal row remains an explicit blocker; no persistence coverage percentage is valid."
+  },
+  "qualified_candidate": {
+    "candidate": "b5346457bd3162298da4d584248473ec282240ef",
+    "run": 36820662241,
+    "semantic_lib_tests_passed": 23,
+    "failed": 0,
+    "artifact": 11143995094,
+    "sha256": "072c646bd833ca430c5dfbf7b8befd6a3b7765bb971e8f777cc2e57cfc0e7299",
+    "scope": "opt-in vNext semantic persistence including tick-mirror resynchronization; default CivSaveBundle is not credited"
+  },
+  "oracle_families": ["semantic roundtrip plus consequence continuity","missing/conflicting component","future schema","cross-world/generation","mod owner compatibility","interrupted publication","invalid CURRENT","causal ablation","LOD conservation","world/action/evidence identity"],
+  "blockers": {
+    "EXECUTION_EXPERIMENT": ["terminal disposition experiments for unresolved state owners","target Linux/Windows durability","filesystem-vs-SQLite authority/reconciliation","mounted process restart continuation","causal emergence ablations","LOD transfer/conservation","origin-to-society playable vertical","named scale benchmarks"],
+    "AUTHORITY_POLICY_SCIENCE": ["historical catalog authority","public model-validity claim boundary","platform/client matrix","post-v1 multiplayer horizon","stable support commitments"],
+    "EMPIRICAL": ["emergence usefulness/legibility","deep-physics value vs cost","integrated product vs narrower game plus Mesa/notebook alternatives"]
+  }
+}

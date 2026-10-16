@@ -193,6 +193,14 @@ sleep 5
 if ! kill -0 "${GAME_PID}" 2>/dev/null; then
     fail "Game crashed on startup"
     cat "${LOGS}/game.log" >&2
+    crash_dir="${HOME}/.local/share/civis/crashes"
+    if [[ -d "${crash_dir}" ]]; then
+        latest="$(ls -1t "${crash_dir}"/crash-*.log 2>/dev/null | head -1 || true)"
+        if [[ -n "${latest}" ]]; then
+            echo "---- ${latest} ----" >&2
+            cat "${latest}" >&2
+        fi
+    fi
     exit 2
 fi
 ok "Game running"

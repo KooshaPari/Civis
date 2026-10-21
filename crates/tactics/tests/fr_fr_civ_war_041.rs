@@ -6,7 +6,7 @@
 //! FR-CIV-WAR-041: War-economy — mobilization pressure reshapes emergent market.
 //! Tests that war drains treasury (economic impact).
 
-use civ_tactics::{compute_war_economy_drain, apply_war_drain};
+use civ_tactics::{apply_war_drain, compute_war_economy_drain};
 
 #[cfg(test)]
 mod fr_fr_civ_war_041 {
@@ -17,12 +17,12 @@ mod fr_fr_civ_war_041 {
     fn verify_fr_civ_war_041_basic() {
         let treasury: i64 = 100_000;
         let drain = compute_war_economy_drain(treasury, 0, true);
-        assert!(
-            drain.treasury_drain > 0,
-            "war should drain treasury"
-        );
+        assert!(drain.treasury_drain > 0, "war should drain treasury");
         let remaining = apply_war_drain(treasury, &drain);
-        assert!(remaining < treasury, "treasury should decrease after war drain");
+        assert!(
+            remaining < treasury,
+            "treasury should decrease after war drain"
+        );
     }
 
     /// FR-CIV-WAR-041: Peace does not drain the economy.

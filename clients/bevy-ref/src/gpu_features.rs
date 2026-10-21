@@ -190,8 +190,7 @@ mod tests {
             "DX12"
         );
         assert_eq!(
-            classify_capabilities(wgpu::Backend::Vulkan, 0, wgpu::Features::empty())
-                .backend_name,
+            classify_capabilities(wgpu::Backend::Vulkan, 0, wgpu::Features::empty()).backend_name,
             "Vulkan"
         );
         assert_eq!(
@@ -199,12 +198,8 @@ mod tests {
             "Metal"
         );
         assert_eq!(
-            classify_capabilities(
-                wgpu::Backend::BrowserWebGpu,
-                0,
-                wgpu::Features::empty()
-            )
-            .backend_name,
+            classify_capabilities(wgpu::Backend::BrowserWebGpu, 0, wgpu::Features::empty())
+                .backend_name,
             "WebGPU"
         );
     }
@@ -251,7 +246,10 @@ mod tests {
         assert!(f.metal_fx, "apple+metal should imply metal_fx");
         assert!(f.fsr_available);
         assert!(!f.dlss_available, "metal must not imply dlss");
-        assert!(!f.mesh_shaders, "apple+metal alone must not imply mesh shaders");
+        assert!(
+            !f.mesh_shaders,
+            "apple+metal alone must not imply mesh shaders"
+        );
     }
 
     #[test]
@@ -281,7 +279,10 @@ mod tests {
             0x9999,
             wgpu::Features::empty(),
         );
-        assert!(f.fsr_available, "BrowserWebGpu path must enable FSR fallback");
+        assert!(
+            f.fsr_available,
+            "BrowserWebGpu path must enable FSR fallback"
+        );
         assert!(!f.ray_tracing);
         assert!(!f.dlss_available);
         assert!(!f.metal_fx);

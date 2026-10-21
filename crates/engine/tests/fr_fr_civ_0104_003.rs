@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod fr_fr_civ_0104_003 {
     use civ_engine::constraints::{
-        ConstraintState, ConstraintSetResult, ConstraintCheck, MinimalConstraintParams,
+        ConstraintCheck, ConstraintSetResult, ConstraintState, MinimalConstraintParams,
         ViolationSeverity,
     };
     use civ_engine::Fixed;
@@ -33,7 +33,12 @@ mod fr_fr_civ_0104_003 {
             c4_adaptive_climate: ConstraintCheck::Ok,
             c5_coalition_compatible: ConstraintCheck::Ok,
         };
-        state.update(1, Fixed::from_num(7) / Fixed::from_num(10), &params, &halt_result);
+        state.update(
+            1,
+            Fixed::from_num(7) / Fixed::from_num(10),
+            &params,
+            &halt_result,
+        );
         assert!(
             state.ablation_mode,
             "ablation_mode should be true after HALT"
@@ -47,7 +52,12 @@ mod fr_fr_civ_0104_003 {
             c4_adaptive_climate: ConstraintCheck::Ok,
             c5_coalition_compatible: ConstraintCheck::Ok,
         };
-        state.update(2, Fixed::from_num(7) / Fixed::from_num(10), &params, &ok_result);
+        state.update(
+            2,
+            Fixed::from_num(7) / Fixed::from_num(10),
+            &params,
+            &ok_result,
+        );
         assert!(
             state.ablation_mode,
             "ablation_mode should remain true even after recovery"
@@ -70,7 +80,12 @@ mod fr_fr_civ_0104_003 {
                 reason: "test".to_string(),
             },
         };
-        state.update(1, Fixed::from_num(7) / Fixed::from_num(10), &params, &critical_result);
+        state.update(
+            1,
+            Fixed::from_num(7) / Fixed::from_num(10),
+            &params,
+            &critical_result,
+        );
         assert!(
             !state.ablation_mode,
             "Critical should not set ablation_mode"
@@ -86,11 +101,13 @@ mod fr_fr_civ_0104_003 {
             c4_adaptive_climate: ConstraintCheck::Ok,
             c5_coalition_compatible: ConstraintCheck::Ok,
         };
-        state.update(2, Fixed::from_num(7) / Fixed::from_num(10), &params, &warning_result);
-        assert!(
-            !state.ablation_mode,
-            "Warning should not set ablation_mode"
+        state.update(
+            2,
+            Fixed::from_num(7) / Fixed::from_num(10),
+            &params,
+            &warning_result,
         );
+        assert!(!state.ablation_mode, "Warning should not set ablation_mode");
     }
 
     /// Multiple HALT violations keep ablation_mode true (idempotent).
@@ -110,7 +127,12 @@ mod fr_fr_civ_0104_003 {
                 c4_adaptive_climate: ConstraintCheck::Ok,
                 c5_coalition_compatible: ConstraintCheck::Ok,
             };
-            state.update(tick, Fixed::from_num(7) / Fixed::from_num(10), &params, &result);
+            state.update(
+                tick,
+                Fixed::from_num(7) / Fixed::from_num(10),
+                &params,
+                &result,
+            );
             assert!(state.ablation_mode, "Should be true at tick {}", tick);
         }
     }

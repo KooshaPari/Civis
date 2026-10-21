@@ -93,10 +93,9 @@ pub fn compute_health(
     let total_weight = config.food_weight + config.water_weight + config.medical_weight;
     let weight_denom = if total_weight > 0 { total_weight } else { 1 };
 
-    let index = (food * config.food_weight
-        + water * config.water_weight
-        + medical * config.medical_weight)
-        / weight_denom;
+    let index =
+        (food * config.food_weight + water * config.water_weight + medical * config.medical_weight)
+            / weight_denom;
 
     let index = index.clamp(0, MAX_HEALTH_BP);
     let in_crisis = index < config.crisis_threshold_bp;

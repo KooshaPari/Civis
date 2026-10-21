@@ -29,7 +29,10 @@ fn lod_seamless_transition() {
     let mut swap = LodTransition::begin(LodLevel(0), LodLevel(3));
     assert!(!swap.is_completed());
     let blend = swap.advance().expect("first frame performs the swap");
-    assert!((blend - 1.0).abs() < f32::EPSILON, "single-frame full blend");
+    assert!(
+        (blend - 1.0).abs() < f32::EPSILON,
+        "single-frame full blend"
+    );
     assert!(swap.is_completed(), "swap finished inside one frame");
     assert_eq!(swap.advance(), None, "no second frame of blending");
 

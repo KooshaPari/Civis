@@ -9,10 +9,13 @@ use prometheus::Registry;
 #[test]
 fn fr_civ_metrics_001_sim_metrics_creation() {
     let registry = Registry::new();
-    let metrics = SimMetrics::new(&registry).expect("SimMetrics::new should succeed");
+    let _metrics = SimMetrics::new(&registry).expect("SimMetrics::new should succeed");
     // Verify the metrics were registered
     let gathered = registry.gather();
-    assert!(!gathered.is_empty(), "registry should have metric families after SimMetrics::new");
+    assert!(
+        !gathered.is_empty(),
+        "registry should have metric families after SimMetrics::new"
+    );
 }
 
 /// FR-CIV-METRICS-001 — SimMetricSnapshot can be constructed with all fields.

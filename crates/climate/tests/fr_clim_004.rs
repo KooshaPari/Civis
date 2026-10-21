@@ -56,7 +56,10 @@ fn damage_capped() {
     let damage = compute_damage(100.0, &config, 0);
 
     assert_eq!(damage.damage_bp, config.max_damage_bp);
-    assert!(damage.production_multiplier_bp >= 1000, "At least 10% capacity remains");
+    assert!(
+        damage.production_multiplier_bp >= 1000,
+        "At least 10% capacity remains"
+    );
 }
 
 /// FR-CLIM-004: Tracker accumulates damage over ticks.

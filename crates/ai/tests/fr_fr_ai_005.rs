@@ -18,8 +18,14 @@ fn cap_enforced_per_tick() {
     assert_eq!(cap.mc_spent, 800, "MC spent should not change on reject");
 
     // Exceed Joule limit — should fail.
-    assert!(!cap.try_use_joules(300), "should reject over-budget Joule use");
-    assert_eq!(cap.joules_used, 300, "Joule used should not change on reject");
+    assert!(
+        !cap.try_use_joules(300),
+        "should reject over-budget Joule use"
+    );
+    assert_eq!(
+        cap.joules_used, 300,
+        "Joule used should not change on reject"
+    );
 }
 
 #[test]

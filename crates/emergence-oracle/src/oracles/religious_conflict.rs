@@ -70,7 +70,10 @@ mod tests {
         let mut sim = Simulation::new();
         sim.tick();
         let v = ReligiousConflictOracle.check(&sim);
-        assert!((v.threshold - 1.0).abs() < f64::EPSILON, "post-tick-0 threshold must be 1.0");
+        assert!(
+            (v.threshold - 1.0).abs() < f64::EPSILON,
+            "post-tick-0 threshold must be 1.0"
+        );
         assert_eq!(v.passed, v.measured >= 1.0, "detail: {}", v.detail);
         assert_eq!(v.fr_id, "FR-EMG-016");
         assert!(v.detail.contains("citizens="), "detail: {}", v.detail);

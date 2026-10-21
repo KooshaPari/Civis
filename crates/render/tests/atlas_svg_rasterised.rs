@@ -22,8 +22,16 @@ fn src(name: &str, svg: String, lod: u8) -> SvgSource {
 #[test]
 fn svg_rasterised_at_build() {
     let sprites = rasterise_at_build(&[
-        src("grass", "<svg width=\"32\" height=\"32\"><rect/></svg>".into(), 0),
-        src("tree", "<svg width=\"24\" height=\"40\"><path/></svg>".into(), 0),
+        src(
+            "grass",
+            "<svg width=\"32\" height=\"32\"><rect/></svg>".into(),
+            0,
+        ),
+        src(
+            "tree",
+            "<svg width=\"24\" height=\"40\"><path/></svg>".into(),
+            0,
+        ),
     ])
     .expect("valid SVG sources rasterise");
 
@@ -40,8 +48,16 @@ fn svg_rasterised_at_build() {
 
     // Rasterisation is deterministic: identical SVG => identical pixels.
     let again = rasterise_at_build(&[
-        src("grass", "<svg width=\"32\" height=\"32\"><rect/></svg>".into(), 0),
-        src("tree", "<svg width=\"24\" height=\"40\"><path/></svg>".into(), 0),
+        src(
+            "grass",
+            "<svg width=\"32\" height=\"32\"><rect/></svg>".into(),
+            0,
+        ),
+        src(
+            "tree",
+            "<svg width=\"24\" height=\"40\"><path/></svg>".into(),
+            0,
+        ),
     ])
     .expect("re-rasterises");
     assert_eq!(sprites, again, "build-time raster must be reproducible");
@@ -56,6 +72,8 @@ fn svg_rasterised_at_build() {
     assert_eq!(rasterise_at_build(&[]), Err(AssetError::NoSources));
     assert_eq!(
         rasterise_at_build(&[src("blank", "   ".into(), 0)]),
-        Err(AssetError::EmptySvg { name: "blank".into() })
+        Err(AssetError::EmptySvg {
+            name: "blank".into()
+        })
     );
 }

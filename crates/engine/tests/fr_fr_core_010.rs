@@ -63,7 +63,11 @@ fn integer_quantities_use_fixed_point() {
 fn fixed_is_integer_backed() {
     let a = Fixed::from_num(3);
     let b = Fixed::from_num(4);
-    assert_eq!(a * b, Fixed::from_num(12), "fixed-point multiply is exact here");
+    assert_eq!(
+        a * b,
+        Fixed::from_num(12),
+        "fixed-point multiply is exact here"
+    );
     assert!(a < b);
 
     let encoded = serde_json::to_value(a).expect("Fixed serialises");
@@ -96,7 +100,11 @@ fn float_boundary_is_economy_clean() {
     let json = serde_json::to_value(&sim.state).expect("WorldState serialises");
 
     // Economy-shaped subtrees must be float-free.
-    for key in ["faction_treasury", "faction_resources", "energy_budget_joules"] {
+    for key in [
+        "faction_treasury",
+        "faction_resources",
+        "energy_budget_joules",
+    ] {
         let value = &json[key];
         assert!(
             !contains_float(value),

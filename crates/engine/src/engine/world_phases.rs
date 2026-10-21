@@ -503,9 +503,7 @@ impl Simulation {
             }
 
             // Copy newly discovered entries into research_progress.
-            self.state
-                .research_progress
-                .extend(new_entries);
+            self.state.research_progress.extend(new_entries);
         }
 
         // Enforce the chronicle cap.

@@ -15,7 +15,10 @@ mod fr_fr_civ_inspect_901 {
     /// FR-CIV-INSPECT-901: WorldState tick available for inspection timestamping.
     #[test]
     fn inspection_timestamps_from_tick() {
-        let ws = civ_engine::WorldState { tick: 42, ..civ_engine::WorldState::default() };
+        let ws = civ_engine::WorldState {
+            tick: 42,
+            ..civ_engine::WorldState::default()
+        };
         assert_eq!(ws.tick, 42);
     }
 }

@@ -38,7 +38,10 @@ fn replay_checksum_corruption() {
             }
         }
     }
-    assert!(rejected > 0, "at least payload corruption yields ChecksumMismatch");
+    assert!(
+        rejected > 0,
+        "at least payload corruption yields ChecksumMismatch"
+    );
 
     // Corrupting the stored checksum itself must also be fatal.
     let mut bad_footer = clean.clone();

@@ -299,7 +299,10 @@ mod tests {
         let snapshot = BudgetSnapshot::from_plan(plan);
         let variances = compute_variances(&snapshot);
         assert_eq!(variances.len(), 2);
-        let mil = variances.iter().find(|v| v.bucket_id == BUCKET_MILITARY).unwrap();
+        let mil = variances
+            .iter()
+            .find(|v| v.bucket_id == BUCKET_MILITARY)
+            .unwrap();
         assert_eq!(mil.variance, 50); // 100 - 50
     }
 }

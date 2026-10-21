@@ -22,6 +22,9 @@ mod fr_fr_civ_war_011 {
     #[test]
     fn movement_config_search_radius_positive() {
         let config = OperationalMovementConfig::default();
-        assert!(config.path_search_radius > 0, "search radius must be positive");
+        assert!(
+            config.path_search_radius > 0,
+            "search radius must be positive"
+        );
     }
 }

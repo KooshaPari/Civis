@@ -18,10 +18,7 @@ mod fr_fr_civ_3d_005 {
             "Factions must exist for nation color injection"
         );
         // At least Player + 2 AI factions.
-        assert!(
-            ws.factions.len() >= 3,
-            "Should have at least 3 factions"
-        );
+        assert!(ws.factions.len() >= 3, "Should have at least 3 factions");
     }
 
     /// Faction IDs are contiguous u32 keys.

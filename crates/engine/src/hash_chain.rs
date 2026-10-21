@@ -421,7 +421,10 @@ mod tests {
         let mut diverged = HashChainState::new();
         diverged.advance(&tick_event_bytes(ticks[0]));
         let alt_second = diverged.advance(&tick_event_bytes(99));
-        assert_ne!(alt_second, first_run[1], "divergent tick must diverge the chain");
+        assert_ne!(
+            alt_second, first_run[1],
+            "divergent tick must diverge the chain"
+        );
     }
 
     // NFR-C-07 — SimEvent.state_hash parity: chain_advance folds each event's
@@ -448,8 +451,14 @@ mod tests {
 
         // Append-only and order-sensitive: the digest advances per event and a
         // reordered replay does not match the emission-time root.
-        assert_ne!(root_after_1, root_after_2, "each event must advance the chain");
+        assert_ne!(
+            root_after_1, root_after_2,
+            "each event must advance the chain"
+        );
         let reordered = chain_root_from_payloads([&e2[..], &e1[..]]).expect("reordered root");
-        assert_ne!(root_after_2, reordered, "event order is part of the state hash");
+        assert_ne!(
+            root_after_2, reordered,
+            "event order is part of the state hash"
+        );
     }
 }

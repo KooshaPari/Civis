@@ -21,7 +21,11 @@ mod fr_fr_civ_3d_001 {
     /// WorldCoord can be constructed from integer coordinates.
     #[test]
     fn world_coord_constructible() {
-        let coord = civ_engine::WorldCoord { x: 10, y: 20, z: 30 };
+        let coord = civ_engine::WorldCoord {
+            x: 10,
+            y: 20,
+            z: 30,
+        };
         assert_eq!(coord.x, 10);
         assert_eq!(coord.y, 20);
         assert_eq!(coord.z, 30);

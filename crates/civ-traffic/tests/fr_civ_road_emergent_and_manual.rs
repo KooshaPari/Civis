@@ -366,7 +366,11 @@ fn fr_civ_road_910_vehicle_placement_respects_unlock_era() {
         "Wagon must be placeable at its unlock era"
     );
 
-    assert_eq!(g.vehicles.len(), 2, "two vehicles should have been recorded");
+    assert_eq!(
+        g.vehicles.len(),
+        2,
+        "two vehicles should have been recorded"
+    );
     assert_eq!(g.vehicles[1].kind, VehicleKind::Wagon);
     assert_eq!(g.vehicles[1].provenance, InfraProvenance::UserPlaced);
 }

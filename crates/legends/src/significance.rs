@@ -425,8 +425,22 @@ mod tests {
         let hero = LegendEntityId(42);
 
         assert!(acc.is_empty(), "fresh accumulator starts empty");
-        acc.record_event(hero, Epoch(0), &EventKind::Battle, &[Role::Leader], 0.9, &cfg);
-        acc.record_event(hero, Epoch(1), &EventKind::WarDeclared, &[Role::Aggressor], 0.7, &cfg);
+        acc.record_event(
+            hero,
+            Epoch(0),
+            &EventKind::Battle,
+            &[Role::Leader],
+            0.9,
+            &cfg,
+        );
+        acc.record_event(
+            hero,
+            Epoch(1),
+            &EventKind::WarDeclared,
+            &[Role::Aggressor],
+            0.7,
+            &cfg,
+        );
         assert_eq!(acc.len(), 1);
         let score = acc.get(hero).expect("tracked").score;
         assert!(score > 0.0);

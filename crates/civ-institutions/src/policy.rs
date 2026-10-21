@@ -176,7 +176,10 @@ mod tests {
         assert!(!inst.add_member(10), "roster add is idempotent");
         assert_eq!(inst.member_count(), 2);
         assert!(inst.remove_member(10));
-        assert!(!inst.remove_member(10), "removing a non-member reports false");
+        assert!(
+            !inst.remove_member(10),
+            "removing a non-member reports false"
+        );
         assert_eq!(inst.members, vec![20]);
 
         // Policies are opaque string tokens owned by this record.

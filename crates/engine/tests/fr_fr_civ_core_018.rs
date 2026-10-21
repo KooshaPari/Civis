@@ -16,7 +16,11 @@ mod fr_fr_civ_core_018 {
         let compressed = zstd::encode_all(&encoded[..], 3).expect("zstd compress");
         // Decompress
         let decompressed = zstd::decode_all(&compressed[..]).expect("zstd decompress");
-        assert_eq!(encoded, decompressed.as_slice(), "zstd round-trip must be lossless");
+        assert_eq!(
+            encoded,
+            decompressed.as_slice(),
+            "zstd round-trip must be lossless"
+        );
     }
 
     /// Compressed data is smaller than raw for non-trivial payloads.

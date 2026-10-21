@@ -319,7 +319,11 @@ mod tests {
 
     #[test]
     fn toast_alpha_is_zero_at_boundaries() {
-        assert_eq!(toast_alpha(0.0), 0.0, "at age 0, alpha must be 0 (start of fade-in)");
+        assert_eq!(
+            toast_alpha(0.0),
+            0.0,
+            "at age 0, alpha must be 0 (start of fade-in)"
+        );
         assert_eq!(
             toast_alpha(-1.0),
             0.0,

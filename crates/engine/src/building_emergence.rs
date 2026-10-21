@@ -262,26 +262,12 @@ mod tests {
         // ascending iteration + max_by_key keeps the last maximum).
         assert_eq!(id_a, Some(5));
         // Centroid is the integer mean of the winning cluster's positions.
-        assert_eq!(
-            coord_a,
-            WorldCoord {
-                x: 20,
-                y: 0,
-                z: 40
-            }
-        );
+        assert_eq!(coord_a, WorldCoord { x: 20, y: 0, z: 40 });
 
         // Empty world: no cluster qualifies, anchor falls back to origin.
         let empty = World::new();
         let (none_id, origin) = settlement_build_anchor(&empty);
         assert_eq!(none_id, None);
-        assert_eq!(
-            origin,
-            WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0
-            }
-        );
+        assert_eq!(origin, WorldCoord { x: 0, y: 0, z: 0 });
     }
 }

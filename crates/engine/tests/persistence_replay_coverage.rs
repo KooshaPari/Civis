@@ -161,7 +161,11 @@ fn replay_after_load_preserves_deep_diplomacy_faction_resources() {
         "post-load+tick live == mirror"
     );
     assert!(
-        loaded.state.deep_diplomacy.faction_resources.contains_key(&29),
+        loaded
+            .state
+            .deep_diplomacy
+            .faction_resources
+            .contains_key(&29),
         "post-load+tick insert reaches mirror"
     );
 

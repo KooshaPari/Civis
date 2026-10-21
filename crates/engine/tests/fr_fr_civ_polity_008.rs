@@ -46,8 +46,30 @@ mod fr_fr_civ_polity_008 {
     fn multiple_signals_accumulate() {
         use civ_agents::DiplomacySignal;
         let mut ws = civ_engine::WorldState::default();
-        ws.faction_relations.apply_signal(0u32, 1u32, DiplomacySignal { trade_volume: 0.1, combat_grievance: 0.0, resource_competition: 0.0, proximity: 0.5, need_complementarity: 0.0, scarcity_pressure: 0.0 });
-        ws.faction_relations.apply_signal(0u32, 1u32, DiplomacySignal { trade_volume: 0.1, combat_grievance: 0.0, resource_competition: 0.0, proximity: 0.5, need_complementarity: 0.0, scarcity_pressure: 0.0 });
+        ws.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            DiplomacySignal {
+                trade_volume: 0.1,
+                combat_grievance: 0.0,
+                resource_competition: 0.0,
+                proximity: 0.5,
+                need_complementarity: 0.0,
+                scarcity_pressure: 0.0,
+            },
+        );
+        ws.faction_relations.apply_signal(
+            0u32,
+            1u32,
+            DiplomacySignal {
+                trade_volume: 0.1,
+                combat_grievance: 0.0,
+                resource_competition: 0.0,
+                proximity: 0.5,
+                need_complementarity: 0.0,
+                scarcity_pressure: 0.0,
+            },
+        );
         let record = ws.faction_relations.record(0u32, 1u32).unwrap();
         assert_eq!(record.samples, 2, "samples should be 2");
         assert!(record.score > 0.0, "score should be positive");

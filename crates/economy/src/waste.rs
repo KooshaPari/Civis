@@ -106,7 +106,9 @@ mod tests {
 
     #[test]
     fn full_fraction_all_waste() {
-        let config = WasteHeatConfig { fraction_bp: 10_000 };
+        let config = WasteHeatConfig {
+            fraction_bp: 10_000,
+        };
         let r = compute_waste_heat(500, &config);
         assert_eq!(r.waste_joules, 500);
         assert_eq!(r.productive_joules, 0);

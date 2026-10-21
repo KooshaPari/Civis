@@ -2620,7 +2620,11 @@ mod tests {
             1,
             "water placed at its declared initial temperature must stay liquid"
         );
-        assert_eq!(count(&g, ICE), 0, "ambient water must not flash-freeze to ice");
+        assert_eq!(
+            count(&g, ICE),
+            0,
+            "ambient water must not flash-freeze to ice"
+        );
     }
 
     /// Genuinely cold water must still freeze — the fix above must not disable

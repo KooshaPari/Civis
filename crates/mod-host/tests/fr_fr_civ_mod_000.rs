@@ -9,9 +9,15 @@ mod fr_fr_civ_mod_000 {
     #[test]
     fn mod_type_variants() {
         assert_eq!(civ_mod_host::ModType::Policy, civ_mod_host::ModType::Policy);
-        assert_eq!(civ_mod_host::ModType::Economic, civ_mod_host::ModType::Economic);
+        assert_eq!(
+            civ_mod_host::ModType::Economic,
+            civ_mod_host::ModType::Economic
+        );
         assert_eq!(civ_mod_host::ModType::Event, civ_mod_host::ModType::Event);
-        assert_eq!(civ_mod_host::ModType::Scenario, civ_mod_host::ModType::Scenario);
+        assert_eq!(
+            civ_mod_host::ModType::Scenario,
+            civ_mod_host::ModType::Scenario
+        );
     }
 
     /// FR-CIV-MOD-000: ModManifest has required fields.

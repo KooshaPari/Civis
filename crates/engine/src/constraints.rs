@@ -321,8 +321,8 @@ pub fn check_bounded_coercion(
     // Approximate sigmoid with a clamped linear ramp for deterministic behavior:
     // sigma = clamp(0.5 + kappa_l * diff / 4, 0, 1)
     let sigma = {
-        let raw = Fixed::from_num(1) / Fixed::from_num(2)
-            + params.kappa_l * diff / Fixed::from_num(4);
+        let raw =
+            Fixed::from_num(1) / Fixed::from_num(2) + params.kappa_l * diff / Fixed::from_num(4);
         if raw < Fixed::ZERO {
             Fixed::ZERO
         } else if raw > Fixed::from_num(1) {
@@ -341,7 +341,12 @@ pub fn check_bounded_coercion(
             severity: ViolationSeverity::Critical,
             reason: format!(
                 "Enforcement intensity {} exceeds ceiling {} (E_base={}, G={}, Sel={}, sigma={})",
-                enforcement_intensity, ceiling, params.e_base, governance_integrity, selectivity, sigma
+                enforcement_intensity,
+                ceiling,
+                params.e_base,
+                governance_integrity,
+                selectivity,
+                sigma
             ),
         }
     } else {

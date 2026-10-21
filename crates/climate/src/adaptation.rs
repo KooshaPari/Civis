@@ -73,11 +73,7 @@ impl AdaptationTracker {
     /// Invest MilliCredits into adaptation.
     ///
     /// Returns the updated adaptation result.
-    pub fn invest(
-        &mut self,
-        milli_credits: i64,
-        config: &AdaptationConfig,
-    ) -> AdaptationResult {
+    pub fn invest(&mut self, milli_credits: i64, config: &AdaptationConfig) -> AdaptationResult {
         let investment = milli_credits.max(0);
         let _old_mc = self.investment_mc;
         self.investment_mc += investment;
@@ -144,7 +140,10 @@ mod tests {
         let mut tracker = AdaptationTracker::new();
         let cfg = AdaptationConfig::default();
         let result = tracker.invest(10_000, &cfg);
-        assert!(result.reduction_bp > 0, "investment should provide some reduction");
+        assert!(
+            result.reduction_bp > 0,
+            "investment should provide some reduction"
+        );
         assert_eq!(result.total_investment_mc, 10_000);
     }
 

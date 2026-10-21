@@ -1040,8 +1040,8 @@ pub use alliance_deep::{
 };
 
 pub use peace_negotiations::{
-    war_weariness, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome,
-    PeaceProposal, PeaceTerms,
+    war_weariness, PeaceNegotiation, PeaceNegotiationStatus, PeaceOutcome, PeaceProposal,
+    PeaceTerms,
 };
 
 pub use cultural_assimilation::{

@@ -3,8 +3,8 @@
 //! The engine SHALL emit `social.insurgency.started.v1` and
 //! `social.insurgency.ended.v1`.
 
-use civ_social::{InsurgencyConfig, InsurgencyTracker};
 use civ_social::events::{Event, EventType};
+use civ_social::{InsurgencyConfig, InsurgencyTracker};
 
 #[test]
 fn insurgency_lifecycle_events() {

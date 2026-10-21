@@ -36,7 +36,7 @@ const DEFAULT_VISION_RADIUS: u32 = 8;
 // two are implemented in other subsystems and only the binding is wrong, one is
 // partially implemented, and one does not exist anywhere. Collapsing those into
 // a single 'false tag' verdict would have thrown away real coverage.
-// 
+//
 // All five ids are unchecked boxes in the civ-015 spec. That is a coverage fact
 // worth recording separately, not a reason to drop a tag whose implementation is
 // real and tagged elsewhere.

@@ -1,3 +1,7 @@
+#![allow(clippy::doc_lazy_continuation)]
+// Doc-comment list continuation lines kept as written; reformatting FR requirement
+// text is out of scope for this no-behavior-change cleanup.
+
 //! FR-CIV-NOTIFY-9xx cluster — real behavioural oracles.
 //!
 //! Replaces the auto-generated `fr_fr_civ_notify_9{01,10,11,20,21}.rs`
@@ -188,7 +192,11 @@ fn notify_901_thresholds_come_from_scenario_config_not_hardcoded_constants() {
     std::fs::write(&path, format!("{yaml}\n")).expect("write scenario fixture");
 
     let scenario = load_scenario(&path).expect("scenario fixture must load");
-    assert_eq!(scenario.objectives.len(), 1, "config objective must be parsed");
+    assert_eq!(
+        scenario.objectives.len(),
+        1,
+        "config objective must be parsed"
+    );
     let objective: ScenarioObjective = scenario.objectives[0].clone();
     assert_eq!(
         objective.condition.effective_threshold(),
@@ -204,8 +212,12 @@ fn notify_901_thresholds_come_from_scenario_config_not_hardcoded_constants() {
 
     let mut sim = scenario.clone().into_simulation(0x901_C0FD);
     sim.state.faction_treasury.clear();
-    sim.state.faction_treasury.insert(0, Fixed::from_num(500_i64));
-    sim.state.faction_treasury.insert(1, Fixed::from_num(500_i64));
+    sim.state
+        .faction_treasury
+        .insert(0, Fixed::from_num(500_i64));
+    sim.state
+        .faction_treasury
+        .insert(1, Fixed::from_num(500_i64));
 
     assert!(
         !check_domination(&sim.state, 0, DOMINATION_TERRITORY_THRESHOLD),
@@ -220,8 +232,12 @@ fn notify_901_thresholds_come_from_scenario_config_not_hardcoded_constants() {
     );
 
     // One unit below the configured threshold must stay silent.
-    sim.state.faction_treasury.insert(0, Fixed::from_num(499_i64));
-    sim.state.faction_treasury.insert(1, Fixed::from_num(501_i64));
+    sim.state
+        .faction_treasury
+        .insert(0, Fixed::from_num(499_i64));
+    sim.state
+        .faction_treasury
+        .insert(1, Fixed::from_num(501_i64));
     assert_eq!(
         objective.evaluate(&sim),
         None,
@@ -347,7 +363,12 @@ fn resource_units(resources: &Resources) -> f64 {
 }
 
 fn measured_resource_share(sim: &Simulation, faction_id: u32) -> f32 {
-    let total: f64 = sim.state.faction_resources.values().map(resource_units).sum();
+    let total: f64 = sim
+        .state
+        .faction_resources
+        .values()
+        .map(resource_units)
+        .sum();
     if total <= 0.0 {
         return 0.0;
     }
@@ -437,8 +458,12 @@ fn notify_910_dashboard_frames_track_measured_state_live_each_tick() {
     sim.state.factions.insert(0, "Ardani".to_owned());
     sim.state.factions.insert(1, "Velthari".to_owned());
     sim.state.faction_treasury.clear();
-    sim.state.faction_treasury.insert(0, Fixed::from_num(600_i64));
-    sim.state.faction_treasury.insert(1, Fixed::from_num(400_i64));
+    sim.state
+        .faction_treasury
+        .insert(0, Fixed::from_num(600_i64));
+    sim.state
+        .faction_treasury
+        .insert(1, Fixed::from_num(400_i64));
     sim.state.faction_resources.insert(
         0,
         Resources {
@@ -497,7 +522,7 @@ fn notify_910_dashboard_frames_track_measured_state_live_each_tick() {
             live_frames += 1;
         }
 
-        let snapshot = sim.last_tick_mood(0).expect("per-tick mood frame").clone();
+        let snapshot = *sim.last_tick_mood(0).expect("per-tick mood frame");
         let food_score = (tick * 5_000 / 200).clamp(MOOD_MIN, MOOD_MAX);
         let housing_score = 0_i64; // population == capacity
         let crime_score = (MOOD_CRIME_BASE - 4 * tick * 10).clamp(0, MOOD_CRIME_BASE);
@@ -576,7 +601,11 @@ fn notify_911_region_aggregate_reconciles_with_per_region_drill_down() {
         "the region aggregate must equal the sum of the per-region drill-down rows"
     );
     assert_eq!(aggregate_strategic(&districts), expected_total);
-    assert_eq!(aggregate_strategic(&[]), 0, "an empty view aggregates to zero");
+    assert_eq!(
+        aggregate_strategic(&[]),
+        0,
+        "an empty view aggregates to zero"
+    );
 
     let mut narrowed = districts.clone();
     let removed = narrowed.pop().expect("fixture has a district to remove");
@@ -629,10 +658,9 @@ fn notify_911_empire_scale_aggregate_is_exact_and_drills_down_per_region() {
         "the aggregate stats view must cover every region at empire scale"
     );
     for settlement_id in 0..64u32 {
-        let drill_down = sim
+        let drill_down = *sim
             .last_tick_mood(settlement_id)
-            .expect("every region must expose a drill-down frame")
-            .clone();
+            .expect("every region must expose a drill-down frame");
         assert_eq!(drill_down.settlement_id, settlement_id);
         let aggregate_entry = aggregate_view
             .iter()
@@ -755,7 +783,10 @@ fn notify_920_progressive_disclosure_gates_completion_on_measured_milestones() {
     // Stage 1: a faction exists.
     sim.state.factions.insert(0, "Ardani".to_owned());
     progress.advance_from_sim(&sim);
-    assert!(progress.faction_exists, "a placed faction must light the first verb");
+    assert!(
+        progress.faction_exists,
+        "a placed faction must light the first verb"
+    );
     assert!(!progress.tech_unlocked && !progress.war_declared && !progress.religion_emerged);
     assert_eq!(progress.current, TutorialMilestone::FirstFaction);
     assert!(
@@ -773,7 +804,10 @@ fn notify_920_progressive_disclosure_gates_completion_on_measured_milestones() {
         },
     );
     progress.advance_from_sim(&sim);
-    assert!(progress.tech_unlocked, "an unlocked tech level must light the tech step");
+    assert!(
+        progress.tech_unlocked,
+        "an unlocked tech level must light the tech step"
+    );
     assert!(!progress.war_declared && !progress.religion_emerged);
     assert_eq!(progress.current, TutorialMilestone::FirstTech);
     assert!(
@@ -804,7 +838,10 @@ fn notify_920_progressive_disclosure_gates_completion_on_measured_milestones() {
         kind: DiplomacyKind::Conflict,
     });
     progress.advance_from_sim(&sim);
-    assert!(progress.war_declared, "a conflict event must light the war step");
+    assert!(
+        progress.war_declared,
+        "a conflict event must light the war step"
+    );
     assert_eq!(progress.current, TutorialMilestone::Complete);
     assert!(
         progress.clone().completed(),
@@ -848,8 +885,7 @@ fn notify_920_progressive_disclosure_gates_completion_on_measured_milestones() {
             "a live faction must be reflected in the flow"
         );
         assert!(
-            live
-                .era_progression
+            live.era_progression
                 .faction_tech
                 .values()
                 .all(|tech| tech.tech_level == 0)
@@ -951,12 +987,18 @@ fn notify_921_control_actions_round_trip_with_intact_payloads() {
             CommandKind::Pause => seen.push(100),
             CommandKind::Resume => seen.push(101),
             CommandKind::SetSpeed(speed) => {
-                assert!(speed > 0, "a dispatched speed binding must carry a valid speed");
+                assert!(
+                    speed > 0,
+                    "a dispatched speed binding must carry a valid speed"
+                );
                 seen.push(200 + u64::from(speed));
             }
             CommandKind::SaveReplay => seen.push(300),
             CommandKind::LoadReplay(path) => {
-                assert_eq!(path, "saves/rebound.civreplay", "payload must survive dispatch");
+                assert_eq!(
+                    path, "saves/rebound.civreplay",
+                    "payload must survive dispatch"
+                );
                 seen.push(301);
             }
             CommandKind::PolicyOverride { key, value } => {
@@ -1101,9 +1143,9 @@ fn tool_catalog() -> Vec<GodToolRequest> {
     ] {
         catalog.push(GodToolRequest::Disaster(request));
     }
-    catalog.push(GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest {
-        pos: tool_center(),
-    })));
+    catalog.push(GodToolRequest::Inspect(InspectRequest::Probe(
+        ProbeRequest { pos: tool_center() },
+    )));
     catalog.push(GodToolRequest::Law(LawRequest::TaxBias {
         target_faction: 0,
         bias: 1_000,
@@ -1127,7 +1169,10 @@ fn tool_catalog() -> Vec<GodToolRequest> {
 #[test]
 fn notify_921_tool_action_catalog_is_distinct_serialisable_and_validated() {
     let catalog = tool_catalog();
-    assert!(catalog.len() >= 25, "the catalog must cover every tool family");
+    assert!(
+        catalog.len() >= 25,
+        "the catalog must cover every tool family"
+    );
 
     // Every bindable action must be individually nameable and persistable.
     let mut encoded: Vec<String> = Vec::new();
@@ -1254,7 +1299,13 @@ fn notify_921_tool_action_catalog_is_distinct_serialisable_and_validated() {
         )))
         .expect("life.spawn_herd must apply");
     assert!(
-        matches!(herd, GodToolReceipt::Life { affected_count: 4, .. }),
+        matches!(
+            herd,
+            GodToolReceipt::Life {
+                affected_count: 4,
+                ..
+            }
+        ),
         "life.spawn_herd must report the agents it injected, got {herd:?}"
     );
 

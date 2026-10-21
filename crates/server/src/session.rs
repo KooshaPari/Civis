@@ -244,11 +244,8 @@ impl SessionSnapshot {
     ) -> Self {
         let speed_multiplier = 1; // Bridge-side multiplier is request-time; leave to JSON-RPC layer.
         let snapshot = crate::jsonrpc::snapshot_fields_from_sim(sim, speed_multiplier);
-        let view = sim.get_snapshot_for_session(
-            connection_id,
-            last_acked_tick,
-            &subscribed_frame_kinds,
-        );
+        let view =
+            sim.get_snapshot_for_session(connection_id, last_acked_tick, &subscribed_frame_kinds);
         // Embed the raw engine view into the snapshot metadata for
         // dashboards that already speak the snapshot JSON shape.
         let mut snapshot_value = serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null);
@@ -324,7 +321,10 @@ mod tests {
         let mut session = SharedSession::new("conn");
         assert!(session.subscribed_frame_kinds.is_empty());
 
-        session.set_subscribed_frame_kinds(vec!["voxel_delta".to_string(), "civilian_state".to_string()]);
+        session.set_subscribed_frame_kinds(vec![
+            "voxel_delta".to_string(),
+            "civilian_state".to_string(),
+        ]);
         assert_eq!(session.subscribed_frame_kinds.len(), 2);
 
         session.set_subscribed_frame_kinds(Vec::new());

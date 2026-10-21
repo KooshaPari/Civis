@@ -6,7 +6,6 @@
 
 #[cfg(test)]
 mod fr_fr_civ_vehicle_044 {
-    use civ_engine::vehicle_types::{effective_speed, LaneClass};
 
     /// FR-CIV-VEHICLE-044 -- Lower local cost = exporter (cost drives flow, not assignment).
     #[test]

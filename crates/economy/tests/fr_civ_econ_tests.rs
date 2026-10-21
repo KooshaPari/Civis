@@ -2,9 +2,7 @@
 //!
 //! Covers: FR-CIV-ECON-001-MARKET, FR-CIV-ECON-004
 
-use civ_economy::{
-    LedgerEntry, ACCOUNT_ENERGY_BUDGET, ACCOUNT_CONSUMPTION, SCHEMA_VERSION,
-};
+use civ_economy::{LedgerEntry, ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET, SCHEMA_VERSION};
 
 // ---------------------------------------------------------------------------
 // FR-CIV-ECON-001-MARKET — Market system: schema version exists
@@ -13,7 +11,7 @@ use civ_economy::{
 /// FR-CIV-ECON-001-MARKET — Schema version is a valid positive integer.
 #[test]
 fn fr_civ_econ_001_market_schema_version_valid() {
-    assert!(SCHEMA_VERSION > 0, "SCHEMA_VERSION must be positive");
+    const { assert!(SCHEMA_VERSION > 0, "SCHEMA_VERSION must be positive") }
 }
 
 // ---------------------------------------------------------------------------

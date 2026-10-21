@@ -10,7 +10,10 @@ mod fr_fr_civ_mcp_004 {
     fn legacy_god_verbs_have_mcp_tools() {
         use civis_mcp::god_verb_parity::{mcp_tool_for_ws_god_verb, WS_LEGACY_GOD_VERBS};
         for verb in WS_LEGACY_GOD_VERBS {
-            assert!(mcp_tool_for_ws_god_verb(verb).is_some(), "missing MCP tool for {verb}");
+            assert!(
+                mcp_tool_for_ws_god_verb(verb).is_some(),
+                "missing MCP tool for {verb}"
+            );
         }
     }
 
@@ -19,7 +22,10 @@ mod fr_fr_civ_mcp_004 {
     fn life_disaster_verbs_have_mcp_tools() {
         use civis_mcp::god_verb_parity::{mcp_tool_for_ws_god_verb, ws_disaster_life_verbs};
         for verb in ws_disaster_life_verbs() {
-            assert!(mcp_tool_for_ws_god_verb(verb).is_some(), "missing MCP tool for {verb}");
+            assert!(
+                mcp_tool_for_ws_god_verb(verb).is_some(),
+                "missing MCP tool for {verb}"
+            );
         }
     }
 

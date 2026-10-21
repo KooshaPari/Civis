@@ -169,8 +169,12 @@ mod tests {
             .count();
         assert_eq!(windows_rows, 2, "windows must have both vulkan + dx12 rows");
         // macOS / linux present once.
-        assert!(PLATFORM_MATRIX.iter().any(|r| r.platform == "macos" && r.gpu_backend == "metal"));
-        assert!(PLATFORM_MATRIX.iter().any(|r| r.platform == "linux" && r.gpu_backend == "vulkan"));
+        assert!(PLATFORM_MATRIX
+            .iter()
+            .any(|r| r.platform == "macos" && r.gpu_backend == "metal"));
+        assert!(PLATFORM_MATRIX
+            .iter()
+            .any(|r| r.platform == "linux" && r.gpu_backend == "vulkan"));
     }
 
     /// NFR-CIV-PORT-002: the backend-selection ADR path is set.

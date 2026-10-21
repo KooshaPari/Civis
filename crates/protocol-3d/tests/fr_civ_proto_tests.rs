@@ -3,8 +3,7 @@
 //! Covers: FR-CIV-PROTO-001, FR-CIV-PROTO-015, FR-PROTO-002/003/004/005, FR-CIV-PROTO3D
 
 use civ_protocol_3d::{
-    BuildingProvenance, Frame3dBundle, WorldXZ, SCHEMA_VERSION,
-    FRAME3D_BUNDLE_MAGIC, FRAME3D_BUNDLE_VERSION,
+    BuildingProvenance, WorldXZ, FRAME3D_BUNDLE_MAGIC, FRAME3D_BUNDLE_VERSION, SCHEMA_VERSION,
 };
 
 /// FR-CIV-PROTO-001 — Schema version is defined and valid.

@@ -15,8 +15,11 @@ mod fr_fr_civ_infoview_930 {
     #[test]
     fn full_catalog_has_at_least_31_overlays() {
         let registry = build_full_catalog();
-        assert!(registry.len() >= 31,
-            "full catalog must have >= 31 overlays, got {}", registry.len());
+        assert!(
+            registry.len() >= 31,
+            "full catalog must have >= 31 overlays, got {}",
+            registry.len()
+        );
     }
 
     /// FR-CIV-INFOVIEW-930 — Every overlay in the catalog has a unique id.
@@ -46,8 +49,11 @@ mod fr_fr_civ_infoview_930 {
     fn all_overlays_have_descriptions() {
         let registry = build_full_catalog();
         for overlay in registry.overlays() {
-            assert!(!overlay.description.is_empty(),
-                "overlay {} must have a description", overlay.id);
+            assert!(
+                !overlay.description.is_empty(),
+                "overlay {} must have a description",
+                overlay.id
+            );
         }
     }
 
@@ -55,7 +61,8 @@ mod fr_fr_civ_infoview_930 {
     #[test]
     fn blind_overlays_are_gated() {
         let registry = build_full_catalog();
-        let blind: Vec<&InfoOverlay> = registry.overlays()
+        let blind: Vec<&InfoOverlay> = registry
+            .overlays()
             .iter()
             .filter(|o| o.availability == OverlayAvailability::Blind)
             .collect();

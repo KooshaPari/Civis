@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! FR traceability tests for the server crate.
 //!
 //! Covers: FR-CIV-SERVER-001, FR-CIV-SERVER-001-WS, FR-CIV-SERVER-002,
@@ -8,7 +10,10 @@ use civ_server::{SessionSnapshot, SharedSession, SESSION_HISTORY_CAP};
 /// FR-CIV-SERVER-001 — Session history cap is defined and positive.
 #[test]
 fn fr_civ_server_001_session_history_cap() {
-    assert!(SESSION_HISTORY_CAP > 0, "SESSION_HISTORY_CAP must be positive");
+    assert!(
+        SESSION_HISTORY_CAP > 0,
+        "SESSION_HISTORY_CAP must be positive"
+    );
     assert!(
         SESSION_HISTORY_CAP >= 10,
         "SESSION_HISTORY_CAP should be at least 10"

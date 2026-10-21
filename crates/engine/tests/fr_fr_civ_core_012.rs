@@ -30,7 +30,10 @@ mod fr_fr_civ_core_012 {
         let budget = sim.state.energy_budget_joules;
         // Fixed is Clone + Copy, not a float
         let _ = budget.to_bits(); // i64
-        assert!(budget >= civ_engine::Fixed::ZERO, "energy must be non-negative");
+        assert!(
+            budget >= civ_engine::Fixed::ZERO,
+            "energy must be non-negative"
+        );
     }
 
     /// Fixed::ZERO == Fixed::default().

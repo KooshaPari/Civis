@@ -9,7 +9,7 @@ mod fr_fr_civ_perf_009 {
     /// Verify FR-CIV-PERF-009: HashChainState advances correctly.
     #[test]
     fn verify_fr_civ_perf_009_basic() {
-        use civ_engine::hash_chain::{HashChainState, tick_event_bytes, GENESIS};
+        use civ_engine::hash_chain::{tick_event_bytes, HashChainState, GENESIS};
         let mut chain = HashChainState::new();
         assert_eq!(chain.running_hash, GENESIS, "starts at genesis");
         let h1 = chain.advance(&tick_event_bytes(1));

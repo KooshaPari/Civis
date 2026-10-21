@@ -59,7 +59,11 @@ mod tests {
         let sim = Simulation::new();
         let verdict = RiverTradeOracle.check(&sim);
         assert_eq!(verdict.fr_id, "FR-EMG-020");
-        assert!(verdict.passed, "tick 0 accepts any state: {}", verdict.detail);
+        assert!(
+            verdict.passed,
+            "tick 0 accepts any state: {}",
+            verdict.detail
+        );
         assert_eq!(verdict.threshold, 0.0, "no threshold applies before tick 0");
         assert!(verdict.measured.is_finite());
         assert!(verdict.detail.contains("citizens="));
@@ -75,8 +79,14 @@ mod tests {
         }
         let verdict = RiverTradeOracle.check(&sim);
         let snap = sim.snapshot();
-        assert!(snap.building_count > 0, "the initial world spawns settlement buildings");
-        assert_eq!(verdict.threshold, 1.0, "post-tick-0 threshold is one settled unit");
+        assert!(
+            snap.building_count > 0,
+            "the initial world spawns settlement buildings"
+        );
+        assert_eq!(
+            verdict.threshold, 1.0,
+            "post-tick-0 threshold is one settled unit"
+        );
         assert_eq!(
             verdict.measured,
             (snap.citizen_count * snap.building_count) as f64,
@@ -88,8 +98,16 @@ mod tests {
             "pass requires citizens AND buildings: {}",
             verdict.detail
         );
-        assert!(verdict.detail.contains(&format!("citizens={}", snap.citizen_count)));
-        assert!(verdict.detail.contains(&format!("buildings={}", snap.building_count)));
-        assert!(verdict.detail.contains("tick=300"), "detail carries the tick: {}", verdict.detail);
+        assert!(verdict
+            .detail
+            .contains(&format!("citizens={}", snap.citizen_count)));
+        assert!(verdict
+            .detail
+            .contains(&format!("buildings={}", snap.building_count)));
+        assert!(
+            verdict.detail.contains("tick=300"),
+            "detail carries the tick: {}",
+            verdict.detail
+        );
     }
 }

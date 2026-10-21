@@ -18,11 +18,28 @@ mod fr_fr_civ_vehicle_042 {
         let congestion = 1.0;
 
         // Rail: speed_mult = 2.0
-        let rail_speed = effective_speed(base, LaneClass::Rail.speed_mult(), vehicle, coupling, load, congestion);
+        let rail_speed = effective_speed(
+            base,
+            LaneClass::Rail.speed_mult(),
+            vehicle,
+            coupling,
+            load,
+            congestion,
+        );
         // Road: speed_mult = 1.0
-        let road_speed = effective_speed(base, LaneClass::Road.speed_mult(), vehicle, coupling, load, congestion);
+        let road_speed = effective_speed(
+            base,
+            LaneClass::Road.speed_mult(),
+            vehicle,
+            coupling,
+            load,
+            congestion,
+        );
 
         // Rail is strictly faster for bulk long-haul
-        assert!(rail_speed > road_speed, "rail must be faster than road for bulk");
+        assert!(
+            rail_speed > road_speed,
+            "rail must be faster than road for bulk"
+        );
     }
 }

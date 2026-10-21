@@ -216,13 +216,16 @@ fn fr_civ_emergence_001_structure_single_component() {
 #[test]
 fn fr_civ_emergence_001_criticality_centre_of_bands_is_one() {
     let inputs = CriticalityInputs {
-        branching_sigma: 0.95,  // centre of [0.85, 1.05]
-        power_law_alpha: 1.7,   // centre of [1.4, 2.0]
-        entropy_norm: 0.75,     // centre of [0.6, 0.9]
+        branching_sigma: 0.95, // centre of [0.85, 1.05]
+        power_law_alpha: 1.7,  // centre of [1.4, 2.0]
+        entropy_norm: 0.75,    // centre of [0.6, 0.9]
     };
     let bands = CriticalityBands::default();
     let result = criticality_indicator(inputs, &bands);
-    assert!((result - 1.0).abs() < 0.01, "centre-of-bands => ~1.0, got {result}");
+    assert!(
+        (result - 1.0).abs() < 0.01,
+        "centre-of-bands => ~1.0, got {result}"
+    );
 }
 
 /// FR-CIV-EMERGENCE-001: criticality_indicator returns 0.0 when all inputs
@@ -296,12 +299,12 @@ fn fr_civ_emergence_001_mi_normalised_bounded() {
 #[test]
 fn fr_civ_emergence_004_dashboard_combines_all_five_fields() {
     let d = EmergenceDashboard::compute(
-        &[50, 50],                          // two equal clusters
-        &[0.5, 0.5, 0.5, 0.5, 0.5, 0.5],  // all same ideology
+        &[50, 50],                       // two equal clusters
+        &[0.5, 0.5, 0.5, 0.5, 0.5, 0.5], // all same ideology
         80,
-        100,                                // 80/100 sentient
-        &[0.0, 0.0, 0.0, 0.0],             // all same mood
-        &[0.9, -0.8, 0.7],                 // mixed diplomacy
+        100,                   // 80/100 sentient
+        &[0.0, 0.0, 0.0, 0.0], // all same mood
+        &[0.9, -0.8, 0.7],     // mixed diplomacy
     );
     // Two equal clusters => uniform => cluster_entropy = 1.0.
     approx(d.cluster_entropy, 1.0, 1e-4);
@@ -339,11 +342,14 @@ fn fr_civ_emergence_004_dashboard_clone_and_debug() {
         &[-0.5, 0.5],
         &[0.6, -0.3],
     );
-    let cloned = d.clone();
+    let cloned = d;
     assert_eq!(d, cloned);
     // Debug output should contain the struct name.
     let debug = format!("{d:?}");
-    assert!(debug.contains("EmergenceDashboard"), "Debug must include struct name");
+    assert!(
+        debug.contains("EmergenceDashboard"),
+        "Debug must include struct name"
+    );
 }
 
 /// FR-CIV-EMERGENCE-004: EmergenceDashboard default is the all-zeros

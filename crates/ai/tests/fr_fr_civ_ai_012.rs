@@ -5,14 +5,12 @@
 //! (epoch-digest -> SLM prose; digest-hash cached). One <=1.5B call per
 //! epoch; unchanged epoch is a cache hit on reload.
 
-use civ_ai::{
-    AiCache, AiEvent, DummyAiProvider, GenOutput, GenRequest,
-};
+use civ_ai::{AiCache, AiEvent, DummyAiProvider, GenOutput, GenRequest};
 
 #[cfg(test)]
 mod fr_fr_civ_ai_012 {
-    use civ_ai::AiProvider;
     use super::*;
+    use civ_ai::AiProvider;
 
     /// FR-CIV-AI-012 — Legends narration generates prose from an epoch digest.
     /// The digest-hash is the cache key; an unchanged epoch yields a cache hit.

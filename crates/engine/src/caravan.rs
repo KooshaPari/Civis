@@ -545,10 +545,15 @@ mod tests {
         }
 
         // Non-complementary profiles (identical) yield no gaps → no route.
-        let clone = SettlementProfile {
+        // A target that already produces enough of every good to feed its own
+        // population has no deficit, so there is nothing to ship.
+        let mut clone = SettlementProfile {
             id: 3,
             ..make_source()
         };
+        for amount in clone.production.values_mut() {
+            *amount = clone.population;
+        }
         let none = evaluate_commodity_gaps(&source, &clone, MIN_COMMODITY_GAP);
         assert!(none.is_empty(), "identical profiles have no commodity gap");
         assert!(evaluate_caravan_spawn(&source, &clone, &config).is_none());

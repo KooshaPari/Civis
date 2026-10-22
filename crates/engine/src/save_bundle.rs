@@ -379,6 +379,12 @@ fn is_plain_component_name(name: &str) -> bool {
     if name.is_empty() || name == "." || name == ".." {
         return false;
     }
+    // A backslash is a path separator on Windows but an ordinary character on
+    // Unix. A name like `nested\..\..\escape.json` is one file name here yet a
+    // traversal when the save is opened on Windows, so refuse it everywhere.
+    if name.contains('\\') {
+        return false;
+    }
     // `Path::components` yields exactly one `Component::Normal` only for a name
     // with no separator, no prefix, and no `.`/`..` element. Using it instead of
     // string matching keeps the check aligned with the platform's own path

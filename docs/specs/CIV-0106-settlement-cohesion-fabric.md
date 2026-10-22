@@ -23,12 +23,12 @@ The settlement score is the integer MEAN of its actors' scores (sum divided by a
 
 ### Tiers (`FabricTier::from_score`)
 
-| Score | Tier |
-|-------|------|
-| >= 80 | Tight |
-| >= 40 | Loosened |
-| >= 10 | Strained |
-| < 10 | Fractured |
+| Score | Tier      |
+| ----- | --------- |
+| >= 80 | Tight     |
+| >= 40 | Loosened  |
+| >= 10 | Strained  |
+| < 10  | Fractured |
 
 ### Worked example (matches the traceability test)
 

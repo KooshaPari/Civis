@@ -77,6 +77,7 @@ allow = [
   "CDLA-Permissive-2.0",            # webpki-roots (tokio-tungstenite / hyper-rustls)
   "MPL-2.0",
   "BSL-1.0",                         # bevy-remote diagnostics / protocol crates
+  "bzip2-1.0.6",                     # libbz2-rs-sys (zip 9 default bzip2 feature); BSD-style permissive
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
 # (exact SPDX match). Lower values may accept near-matches.

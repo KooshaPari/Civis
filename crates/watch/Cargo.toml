@@ -40,7 +40,7 @@ sha2 = "0.10"
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
-zip = "2"
+zip = { version = "9", default-features = false, features = ["deflate"] }
 wat = "1"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand = "0.8"

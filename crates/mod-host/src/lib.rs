@@ -916,7 +916,13 @@ pub fn read_civmod_archive(
             path: archive_path.to_path_buf(),
             message: e.to_string(),
         })?;
-        let name = entry.name().to_string();
+        let name = entry
+            .name()
+            .map_err(|e| ManifestError::Archive {
+                path: archive_path.to_path_buf(),
+                message: e.to_string(),
+            })?
+            .to_string();
         if entry.is_dir() {
             continue;
         }

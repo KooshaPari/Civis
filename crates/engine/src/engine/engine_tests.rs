@@ -564,9 +564,10 @@ mod tests {
             snapshot.fragmentations, 0,
             "healthy fabric does not fragment"
         );
-        // Positive fabric (kin*10 + trust + temple=30) must land above the
-        // strained tier, proving tiered fabric classification runs.
-        assert_eq!(snapshot.fabric, FabricTier::Tight);
+        // The settlement fabric is the mean of the per-actor scores: actor 1
+        // scores kin*10 + trust + temple = 10 + 40 + 30 = 80, actor 2 scores 0,
+        // so the mean is 40, which classifies as Loosened (above Strained).
+        assert_eq!(snapshot.fabric, FabricTier::Loosened);
     }
 
     #[test]

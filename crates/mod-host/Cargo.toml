@@ -14,9 +14,9 @@ thiserror = "1"
 toml = "0.9"
 # wasmtime >=46.0.2 fixes RUSTSEC-2026-0222 (type index mixup).
 # 45.0.x is vulnerable; bump when the lockfile is regenerated.
-wasmtime = "46"
+wasmtime = "49"
 wasmparser = "0.248.0"
-zip = "2"
+zip = "9"
 rand = "0.8"
 
 [[bin]]

@@ -1,66 +1,66 @@
 {
-	"version": "1",
-	"repo": "Civis",
-	"git_sha": "3c54ecc8dcb4131c832b31eb155c170f3dbffd0c",
-	"content_hash": "0fbe24ead313aec9238c14053c8a3f0dc8f21ceed8b2000678a2710c462e1c5f",
-	"created_at": "2026-10-21T01:52:32Z",
-	"runner": {
-		"host": "unknown",
-		"rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
-	},
-	"gates": {
-		"civis_3d_verify": {
-			"status": "pass",
-			"detail": ""
-		},
-		"bevy_egui_check": {
-			"status": "pass",
-			"detail": ""
-		},
-		"web_test": {
-			"status": "pass",
-			"detail": ""
-		},
-		"dashboard_typecheck": {
-			"status": "pass",
-			"detail": ""
-		},
-		"dashboard_build": {
-			"status": "pass",
-			"detail": ""
-		},
-		"extra_cargo_audit": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_cargo_deny": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_cargo_machete": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_cargo_semver": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_trufflehog": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_fr_coverage": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_docs_check": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		},
-		"extra_security_guard": {
-			"status": "skip",
-			"detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-		}
-	},
-	"manifest_hash": "0863ee71e7302dd6dd8c514bec58199aa3205f08321ff7cbafec920da483ef78"
+    "version": "1",
+    "repo": "Civis",
+    "git_sha": "c8e14cb48449bd28f7599f5b995c11a0c365a376",
+    "content_hash": "1e36fa56afe5c5fb91806b9f02bb4c9deff6de02b6b0d20382b37adf26ded2d6",
+    "created_at": "2026-10-25T23:40:19Z",
+    "runner": {
+        "host": "unknown",
+        "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+    },
+    "gates": {
+        "civis_3d_verify": {
+            "status": "pass",
+            "detail": ""
+        },
+        "bevy_egui_check": {
+            "status": "pass",
+            "detail": ""
+        },
+        "web_test": {
+            "status": "pass",
+            "detail": ""
+        },
+        "dashboard_typecheck": {
+            "status": "pass",
+            "detail": ""
+        },
+        "dashboard_build": {
+            "status": "pass",
+            "detail": ""
+        },
+        "extra_cargo_audit": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_cargo_deny": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_cargo_machete": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_cargo_semver": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_trufflehog": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_fr_coverage": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_docs_check": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        },
+        "extra_security_guard": {
+            "status": "skip",
+            "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+        }
+    },
+    "manifest_hash": "0c8954d3ab251a954ce2aa0b539cf4733bebc74a35dc7e7c4a8cf9a6b60439ea"
 }

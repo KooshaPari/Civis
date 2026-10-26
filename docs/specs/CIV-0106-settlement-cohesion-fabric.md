@@ -32,7 +32,7 @@ The settlement score is the integer MEAN of its actors' scores (sum divided by a
 
 ### Worked example (matches the traceability test)
 
-Two actors in one settlement. Actor 1 has one kinship edge, trust 40 and a temple bonus of 30: 1*10 + 40 + 30 = 80. Actor 2 is isolated: 0. Mean = (80 + 0) / 2 = 40, tier Loosened. Under a SUM rule the same settlement would score 80 and be Tight.
+Two actors in one settlement. Actor 1 has one kinship edge, trust 40 and a temple bonus of 30: 1\*10 + 40 + 30 = 80. Actor 2 is isolated: 0. Mean = (80 + 0) / 2 = 40, tier Loosened. Under a SUM rule the same settlement would score 80 and be Tight.
 
 ### Other snapshot fields
 

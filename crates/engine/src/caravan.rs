@@ -176,13 +176,19 @@ pub fn evaluate_commodity_gaps(
             continue;
         }
 
-        // Source surplus is what it can spare
+        // Source surplus is what it can spare. A settlement cannot ship what
+        // its own population needs to eat: "spare" is production beyond the
+        // amount the source consumes itself, not its raw output. Without
+        // this, two identical self-sufficient settlements form a trade route,
+        // because each looks like a surplus to the other.
+        let source_consumption = source.population; // Simplified: 1 unit per person per tick
         let source_spare = source
             .stock
             .get(&good_id)
             .copied()
             .unwrap_or(0)
-            .min(surplus);
+            .min(surplus)
+            .saturating_sub(source_consumption);
 
         if source_spare < min_gap {
             continue;
@@ -350,14 +356,18 @@ mod tests {
         stock.insert(1, 500); // food
         stock.insert(2, 200); // wood
         let mut production = BTreeMap::new();
-        production.insert(1, 100); // produces food
-        production.insert(2, 80); // produces wood
+        production.insert(1, 300); // produces food
+        production.insert(2, 100); // produces wood
 
         SettlementProfile {
             id: 1,
             stock,
             production,
-            population: 200,
+            // The source must have a genuine surplus: a settlement can only
+            // ship production beyond what its own population consumes, so a
+            // source that produces less than it eats has nothing to spare.
+            // At population 100 it has 200 spare food and no spare wood.
+            population: 100,
             safety: 600, // 60% safe
             active_caravans: 0,
         }
@@ -547,13 +557,10 @@ mod tests {
         // Non-complementary profiles (identical) yield no gaps → no route.
         // A target that already produces enough of every good to feed its own
         // population has no deficit, so there is nothing to ship.
-        let mut clone = SettlementProfile {
+        let clone = SettlementProfile {
             id: 3,
             ..make_source()
         };
-        for amount in clone.production.values_mut() {
-            *amount = clone.population;
-        }
         let none = evaluate_commodity_gaps(&source, &clone, MIN_COMMODITY_GAP);
         assert!(none.is_empty(), "identical profiles have no commodity gap");
         assert!(evaluate_caravan_spawn(&source, &clone, &config).is_none());

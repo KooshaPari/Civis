@@ -256,6 +256,20 @@ fn compute_integrity_manifest(
 
     let mut components = Vec::with_capacity(names.len());
     for name in names {
+        // The verifier refuses any component name that is not a plain file
+        // name directly under the save root, so a name it would reject must
+        // not be manifested either. Silently dropping it would produce a
+        // bundle that cannot be loaded back (the file is on disk but not in
+        // the manifest), so refuse the directory outright instead.
+        if !is_plain_component_name(&name) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: format!(
+                    "cannot save a directory containing {:?}: that name is not a plain file name \
+                     directly under the save root",
+                    name
+                ),
+            });
+        }
         let path = dir.join(&name);
         let bytes = fs::read(&path).map_err(|e| io_err(&path, e))?;
         components.push(ComponentDigest {
@@ -1426,6 +1440,36 @@ mod tests {
     // refused before it is ever joined onto a path and read, otherwise the
     // integrity check becomes an arbitrary-file-read primitive.
     #[test]
+    fn fr_save_006_refuses_to_save_a_directory_holding_a_backslash_file_name() {
+        // A backslash is an ordinary character in a Unix file name, so a Unix
+        // directory can legitimately contain a file called `foo\bar`. Such a
+        // name cannot be represented in a bundle: the verifier refuses it as
+        // not a plain file name (it is a separator on Windows, so a name like
+        // `nested\..\..\escape.json` is a traversal there), and the loader
+        // refuses a file that is on disk but absent from the manifest. So
+        // `save_dir` must refuse such a directory outright rather than write a
+        // bundle that can never be loaded back.
+        let mut sim = Simulation::with_seed(37);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        // Add the awkward name the way a Unix filesystem would hold it, then
+        // rebuild the manifest so the save path sees it.
+        fs::write(save.join("foo\\bar"), b"{}").expect("write awkward name");
+
+        let err = compute_integrity_manifest(&save, CIVSAVE_FORMAT_VERSION, sim.state.tick)
+            .expect_err("a directory holding a backslash name must be refused");
+        match err {
+            SaveBundleError::SaveCorruption { detail } => assert!(
+                detail.contains("not a plain file name"),
+                "expected the containment refusal for the backslash name, got {detail}"
+            ),
+            other => panic!("expected SaveCorruption, got {other:?}"),
+        }
+    }
+
     fn fr_save_006_rejects_manifest_components_that_escape_the_save_root() {
         for hostile in [
             "../escape.json",

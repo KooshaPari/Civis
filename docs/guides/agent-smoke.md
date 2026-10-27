@@ -99,17 +99,18 @@ Rust-only; add `cd web && bun test` when the dashboard or shared `web/src` helpe
 
 `agent-smoke.ps1` and `just civis-3d-live-smoke` are headless protocol gates.
 They do not open a native window or require a running server. For the windowed
-standalone startup/clean-exit path, run:
+standalone bounded-startup smoke, run:
 
 ```powershell
 just civis-3d-standalone-smoke
 ```
 
-That recipe builds `civ-standalone` and runs it for a bounded number of update
-frames (`CIVIS_SMOKE_FRAMES`, default `5`) on a GPU adapter. It proves startup
-and its scripted `AppExit`; it does **not** prove operating-system minimize,
-restore, close-button behavior, or live-server gameplay. Treat those as
-separate acceptance evidence.
+That recipe builds `civ-standalone` and runs it on a GPU adapter until its
+Update counter reaches `CIVIS_SMOKE_FRAMES` (default `5`), then exits the
+process with code `0`. It exercises startup and bounded Update execution; it
+does **not** verify `AppExit` handling, graceful shutdown, a rendered or
+presented frame, operating-system minimize, restore, close-button behavior, or
+live-server gameplay. Treat those as separate acceptance evidence.
 
 The menu-level live pause/resume acknowledgement is covered without a window by:
 

@@ -187,8 +187,8 @@ civis-3d-bevy-window:
 civis-3d-standalone:
     cargo run -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone
 
-# Bounded native launch smoke: build + run civ-standalone for N Update frames
-# (default 5), assert preflight + clean AppExit. Needs a GPU adapter.
+# Bounded native launch smoke: build + run civ-standalone for N Update ticks
+# (default 5), then exit the process with code 0. Needs a GPU adapter.
 # Override frames: `just civis-3d-standalone-smoke 12`
 civis-3d-standalone-smoke FRAMES="5":
     cargo build -p civ-bevy-ref --features bevy,egui,client-bins --bin civ-standalone

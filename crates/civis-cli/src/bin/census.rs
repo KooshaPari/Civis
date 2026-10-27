@@ -172,8 +172,6 @@ async fn census_call(
             }
         }
     }
-
-
 }
 
 #[derive(Debug, thiserror::Error)]

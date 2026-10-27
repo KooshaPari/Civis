@@ -40,9 +40,7 @@ mod tuple_key_serde_tests {
     #[test]
     fn deep_diplomacy_state_round_trips_tuple_keyed_maps() {
         let mut state = DeepDiplomacyState::default();
-        state
-            .active_wars
-            .insert((3, 7));
+        state.active_wars.insert((3, 7));
         state.war_start_ticks.insert((3, 7), 42);
         state.war_casualties.insert(3, 2);
 
@@ -56,8 +54,7 @@ mod tuple_key_serde_tests {
             "the encoded pair key must be present: {json}"
         );
 
-        let back: DeepDiplomacyState =
-            serde_json::from_str(&json).expect("deserialize");
+        let back: DeepDiplomacyState = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(back.active_wars, state.active_wars);
         assert_eq!(back.war_start_ticks, state.war_start_ticks);
         assert_eq!(back.war_casualties, state.war_casualties);
@@ -675,7 +672,11 @@ impl Serialize for DeepDiplomacyState {
         map.serialize_entry("faction_resources", &self.faction_resources)?;
         map.serialize_entry(
             "active_wars",
-            &self.active_wars.iter().map(|k| encode_pair(*k)).collect::<BTreeSet<_>>(),
+            &self
+                .active_wars
+                .iter()
+                .map(|k| encode_pair(*k))
+                .collect::<BTreeSet<_>>(),
         )?;
         map.serialize_entry(
             "war_start_ticks",

@@ -4,13 +4,13 @@
 #
 # Runs the ten-step reproducible playthrough against a live civ-server.
 # Communicates with the server over its WebSocket JSON-RPC bridge
-# (`ws://$CIV_WS_HOST:$CIV_SERVER_PORT$/$CIV_WS_PATH`) using `websocat`,
-# falling back to `curl` only when an HTTP helper is available.
+# (`ws://$CIV_WS_HOST:$CIV_SERVER_PORT$/$CIV_WS_PATH`) using `websocat`.
 #
 # Usage:
 #   bash scripts/playthrough.sh                          # default localhost:3000
 #   CIV_WS_URL=ws://host:3010/ws bash scripts/playthrough.sh
 #   CIVIS_CAPTURE_FRAMES=1 bash scripts/playthrough.sh   # also capture frames
+#   RPC_MAX_MESSAGE_BYTES=1048576 bash scripts/playthrough.sh # lower message cap
 #
 # Exit codes:
 #   0  all ten steps succeeded with the expected response shape
@@ -29,8 +29,10 @@
 #   - save.slot / save.load are inherently idempotent on the production
 #     slot stems (`slot-1` … `slot-5`).
 #
-# Requirements: bash 4+, websocat (https://github.com/vi/websocat), and
-# either `jq` (preferred) or a minimal JSON shim written in awk/sed.
+# Requirements: bash 4+, GNU timeout, jq, and websocat 1.13.0+
+# (https://github.com/vi/websocat).
+# Incoming WebSocket messages/frames are capped at 16 MiB by default.
+# RPC_MAX_MESSAGE_BYTES may lower the cap (1..16777216 bytes).
 
 set -u
 set -o pipefail
@@ -100,54 +102,26 @@ if [[ ! -d "${REPO_ROOT}/crates/server" ]]; then
 fi
 
 require websocat
-if ! command -v jq >/dev/null 2>&1; then
-    warn "jq not found; falling back to a tiny awk-based JSON shim"
-fi
+require jq
+require timeout
 
 # --------------------------------------------------------------------- #
-# Tiny JSON helpers (when jq is unavailable)                             #
+# JSON helpers                                                          #
 # --------------------------------------------------------------------- #
 json_get() {
     # json_get <json> <path>
     # Prints the value at the given dotted path, e.g. "result.tick".
     local body="$1" path="$2"
-    if command -v jq >/dev/null 2>&1; then
-        printf '%s' "${body}" | jq -r ".${path}"
-    else
-        # Fallback: very small awk implementation. Supports simple keys
-        # and integer fields. Only used for the handful of paths below.
-        local key="${path##*.}"
-        printf '%s' "${body}" \
-            | awk -v k="${key}" '
-                {
-                    # Find "key":value pairs, value can be number/string/bool/null
-                    while (match($0, /[,"{][[:space:]]*"[^"]+"[[:space:]]*:[[:space:]]*("[^"]*"|[0-9]+(\.[0-9]+)?|true|false|null)/, arr)) {
-                        kv = substr($0, arr[1, "start"], arr[1, "length"])
-                        $0 = substr($0, arr[1, "start"] + arr[1, "length"])
-                        split(kv, parts, ":")
-                        k1 = parts[1]
-                        sub(/^[[:space:]]*,*[[:space:]]*"?/, "", k1)
-                        sub(/"[[:space:]]*$/, "", k1)
-                        v1 = parts[2]
-                        sub(/^[[:space:]]*/, "", v1)
-                        if (k1 == k) {
-                            gsub(/^"|"$/, "", v1)
-                            print v1
-                            exit
-                        }
-                    }
-                }'
-    fi
+    printf '%s' "${body}" | jq -r ".${path}"
 }
 
 json_ok() {
-    # json_ok <json> -> prints "true" if the JSON-RPC response has no error.
+    # Require one successful JSON-RPC response, including a result (possibly null).
     local body="$1"
-    if command -v jq >/dev/null 2>&1; then
-        printf '%s' "${body}" | jq -e 'has("error") | not' >/dev/null && echo true || echo false
-    else
-        if [[ "${body}" == *'"error"'* ]]; then echo false; else echo true; fi
-    fi
+    printf '%s' "${body}" | jq -se '
+        length == 1 and (.[0] | type == "object" and .jsonrpc == "2.0"
+        and has("id") and has("result") and (has("error") | not))
+    ' >/dev/null && echo true || echo false
 }
 
 # --------------------------------------------------------------------- #
@@ -157,26 +131,95 @@ ws_url() {
     printf 'ws://%s:%s%s' "${CIV_WS_HOST}" "${CIV_SERVER_PORT}" "${CIV_WS_PATH}"
 }
 
+rpc_buffer_size() {
+    local limit="$1"
+    if [[ ! "$limit" =~ ^[1-9][0-9]{0,7}$ ]] || (( limit > 16777216 )); then
+        fail "RPC_MAX_MESSAGE_BYTES must be an integer from 1 to 16777216"
+        return 2
+    fi
+    # Fit an entire accepted message after base64 expansion, type prefix, and
+    # newline. Smaller copy buffers split messages and lose their type prefix.
+    printf '%s' "$((4 * ((limit + 2) / 3) + 16))"
+}
+
+# Subshell scopes the transport and EXIT cleanup to this call.
 rpc() {
-    # rpc <id> <method> [params_json]
-    # Sends a JSON-RPC 2.0 request over a fresh websocat pipe and prints
-    # the raw response payload on stdout. Stderr is captured for diagnostics.
-    local id="$1" method="$2" params="${3:-null}"
-    local payload
-    payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
-        "${id}" "$(json_quote "${method}")" "${params}")"
+    (
+        local id="$1" method="$2" params="${3:-null}" payload buffer_size
+        local message_limit="${RPC_MAX_MESSAGE_BYTES:-16777216}"
+        buffer_size="$(rpc_buffer_size "$message_limit")" || return 2
+        payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
+            "${id}" "$(json_quote "${method}")" "${params}" \
+            | jq -Rsr '"CIVIS_TEXT:" + @base64')" || return 2
+        (( buffer_size > ${#payload} )) || buffer_size=$(( ${#payload} + 1 ))
+        coproc CIVIS_RPC {
+            # Wait until the parent owns the descriptors and cleanup trap.
+            local request_line
+            IFS= read -r request_line || exit 2
+            exec timeout --kill-after=1s "${RPC_TIMEOUT_SECONDS}" \
+                websocat -t -n --base64 --base64-text \
+                    --binary-prefix 'CIVIS_BINARY:' --text-prefix 'CIVIS_TEXT:' \
+                    --buffer-size "$buffer_size" --max-ws-message-length "$message_limit" \
+                    --max-ws-frame-length "$message_limit" \
+                    --ping-interval 5 --ping-timeout 8 \
+                    "$(ws_url)" <<<"$request_line"
+        }
+        local rpc_pid="${CIVIS_RPC_PID}" rpc_read rpc_write="${CIVIS_RPC[1]}"
+        exec {rpc_read}<&"${CIVIS_RPC[0]}"
+        trap 'if [[ -n "$rpc_pid" ]]; then kill "$rpc_pid" 2>/dev/null || true; wait "$rpc_pid" 2>/dev/null || true; fi' EXIT
+        printf '%s\n' "$payload" >&"$rpc_write" || return 2
+        exec {rpc_write}>&-
+        local response status
+        response="$(rpc_read_response "$id" "$method" "$rpc_read")"
+        status=$?
+        if [[ "$status" -ne 1 ]]; then
+            [[ -z "$response" ]] || printf '%s\n' "$response"
+            return "$status"
+        fi
+        wait "$rpc_pid"
+        status=$?
+        rpc_pid=''
+        fail "RPC ${method} id=${id}: transport ended without a matching response (exit ${status})"
+        return 2
+    )
+}
 
-    # `websocat -n` opens a fresh connection per call (stateless, idempotent).
-    local url
-    url="$(ws_url)"
+rpc_read_response() {
+    local id="$1" method="$2" descriptor="$3" line response
+    while IFS= read -r line <&"$descriptor"; do
+        case "$line" in
+            CIVIS_BINARY:*) continue ;;
+            CIVIS_TEXT:*)
+                if ! response="$(rpc_select_response "$id" "${line#CIVIS_TEXT:}")"; then
+                    fail "RPC ${method} id=${id}: invalid JSON-RPC text frame"
+                    return 2
+                fi
+                [[ -n "$response" ]] || continue
+                printf '%s\n' "$response"
+                [[ "$(json_ok "$response")" == true ]] && return 0
+                fail "RPC ${method} id=${id}: server returned an error"
+                return 2
+                ;;
+            *) fail "RPC ${method} id=${id}: unrecognized transport framing"; return 2 ;;
+        esac
+    done
+    return 1
+}
 
-    # -1 = exit after one full duplex exchange, --protocol=... for the
-    # Sec-WebSocket-Protocol header if a server requires it. We always use
-    # the default protocol.
-    timeout "${RPC_TIMEOUT_SECONDS}" \
-        websocat -n --ping-interval 5 --ping-timeout 8 \
-            "${url}" < <(printf '%s\n' "${payload}") 2>/dev/null \
-        || true
+rpc_select_response() {
+    printf '%s' "$2" | jq -cR --argjson request_id "$1" '
+        @base64d | fromjson
+        | select(type == "object" and has("id") and .id == $request_id)
+        | if .jsonrpc != "2.0" or (has("result") == has("error")) then
+            error("matching response must have jsonrpc=2.0 and exactly one of result/error")
+          elif has("error") then
+            if (.error | type) != "object" then error("invalid RPC error object")
+            elif (.error.code | type) != "number" or (.error.message | type) != "string" then
+                error("RPC error requires numeric code and string message")
+            elif .error.code != (.error.code | floor) then error("RPC error code must be an integer")
+            else . end
+          else . end
+    '
 }
 
 json_quote() {
@@ -188,13 +231,10 @@ json_quote() {
 }
 
 ws_health() {
-    # Probe health by sending a `health` JSON-RPC request and inspecting
-    # the response. The bridge answers `{"jsonrpc":"2.0","id":1,"result":...}`
-    # for unknown methods (it just maps to METHOD_NOT_FOUND); a connection
-    # that closes cleanly is the contract we care about.
+    # A notification or METHOD_NOT_FOUND error is not a successful health probe.
     local body
-    body="$(rpc 0 health)"
-    [[ -n "${body}" ]]
+    body="$(rpc 0 sim.status '{}')" || return 1
+    [[ "$(json_ok "${body}")" == true ]]
 }
 
 # --------------------------------------------------------------------- #

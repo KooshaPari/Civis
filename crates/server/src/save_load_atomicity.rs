@@ -15,7 +15,10 @@ async fn jsonrpc_corrupt_save_load_preserves_active_session() {
     let saved = Simulation::with_seed(7);
     CivSaveBundle::save_archive(&path, &saved).expect("write valid save");
     assert_eq!(
-        CivSaveBundle::load_archive(&path).expect("valid control loads").state.tick,
+        CivSaveBundle::load_archive(&path)
+            .expect("valid control loads")
+            .state
+            .tick,
         0
     );
 
@@ -29,19 +32,27 @@ async fn jsonrpc_corrupt_save_load_preserves_active_session() {
         let name = entry.path().expect("entry path").into_owned();
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).expect("read entry");
-        if name.file_name().is_some_and(|name| name == "world_state.json") {
+        if name
+            .file_name()
+            .is_some_and(|name| name == "world_state.json")
+        {
             assert!(!bytes.is_empty());
             bytes[0] ^= 1;
             corrupted = true;
         }
         let mut header = entry.header().clone();
         header.set_cksum();
-        output.append(&header, bytes.as_slice()).expect("append entry");
+        output
+            .append(&header, bytes.as_slice())
+            .expect("append entry");
     }
     assert!(corrupted, "must corrupt the actual world-state component");
     let tar_bytes = output.into_inner().expect("finish tar");
-    fs::write(&path, zstd::stream::encode_all(tar_bytes.as_slice(), 3).expect("compress"))
-        .expect("write corrupt archive");
+    fs::write(
+        &path,
+        zstd::stream::encode_all(tar_bytes.as_slice(), 3).expect("compress"),
+    )
+    .expect("write corrupt archive");
     assert!(matches!(
         CivSaveBundle::load_archive(&path),
         Err(civ_engine::SaveBundleError::HashMismatch { .. })
@@ -71,7 +82,10 @@ async fn jsonrpc_corrupt_save_load_preserves_active_session() {
     assert!(response.get("result").is_none(), "{response}");
     let mut active = sim.lock().await;
     assert_eq!(active.state, before_state);
-    assert_eq!(serde_json::to_value(active.snapshot()).unwrap(), before_world);
+    assert_eq!(
+        serde_json::to_value(active.snapshot()).unwrap(),
+        before_world
+    );
     let after_rng = active.rng_mut();
     assert_eq!(after_rng.get_seed(), before_rng.get_seed());
     assert_eq!(after_rng.get_stream(), before_rng.get_stream());

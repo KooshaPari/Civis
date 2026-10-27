@@ -5,13 +5,17 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_narrator_13 {
-    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+    use civ_legends::{EventKind, RawSimEvent, SagaGraph, SourceCrate};
 
     /// FR-CIV-LEGENDS-NARRATOR-13: Graph accumulates events for narrator reading.
     #[test]
     fn graph_accumulates_for_narrator() {
         let mut graph = SagaGraph::default();
-        for kind in [EventKind::WarDeclared, EventKind::GreatWork, EventKind::Plague] {
+        for kind in [
+            EventKind::WarDeclared,
+            EventKind::GreatWork,
+            EventKind::Plague,
+        ] {
             let raw = RawSimEvent::new(10, kind, SourceCrate::Engine, 0.9);
             graph.ingest(raw);
         }

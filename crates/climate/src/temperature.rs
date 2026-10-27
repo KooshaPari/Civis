@@ -88,6 +88,9 @@ impl Default for TemperatureTracker {
 }
 
 #[cfg(test)]
+// Tests spell out every field and keep ..Default::default() as a forward-compat
+// marker for future fields; removing it is the owning lane call.
+#[allow(clippy::needless_update)]
 mod tests {
     use super::*;
 

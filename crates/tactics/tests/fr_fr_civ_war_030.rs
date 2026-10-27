@@ -6,7 +6,7 @@
 //! FR-CIV-WAR-030: Doctrine-GA evolution across the loop.
 //! Tests that doctrine fitness scoring rewards higher engagement stats.
 
-use civ_tactics::{FactionEngagementStats, score_doctrine_fitness, Doctrine};
+use civ_tactics::{score_doctrine_fitness, Doctrine, FactionEngagementStats};
 
 #[cfg(test)]
 mod fr_fr_civ_war_030 {
@@ -32,7 +32,10 @@ mod fr_fr_civ_war_030 {
         };
         let s_low = score_doctrine_fitness(&doctrine, &low);
         let s_high = score_doctrine_fitness(&doctrine, &high);
-        assert!(s_high > s_low, "more engaged faction should score higher fitness");
+        assert!(
+            s_high > s_low,
+            "more engaged faction should score higher fitness"
+        );
     }
 
     /// FR-CIV-WAR-030: Doctrine fitness is deterministic for same inputs.

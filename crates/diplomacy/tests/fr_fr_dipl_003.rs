@@ -3,7 +3,7 @@
 //! Treaties SHALL encode terms (trade ratios, non-aggression, alliance)
 //! as structured data.
 
-use civ_diplomacy::{TreatyTerms, TreatyType, TreatyManager, PolityId};
+use civ_diplomacy::{PolityId, TreatyManager, TreatyTerms, TreatyType};
 
 fn p(id: u32) -> PolityId {
     PolityId::new(id)
@@ -52,7 +52,7 @@ fn treaty_default_terms() {
 fn treaty_trade_ratios_clamped() {
     let terms = TreatyTerms::trade(20_000, -500);
     assert_eq!(terms.trade_ratio_a, 10_000); // clamped to max
-    assert_eq!(terms.trade_ratio_b, 0);      // clamped to min
+    assert_eq!(terms.trade_ratio_b, 0); // clamped to min
 }
 
 /// FR-DIPL-003: TreatyManager can create treaties with TreatyType.

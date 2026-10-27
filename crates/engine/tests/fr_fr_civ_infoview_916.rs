@@ -22,9 +22,21 @@ mod fr_fr_civ_infoview_916 {
             availability: OverlayAvailability::Live,
             legend_kind: LegendKind::Continuous,
             legend_stops: vec![
-                LegendStop { position: 0.0, label: "Frozen".into(), color: [0.6, 0.8, 1.0] },
-                LegendStop { position: 0.5, label: "Temperate".into(), color: [0.4, 0.8, 0.3] },
-                LegendStop { position: 1.0, label: "Scorching".into(), color: [1.0, 0.3, 0.0] },
+                LegendStop {
+                    position: 0.0,
+                    label: "Frozen".into(),
+                    color: [0.6, 0.8, 1.0],
+                },
+                LegendStop {
+                    position: 0.5,
+                    label: "Temperate".into(),
+                    color: [0.4, 0.8, 0.3],
+                },
+                LegendStop {
+                    position: 1.0,
+                    label: "Scorching".into(),
+                    color: [1.0, 0.3, 0.0],
+                },
             ],
             description: "Surface temperature",
         };

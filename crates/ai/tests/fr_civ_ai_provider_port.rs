@@ -32,9 +32,18 @@
 
 use std::sync::Arc;
 
-use civ_ai::{
-    AiError, AiProvider, Capabilities, DummyAiProvider, EmbedRequest, GenRequest,
-};
+use civ_ai::{AiProvider, Capabilities, DummyAiProvider, EmbedRequest, GenRequest};
+
+// Only the feature-gated provider tests name `AiError`; gating the import the
+// same way keeps `-D unused-imports` clean when this test target builds with
+// default features.
+#[cfg(any(
+    feature = "local",
+    feature = "dev",
+    feature = "cloud",
+    feature = "embed"
+))]
+use civ_ai::AiError;
 
 /// Compile-time proof that the port is object-safe and shareable.
 ///
@@ -129,7 +138,10 @@ async fn fr_civ_ai_001_identical_requests_yield_identical_output() {
 
     let first = provider.generate(&req).await.expect("generate");
     let second = provider.generate(&req).await.expect("generate");
-    assert_eq!(first, second, "identical requests must give identical output");
+    assert_eq!(
+        first, second,
+        "identical requests must give identical output"
+    );
 
     let other = GenRequest::from_prompt("the river changed course twice");
     let different = provider.generate(&other).await.expect("generate");
@@ -211,7 +223,10 @@ async fn fr_civ_ai_003_ollama_dev_is_loud_when_no_server_answers() {
         !caps.embed,
         "the dev provider is generate-only and must say so"
     );
-    assert!(caps.cloud, "Ollama is reached over HTTP, so it is not local");
+    assert!(
+        caps.cloud,
+        "Ollama is reached over HTTP, so it is not local"
+    );
 
     let err = provider
         .generate(&GenRequest::from_prompt("say hello"))

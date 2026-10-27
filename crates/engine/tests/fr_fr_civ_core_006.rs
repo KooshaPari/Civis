@@ -39,6 +39,9 @@ mod fr_fr_civ_core_006 {
         // Replay log event counts or RNG state should differ
         let differs = sim_a.state.rng_seed != sim_b.state.rng_seed
             || sim_a.replay_log().events.len() != sim_b.replay_log().events.len();
-        assert!(differs, "different seeds should produce different replay state");
+        assert!(
+            differs,
+            "different seeds should produce different replay state"
+        );
     }
 }

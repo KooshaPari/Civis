@@ -18,7 +18,9 @@ use crate::{BuildingGraph, BuildingId};
 
 /// Era-driven tier classification for a building. Each tier scales slot
 /// counts, joule cost, and construction time (`FR-CIV-BUILD-001`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 pub enum BuildingTier {
     /// Hand-crafted, low-throughput (1 input + 1 output slot).
     #[default]

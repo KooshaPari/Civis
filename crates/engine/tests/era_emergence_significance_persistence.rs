@@ -9,8 +9,10 @@
 //! to fire `save_state_mirror`, save, load, and assert all 3 fields round-trip
 //! exactly.
 
-use civ_engine::{CivSaveBundle, EmergenceSample, Simulation, SignificanceAccumulator, SignificanceConfig};
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
+use civ_engine::{
+    CivSaveBundle, EmergenceSample, SignificanceAccumulator, SignificanceConfig, Simulation,
+};
 use civ_legends::ids::{Epoch, LegendEntityId};
 use civ_legends::model::{EventKind, Role};
 use tempfile::tempdir;
@@ -89,7 +91,9 @@ fn era_emergence_significance_all_persist_through_archive() {
     use civ_engine::era::CivAge;
     sim.era_progression.faction_ages.insert(1, CivAge::Bronze);
     sim.era_progression.faction_ages.insert(2, CivAge::Iron);
-    sim.era_progression.faction_ages.insert(3, CivAge::Classical);
+    sim.era_progression
+        .faction_ages
+        .insert(3, CivAge::Classical);
 
     // 2. emergence_sample — set a non-default sample
     sim.emergence_sample = Some(sample());

@@ -1,3 +1,7 @@
+#![allow(clippy::result_large_err)]
+// Test asserts the shape of a large server Err payload; boxing the error is a
+// production API decision for the owning lane, tracked as a follow-up issue.
+
 //! Behavioral coverage for NFR-S-01 — max simultaneous WebSocket
 //! clients: the server must sustain > 100 concurrent WebSocket clients at
 //! 10 ticks/sec with no dropped frames.
@@ -29,11 +33,7 @@ use civ_server::spawn_ws_bridge;
 use futures::StreamExt;
 use tokio::net::TcpStream;
 use tokio::time::{timeout, timeout_at, Instant as TokioInstant};
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::Message,
-    MaybeTlsStream, WebSocketStream,
-};
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
 /// NFR requires **> 100** concurrent clients — 101 is the smallest
 /// integer that satisfies the strict inequality, and it doubles as the

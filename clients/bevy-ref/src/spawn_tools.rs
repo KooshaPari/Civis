@@ -302,7 +302,10 @@ impl GhostPreview {
     /// - the cursor marker resolved a world position, and
     /// - the marker is reported visible (e.g. not hidden behind UI).
     pub fn should_render(&self, marker: &CursorMarker) -> bool {
-        self.tool.is_some() && marker.visible && marker.position.is_some() && self.position.is_some()
+        self.tool.is_some()
+            && marker.visible
+            && marker.position.is_some()
+            && self.position.is_some()
     }
 }
 

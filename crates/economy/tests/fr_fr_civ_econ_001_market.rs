@@ -9,7 +9,7 @@ mod fr_fr_civ_econ_001_market {
     /// Verify FR-CIV-ECON-001-MARKET type existence and basic behavior.
     #[test]
     fn verify_fr_civ_econ_001_market_basic() {
-        use civ_economy::{EconomyState, Good, ResourceType, SCHEMA_VERSION};
+        use civ_economy::{EconomyState, ResourceType, SCHEMA_VERSION};
         assert_eq!(SCHEMA_VERSION, 1);
         let _ = EconomyState::default();
         let _ = ResourceType::Food;

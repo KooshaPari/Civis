@@ -12,7 +12,10 @@ mod fr_fr_prot_001 {
         let ws = civ_engine::WorldState::default();
         let json = serde_json::to_string(&ws).expect("WorldState must serialize to JSON");
         assert!(json.contains("tick"), "JSON must contain tick field");
-        assert!(json.contains("population"), "JSON must contain population field");
+        assert!(
+            json.contains("population"),
+            "JSON must contain population field"
+        );
     }
 
     /// FR-PROT-001: WorldState round-trips through JSON.

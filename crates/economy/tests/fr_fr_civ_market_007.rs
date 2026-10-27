@@ -31,12 +31,11 @@ mod fr_fr_civ_market_007 {
         let initial_trust = trust.trust_bp();
         // Simulate a rapid price spike: price jumped from 100 to 300 cents.
         let _outcome = civ_economy::step_currency_trust(
-            &mut trust,
-            1000,    // trade_volume
-            300,     // price_level_cents (high)
-            100,     // previous_price_level_cents (low) => 200% spike
-            1000,    // supply
-            1000,    // previous_supply
+            &mut trust, 1000, // trade_volume
+            300,  // price_level_cents (high)
+            100,  // previous_price_level_cents (low) => 200% spike
+            1000, // supply
+            1000, // previous_supply
         );
         let new_trust = trust.trust_bp();
         assert!(
@@ -54,8 +53,7 @@ mod fr_fr_civ_market_007 {
         // Simulate 20 ticks of stable prices.
         for _ in 0..20 {
             civ_economy::step_currency_trust(
-                &mut trust,
-                500,  // trade_volume
+                &mut trust, 500,  // trade_volume
                 100,  // price_level_cents (stable)
                 100,  // previous_price_level_cents (same)
                 1000, // supply

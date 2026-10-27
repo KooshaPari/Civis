@@ -1,4 +1,4 @@
-﻿//! Tests for FR-CIV-GODTOOL-921 - God Tool Extended Operations
+//! Tests for FR-CIV-GODTOOL-921 - God Tool Extended Operations
 //!
 //! Epic: FR-CIV-FRAME
 //! God-tool substrate extended verb coverage.
@@ -11,6 +11,3 @@ mod fr_fr_civ_godtool_921 {
         assert_eq!(ws.tick, 0);
     }
 }
-
-
-

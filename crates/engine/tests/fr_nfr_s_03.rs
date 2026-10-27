@@ -34,7 +34,10 @@ fn nfr_s_03_sublinear_scaling_accepted() {
     // Identical tick time at 1k and 10k citizens (best case).
     assert!(tick_scale_budget_met(10.0, 10.0));
     // The spec's rayon expectation: ~5× for a 10× population.
-    assert!(tick_scale_budget_met(10.0, 50.0), "~5x is the expected result");
+    assert!(
+        tick_scale_budget_met(10.0, 50.0),
+        "~5x is the expected result"
+    );
     // Tightest legal ratio: 7.99× must pass.
     assert!(tick_scale_budget_met(10.0, 79.9));
 }

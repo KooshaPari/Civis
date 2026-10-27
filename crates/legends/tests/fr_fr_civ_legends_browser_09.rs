@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_browser_09 {
-    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+    use civ_legends::{EventKind, RawSimEvent, SagaGraph, SourceCrate};
 
     /// FR-CIV-LEGENDS-BROWSER-09: SagaGraph default is empty.
     #[test]

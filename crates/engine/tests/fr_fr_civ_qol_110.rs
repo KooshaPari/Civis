@@ -8,13 +8,16 @@
 
 #[cfg(test)]
 mod fr_fr_civ_qol_110 {
-    use civ_engine::{WorldState, Fixed};
+    use civ_engine::{Fixed, WorldState};
 
     /// WorldState provides population for data tooltip display.
     #[test]
     fn population_available_for_tooltip() {
         let ws = WorldState::default();
-        assert!(ws.population > 0, "Population should be available for tooltips");
+        assert!(
+            ws.population > 0,
+            "Population should be available for tooltips"
+        );
     }
 
     /// WorldState provides energy budget for data tooltip.

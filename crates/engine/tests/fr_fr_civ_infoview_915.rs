@@ -52,7 +52,9 @@ mod fr_fr_civ_infoview_915 {
             legend_stops: vec![],
             description: "Emergent faction territory",
         };
-        assert!(t.legend_stops.is_empty(),
-            "territory overlay should have no authored legend stops");
+        assert!(
+            t.legend_stops.is_empty(),
+            "territory overlay should have no authored legend stops"
+        );
     }
 }

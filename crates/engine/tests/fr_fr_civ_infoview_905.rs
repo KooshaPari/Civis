@@ -1,4 +1,4 @@
-﻿//! Tests for FR-CIV-INFOVIEW-905 - Info View Population Stats
+//! Tests for FR-CIV-INFOVIEW-905 - Info View Population Stats
 //!
 //! Epic: FR-CIV-FRAME
 //! Info view SHALL expose entity and region data for UI rendering.

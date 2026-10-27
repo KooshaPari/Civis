@@ -677,9 +677,11 @@ impl ReplayLog {
                 weather_grid,
                 geology_map,
             )),
-            ReplayEvent::ResearchOutcome { tick, snapshot_hash, accepted } => {
-                Some(research_event_bytes(*tick, snapshot_hash, *accepted))
-            }
+            ReplayEvent::ResearchOutcome {
+                tick,
+                snapshot_hash,
+                accepted,
+            } => Some(research_event_bytes(*tick, snapshot_hash, *accepted)),
             _ => None,
         }))
     }

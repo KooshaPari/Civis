@@ -19,7 +19,7 @@ mod fr_fr_civ_rts_004 {
             CommandKind::Resume,
             CommandKind::SetSpeed(5),
         ];
-        for (i, kind) in kinds.iter().enumerate() {
+        for (i, _kind) in kinds.iter().enumerate() {
             q.push(Command {
                 client_id: 0,
                 seq: i as u64,

@@ -109,8 +109,20 @@ mod tests {
     fn scorer_returns_all_moves() {
         let scorer = UtilityScorer::default_scorer();
         let moves = vec![
-            Move { id: "a".into(), resource_value: 0.5, strategic_value: 0.5, safety_value: 0.5, diplomatic_value: 0.5 },
-            Move { id: "b".into(), resource_value: 0.8, strategic_value: 0.2, safety_value: 0.9, diplomatic_value: 0.1 },
+            Move {
+                id: "a".into(),
+                resource_value: 0.5,
+                strategic_value: 0.5,
+                safety_value: 0.5,
+                diplomatic_value: 0.5,
+            },
+            Move {
+                id: "b".into(),
+                resource_value: 0.8,
+                strategic_value: 0.2,
+                safety_value: 0.9,
+                diplomatic_value: 0.1,
+            },
         ];
         let scored = scorer.score_all(&moves);
         assert_eq!(scored.len(), 2);
@@ -119,8 +131,20 @@ mod tests {
     #[test]
     fn higher_values_produce_higher_scores() {
         let scorer = UtilityScorer::default_scorer();
-        let low = Move { id: "low".into(), resource_value: 0.1, strategic_value: 0.1, safety_value: 0.1, diplomatic_value: 0.1 };
-        let high = Move { id: "high".into(), resource_value: 0.9, strategic_value: 0.9, safety_value: 0.9, diplomatic_value: 0.9 };
+        let low = Move {
+            id: "low".into(),
+            resource_value: 0.1,
+            strategic_value: 0.1,
+            safety_value: 0.1,
+            diplomatic_value: 0.1,
+        };
+        let high = Move {
+            id: "high".into(),
+            resource_value: 0.9,
+            strategic_value: 0.9,
+            safety_value: 0.9,
+            diplomatic_value: 0.9,
+        };
         assert!(scorer.score_move(&high).score > scorer.score_move(&low).score);
     }
 }

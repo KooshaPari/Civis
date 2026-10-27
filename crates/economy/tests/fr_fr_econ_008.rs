@@ -53,7 +53,10 @@ mod fr_fr_econ_008 {
         state.balance_joules = 100;
         let event = tick_district_collapse(&mut state, 3, 3);
         assert_eq!(event, None);
-        assert_eq!(state.consecutive_deficit_ticks, 0, "counter reset on recovery");
+        assert_eq!(
+            state.consecutive_deficit_ticks, 0,
+            "counter reset on recovery"
+        );
     }
 
     /// FR-ECON-008: Configurable threshold — 1 tick collapse.

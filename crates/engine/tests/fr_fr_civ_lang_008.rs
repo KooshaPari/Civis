@@ -27,8 +27,12 @@ mod fr_fr_civ_lang_008 {
         let dominant = BTreeMap::from([(10, 1), (20, 2)]);
         let members = BTreeMap::from([(10, 12), (20, 3)]);
         let contacts = BTreeSet::from([(10, 20)]);
-        let isolated =
-            civ_engine::language::faction_isolation_pressure(1, &dominant, &members, &BTreeSet::new());
+        let isolated = civ_engine::language::faction_isolation_pressure(
+            1,
+            &dominant,
+            &members,
+            &BTreeSet::new(),
+        );
         let connected =
             civ_engine::language::faction_isolation_pressure(1, &dominant, &members, &contacts);
         assert!(connected < isolated);
@@ -40,12 +44,8 @@ mod fr_fr_civ_lang_008 {
         let dominant = BTreeMap::from([(10, 1), (11, 1), (20, 2)]);
         let members = BTreeMap::from([(10, 5), (11, 5), (20, 0)]);
         let contacts = BTreeSet::from([(10, 11), (10, 20)]);
-        let isolation = civ_engine::language::faction_isolation_pressure(
-            1,
-            &dominant,
-            &members,
-            &contacts,
-        );
+        let isolation =
+            civ_engine::language::faction_isolation_pressure(1, &dominant, &members, &contacts);
         assert_eq!(isolation, 1.0);
     }
 

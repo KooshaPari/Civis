@@ -28,10 +28,16 @@ fn full_cascade_at_high_anomaly() {
     let mut tracker = CascadeTracker::new();
     let result = tracker.evaluate(5.0, 100);
 
-    assert_eq!(result.newly_triggered.len(), 3, "All three tipping points should trigger");
+    assert_eq!(
+        result.newly_triggered.len(),
+        3,
+        "All three tipping points should trigger"
+    );
     assert!(result.newly_triggered.contains(&TippingPoint::IceAlbedo));
     assert!(result.newly_triggered.contains(&TippingPoint::Permafrost));
-    assert!(result.newly_triggered.contains(&TippingPoint::AmazonDieback));
+    assert!(result
+        .newly_triggered
+        .contains(&TippingPoint::AmazonDieback));
     assert_eq!(tracker.triggered_count(), 3);
 }
 
@@ -48,7 +54,10 @@ fn cascading_amplification() {
     // Ice-albedo + permafrost
     let r2 = tracker.evaluate(3.1, 11);
     let amp2 = r2.amplification_c;
-    assert!(amp2 > amp1, "More tipping points should produce more amplification");
+    assert!(
+        amp2 > amp1,
+        "More tipping points should produce more amplification"
+    );
 }
 
 /// FR-CLIM-005: Once triggered, a tipping point stays active permanently.
@@ -92,5 +101,8 @@ fn co2_release_from_tipping_points() {
     let result = tracker.evaluate(5.0, 100);
 
     // Permafrost releases 0.5 ppm, Amazon releases 0.3 ppm, ice-albedo releases 0.0
-    assert!(result.co2_release_ppm > 0.0, "Active tipping points should release CO₂");
+    assert!(
+        result.co2_release_ppm > 0.0,
+        "Active tipping points should release CO₂"
+    );
 }

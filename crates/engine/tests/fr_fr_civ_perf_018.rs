@@ -41,7 +41,10 @@ mod fr_fr_civ_perf_018 {
         let keys: Vec<_> = ws2.factions.keys().copied().collect();
         // All keys must be sorted
         for w in keys.windows(2) {
-            assert!(w[0] < w[1], "BTreeMap serialization must preserve sorted order");
+            assert!(
+                w[0] < w[1],
+                "BTreeMap serialization must preserve sorted order"
+            );
         }
     }
 }

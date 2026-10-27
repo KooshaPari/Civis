@@ -20,16 +20,32 @@ mod fr_fr_econ_006 {
             waste_joules: 100,
         };
         assert_eq!(region.net_throughput(), 900);
-        assert_eq!(region.gdp_contribution(), 900, "1.0 exchange rate means contribution = net");
+        assert_eq!(
+            region.gdp_contribution(),
+            900,
+            "1.0 exchange rate means contribution = net"
+        );
     }
 
     /// FR-ECON-006: Aggregate GDP sums contributions from all regions.
     #[test]
     fn aggregate_gdp_sums_all_regions() {
         let regions = vec![
-            RegionGdp { region_id: 0, production_joules: 2000, waste_joules: 200 },
-            RegionGdp { region_id: 1, production_joules: 1000, waste_joules: 50 },
-            RegionGdp { region_id: 2, production_joules: 500, waste_joules: 0 },
+            RegionGdp {
+                region_id: 0,
+                production_joules: 2000,
+                waste_joules: 200,
+            },
+            RegionGdp {
+                region_id: 1,
+                production_joules: 1000,
+                waste_joules: 50,
+            },
+            RegionGdp {
+                region_id: 2,
+                production_joules: 500,
+                waste_joules: 0,
+            },
         ];
         let result = compute_gdp(&regions);
         // Region 0: 1800, Region 1: 950, Region 2: 500 => total 3250
@@ -73,9 +89,11 @@ mod fr_fr_econ_006 {
     /// FR-ECON-006: GDP result preserves per-region data.
     #[test]
     fn gdp_result_preserves_region_data() {
-        let regions = vec![
-            RegionGdp { region_id: 42, production_joules: 500, waste_joules: 50 },
-        ];
+        let regions = vec![RegionGdp {
+            region_id: 42,
+            production_joules: 500,
+            waste_joules: 50,
+        }];
         let result = compute_gdp(&regions);
         assert_eq!(result.regions.len(), 1);
         assert_eq!(result.regions[0].region_id, 42);

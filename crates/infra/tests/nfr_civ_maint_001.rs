@@ -25,7 +25,11 @@ fn find_bash() -> Option<String> {
 }
 
 /// Run `quality-gate.sh` against `project_dir` and return (stdout, stderr).
-fn run_quality_gate(bash: &str, script: &std::path::Path, project_dir: &std::path::Path) -> (String, String) {
+fn run_quality_gate(
+    bash: &str,
+    script: &std::path::Path,
+    project_dir: &std::path::Path,
+) -> (String, String) {
     // Git Bash mangles backslash paths passed as argv; forward slashes are
     // accepted by bash and by the Win32 API it invokes underneath.
     let script_arg = script.to_string_lossy().replace('\\', "/");
@@ -60,10 +64,7 @@ fn nfr_civ_maint_001_quality_gate_reports_configurable_coverage_threshold() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..");
-    let script = repo
-        .join("scripts")
-        .join("quality")
-        .join("quality-gate.sh");
+    let script = repo.join("scripts").join("quality").join("quality-gate.sh");
     assert!(
         script.is_file(),
         "quality-gate.sh must live at {}",
@@ -89,8 +90,11 @@ fn nfr_civ_maint_001_quality_gate_reports_configurable_coverage_threshold() {
         .map(|o| o.status.success())
         .unwrap_or(false);
     if has_yq {
-        std::fs::write(project.join("quality-gate.yml"), "thresholds:\n  coverage: 90\n")
-            .expect("write config");
+        std::fs::write(
+            project.join("quality-gate.yml"),
+            "thresholds:\n  coverage: 90\n",
+        )
+        .expect("write config");
         let (stdout, stderr) = run_quality_gate(&bash, &script, project);
         assert!(
             stdout.contains("Gate 5: Coverage (>=90%)"),

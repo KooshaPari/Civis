@@ -10,7 +10,9 @@ mod fr_fr_civ_proto_010 {
     #[test]
     fn verify_fr_civ_proto_010_basic() {
         let entry = BuildingDiffEntry {
-            id: 1, kind: BuildingKind3d::House, tier: 0,
+            id: 1,
+            kind: BuildingKind3d::House,
+            tier: 0,
             position: WorldXZ { x: 0.0, z: 0.0 },
         };
         assert_eq!(entry.id, 1);

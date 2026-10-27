@@ -101,9 +101,7 @@ mod tests {
 
     #[test]
     fn ends_below_hysteresis() {
-        let mut tracker = InsurgencyTracker {
-            active: true,
-        };
+        let mut tracker = InsurgencyTracker { active: true };
         let cfg = InsurgencyConfig::default();
         let events = tracker.tick(300, &cfg, 20);
         assert!(!tracker.active);
@@ -113,9 +111,7 @@ mod tests {
 
     #[test]
     fn stays_active_in_hysteresis_band() {
-        let mut tracker = InsurgencyTracker {
-            active: true,
-        };
+        let mut tracker = InsurgencyTracker { active: true };
         let cfg = InsurgencyConfig::default();
         // 600 is between end (400) and start (800) => stays active
         let events = tracker.tick(600, &cfg, 5);

@@ -170,8 +170,12 @@ impl Default for InfoViewHotkeys {
             prev: "Shift+Tab".into(),
             toggle: "Backtick".into(),
             group_keys: vec![
-                "1".into(), "2".into(), "3".into(),
-                "4".into(), "5".into(), "6".into(),
+                "1".into(),
+                "2".into(),
+                "3".into(),
+                "4".into(),
+                "5".into(),
+                "6".into(),
             ],
             close: "Esc".into(),
             focus: "F".into(),
@@ -253,9 +257,21 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Live,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Dry".into(), color: [0.9, 0.8, 0.6] },
-            LegendStop { position: 0.5, label: "Shallow".into(), color: [0.3, 0.6, 0.9] },
-            LegendStop { position: 1.0, label: "Deep".into(), color: [0.1, 0.2, 0.7] },
+            LegendStop {
+                position: 0.0,
+                label: "Dry".into(),
+                color: [0.9, 0.8, 0.6],
+            },
+            LegendStop {
+                position: 0.5,
+                label: "Shallow".into(),
+                color: [0.3, 0.6, 0.9],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Deep".into(),
+                color: [0.1, 0.2, 0.7],
+            },
         ],
         description: "Water depth and hydrology",
     });
@@ -281,8 +297,16 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Live,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Empty".into(), color: [0.1, 0.1, 0.1] },
-            LegendStop { position: 1.0, label: "Dense".into(), color: [0.9, 0.2, 0.2] },
+            LegendStop {
+                position: 0.0,
+                label: "Empty".into(),
+                color: [0.1, 0.1, 0.1],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Dense".into(),
+                color: [0.9, 0.2, 0.2],
+            },
         ],
         description: "Agent density per lattice cell",
     });
@@ -296,8 +320,16 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Live,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Satisfied".into(), color: [0.2, 0.8, 0.2] },
-            LegendStop { position: 1.0, label: "Strained".into(), color: [0.9, 0.1, 0.1] },
+            LegendStop {
+                position: 0.0,
+                label: "Satisfied".into(),
+                color: [0.2, 0.8, 0.2],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Strained".into(),
+                color: [0.9, 0.1, 0.1],
+            },
         ],
         description: "Emergent unmet needs pressure",
     });
@@ -323,9 +355,21 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Live,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Frozen".into(), color: [0.6, 0.8, 1.0] },
-            LegendStop { position: 0.5, label: "Temperate".into(), color: [0.4, 0.8, 0.3] },
-            LegendStop { position: 1.0, label: "Scorching".into(), color: [1.0, 0.3, 0.0] },
+            LegendStop {
+                position: 0.0,
+                label: "Frozen".into(),
+                color: [0.6, 0.8, 1.0],
+            },
+            LegendStop {
+                position: 0.5,
+                label: "Temperate".into(),
+                color: [0.4, 0.8, 0.3],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Scorching".into(),
+                color: [1.0, 0.3, 0.0],
+            },
         ],
         description: "Surface temperature proxy",
     });
@@ -351,8 +395,16 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Near,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Light".into(), color: [0.6, 0.6, 0.6] },
-            LegendStop { position: 1.0, label: "Heavy".into(), color: [0.2, 0.2, 0.2] },
+            LegendStop {
+                position: 0.0,
+                label: "Light".into(),
+                color: [0.6, 0.6, 0.6],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Heavy".into(),
+                color: [0.2, 0.2, 0.2],
+            },
         ],
         description: "Traffic graph overlay",
     });
@@ -366,8 +418,16 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Near,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Poor".into(), color: [0.4, 0.2, 0.1] },
-            LegendStop { position: 1.0, label: "Prosperous".into(), color: [1.0, 0.84, 0.0] },
+            LegendStop {
+                position: 0.0,
+                label: "Poor".into(),
+                color: [0.4, 0.2, 0.1],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Prosperous".into(),
+                color: [1.0, 0.84, 0.0],
+            },
         ],
         description: "Per-entity wealth tint",
     });
@@ -381,8 +441,16 @@ pub fn register_priority_12(registry: &mut OverlayRegistry) {
         availability: OverlayAvailability::Near,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Static".into(), color: [0.5, 0.5, 0.5] },
-            LegendStop { position: 1.0, label: "High Flow".into(), color: [0.1, 0.5, 0.9] },
+            LegendStop {
+                position: 0.0,
+                label: "Static".into(),
+                color: [0.5, 0.5, 0.5],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "High Flow".into(),
+                color: [0.1, 0.5, 0.9],
+            },
         ],
         description: "Agent migration arrows between settlements",
     });
@@ -405,11 +473,31 @@ pub fn build_full_catalog() -> OverlayRegistry {
         availability: OverlayAvailability::Live,
         legend_kind: LegendKind::Continuous,
         legend_stops: vec![
-            LegendStop { position: 0.0, label: "Deep".into(), color: [0.1, 0.1, 0.3] },
-            LegendStop { position: 0.3, label: "Coast".into(), color: [0.3, 0.7, 0.9] },
-            LegendStop { position: 0.5, label: "Lowland".into(), color: [0.3, 0.7, 0.3] },
-            LegendStop { position: 0.7, label: "Highland".into(), color: [0.6, 0.5, 0.3] },
-            LegendStop { position: 1.0, label: "Peak".into(), color: [0.9, 0.9, 0.9] },
+            LegendStop {
+                position: 0.0,
+                label: "Deep".into(),
+                color: [0.1, 0.1, 0.3],
+            },
+            LegendStop {
+                position: 0.3,
+                label: "Coast".into(),
+                color: [0.3, 0.7, 0.9],
+            },
+            LegendStop {
+                position: 0.5,
+                label: "Lowland".into(),
+                color: [0.3, 0.7, 0.3],
+            },
+            LegendStop {
+                position: 0.7,
+                label: "Highland".into(),
+                color: [0.6, 0.5, 0.3],
+            },
+            LegendStop {
+                position: 1.0,
+                label: "Peak".into(),
+                color: [0.9, 0.9, 0.9],
+            },
         ],
         description: "Height above sea level",
     });
@@ -436,16 +524,36 @@ pub fn build_full_catalog() -> OverlayRegistry {
         ("info_health", "Health", OverlayGroup::Population),
         ("info_happiness", "Happiness", OverlayGroup::Population),
         ("info_psychology", "Psychology", OverlayGroup::Population),
-        ("info_trade_routes", "Trade Routes", OverlayGroup::Infrastructure),
-        ("info_construction", "Construction", OverlayGroup::Infrastructure),
-        ("info_energy_grid", "Energy Grid", OverlayGroup::Infrastructure),
+        (
+            "info_trade_routes",
+            "Trade Routes",
+            OverlayGroup::Infrastructure,
+        ),
+        (
+            "info_construction",
+            "Construction",
+            OverlayGroup::Infrastructure,
+        ),
+        (
+            "info_energy_grid",
+            "Energy Grid",
+            OverlayGroup::Infrastructure,
+        ),
         ("info_food_supply", "Food Supply", OverlayGroup::Economy),
         ("info_water_quality", "Water Quality", OverlayGroup::Terrain),
-        ("info_soil_fertility", "Soil Fertility", OverlayGroup::Terrain),
+        (
+            "info_soil_fertility",
+            "Soil Fertility",
+            OverlayGroup::Terrain,
+        ),
         ("info_wildlife", "Wildlife", OverlayGroup::Terrain),
         ("info_forest_cover", "Forest Cover", OverlayGroup::Terrain),
         ("info_air_quality", "Air Quality", OverlayGroup::Hazard),
-        ("info_noise_pollution", "Noise Pollution", OverlayGroup::Hazard),
+        (
+            "info_noise_pollution",
+            "Noise Pollution",
+            OverlayGroup::Hazard,
+        ),
         ("info_fire_risk", "Fire Risk", OverlayGroup::Hazard),
     ];
 

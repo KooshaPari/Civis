@@ -124,7 +124,11 @@ fn minimap_dot_fade_alpha(age_secs: f32, fading_out: bool) -> f32 {
     let t = age_secs / MINIMAP_DOT_FADE_SECS;
     // smoothstep: 3t^2 - 2t^3
     let s = t * t * (3.0 - 2.0 * t);
-    if fading_out { 1.0 - s } else { s }
+    if fading_out {
+        1.0 - s
+    } else {
+        s
+    }
 }
 /// Resource tracking the last snapshot fire time so we can throttle the poll.
 #[derive(Resource, Debug, Default, Clone, Copy)]
@@ -762,10 +766,7 @@ mod viewport_indicator_tests {
         let mut rig = CameraRig::default();
         rig.distance = 60.0;
         let node = run_indicator(rig, (900.0, 0.0));
-        let all_px = [
-            node.left, node.top, node.width, node.height,
-        ]
-        .map(|v| match v {
+        let all_px = [node.left, node.top, node.width, node.height].map(|v| match v {
             Val::Px(v) => v,
             _ => panic!("expected pixel value"),
         });
@@ -821,7 +822,10 @@ mod dot_fade_tests {
     fn alpha_reaches_one_after_fade_window_elapses() {
         assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS, false), 1.0);
         // Any age past the window stays opaque.
-        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0, false), 1.0);
+        assert_eq!(
+            minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0, false),
+            1.0
+        );
         assert_eq!(minimap_dot_fade_alpha(60.0, false), 1.0);
     }
 
@@ -880,7 +884,10 @@ mod dot_fade_tests {
     fn fade_out_alpha_is_zero_after_window() {
         // After the fade window elapses, the dot is gone.
         assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS, true), 0.0);
-        assert_eq!(minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0, true), 0.0);
+        assert_eq!(
+            minimap_dot_fade_alpha(MINIMAP_DOT_FADE_SECS + 5.0, true),
+            0.0
+        );
     }
 
     #[test]

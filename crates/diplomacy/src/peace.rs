@@ -143,9 +143,9 @@ impl PeaceTreatyManager {
     /// Check if there is an active peace treaty between two polities.
     pub fn has_peace(&self, a: PolityId, b: PolityId) -> bool {
         let pair = Pair::new(a, b);
-        self.treaties.iter().any(|t| {
-            Pair::new(t.parties.0, t.parties.1) == pair && t.ceasefire_duration > 0
-        })
+        self.treaties
+            .iter()
+            .any(|t| Pair::new(t.parties.0, t.parties.1) == pair && t.ceasefire_duration > 0)
     }
 
     /// Get all treaties involving a polity.

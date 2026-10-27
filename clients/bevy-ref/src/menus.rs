@@ -135,9 +135,10 @@ pub fn request_live_speed(
         return false;
     }
     pending.request = Some(PendingSimSpeedRequest {
-        ticket: bridge
-            .client
-            .request_rpc("sim.set_speed", serde_json::json!({ "multiplier": multiplier })),
+        ticket: bridge.client.request_rpc(
+            "sim.set_speed",
+            serde_json::json!({ "multiplier": multiplier }),
+        ),
         multiplier,
         shell_mode,
         sent_at: Instant::now(),
@@ -197,7 +198,10 @@ fn reconcile_live_speed_request(
     let Some((reply, timed_out)) = completed else {
         return;
     };
-    let request = pending.request.take().expect("pending speed request exists");
+    let request = pending
+        .request
+        .take()
+        .expect("pending speed request exists");
     match accepted_speed_multiplier(reply, request.multiplier) {
         Ok(multiplier) => {
             speed.multiplier = multiplier as f32;
@@ -748,12 +752,7 @@ fn resume_from_pause_menu(
         let multiplier = speed
             .as_deref()
             .map_or(1, |speed| server_speed_multiplier(speed.last_non_zero));
-        request_live_speed(
-            pending_speed,
-            bridge,
-            multiplier,
-            Some(GameUiMode::Playing),
-        );
+        request_live_speed(pending_speed, bridge, multiplier, Some(GameUiMode::Playing));
     } else {
         resume_shell_pause(mode, speed);
     }

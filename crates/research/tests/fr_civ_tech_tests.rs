@@ -8,8 +8,8 @@
 
 use civ_laws::{Law, LawDb, LawKind};
 use civ_research::{
-    LlmEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal, ResearchCache, TechCard,
-    ValidationOutcome, replay_advance_llm_event, validate,
+    replay_advance_llm_event, validate, LlmEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal,
+    ResearchCache, TechCard, ValidationOutcome,
 };
 
 fn db_with(laws: Vec<Law>) -> LawDb {
@@ -108,7 +108,10 @@ fn tech_008_llm_cards_face_the_same_validate_gate() {
     assert_eq!(validate(&good, &db), ValidationOutcome::Accept);
     // A hollow proposal is rejected by the same function.
     let hollow = card(1, vec![], vec![]);
-    assert!(matches!(validate(&hollow, &db), ValidationOutcome::Reject(_)));
+    assert!(matches!(
+        validate(&hollow, &db),
+        ValidationOutcome::Reject(_)
+    ));
 }
 
 // ---------------------------------------------------------------------------

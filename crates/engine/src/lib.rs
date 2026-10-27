@@ -60,11 +60,11 @@ pub mod faction_decisions;
 pub mod famine;
 pub mod festivals;
 pub mod gameplay;
-pub mod grid;
 pub mod godtools;
+pub mod grid;
 pub mod hash_chain;
-pub mod integrity;
 pub mod info_views;
+pub mod integrity;
 pub mod invariants;
 pub mod io;
 pub mod lod;
@@ -96,8 +96,8 @@ pub mod religion;
 pub mod writing;
 
 pub mod brush_types;
-pub mod vehicle_types;
 pub mod rts_types;
+pub mod vehicle_types;
 
 pub mod fixed_math;
 pub mod tutorial;
@@ -139,7 +139,9 @@ pub use building_emergence::{
 pub use civ_audio::triggers::SfxTrigger;
 pub use civ_build::{BiomeStyleTag, DemandSignals, EmergentStyleKey};
 pub use civ_emergence_metrics::branching::BranchingRegime;
-pub use civ_legends::significance::{EntitySignificance, SignificanceAccumulator, SignificanceConfig};
+pub use civ_legends::significance::{
+    EntitySignificance, SignificanceAccumulator, SignificanceConfig,
+};
 pub use civ_mod_host::{load_manifest, ModBrowserEntry, ModGuestStateSave, ModType};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_coupling::{
@@ -290,16 +292,16 @@ pub fn create_rng(seed: u64) -> SimRng {
 }
 
 // FR-NET-001, FR-NET-002, FR-NET-003
-    // FR-CIV-VERIFY-001
-    // FR-CIV-VERIFY-002
-    // FR-CIV-VERIFY-003
-    // FR-CIV-VERIFY-004
-    // FR-CIV-VERIFY-005
-    // FR-CIV-VERIFY-006
-    // FR-CIV-VERIFY-007
-    // FR-CIV-VERIFY-008
-    // FR-CIV-VERIFY-009
-    // FR-CIV-VERIFY-010
+// FR-CIV-VERIFY-001
+// FR-CIV-VERIFY-002
+// FR-CIV-VERIFY-003
+// FR-CIV-VERIFY-004
+// FR-CIV-VERIFY-005
+// FR-CIV-VERIFY-006
+// FR-CIV-VERIFY-007
+// FR-CIV-VERIFY-008
+// FR-CIV-VERIFY-009
+// FR-CIV-VERIFY-010
 /// Advance simulation by one tick (simple API)
 // FR-CIV-3D-006
 // FR-CIV-3D-007

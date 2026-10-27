@@ -3,9 +3,7 @@
 //!
 //! Matrix check: `distribution::surplus_flows_adjacent`.
 
-use civ_economy::{
-    distribute_surplus, DistributionConfig, DistrictEnergyState, DistrictGraph,
-};
+use civ_economy::{distribute_surplus, DistributionConfig, DistrictEnergyState, DistrictGraph};
 
 fn districts(pairs: &[(u32, i64)]) -> Vec<DistrictEnergyState> {
     pairs
@@ -32,10 +30,16 @@ fn surplus_flows_adjacent() {
     let report = distribute_surplus(&mut d, &graph, &DistributionConfig::default());
     let after: i64 = d.iter().map(|x| x.balance_joules).sum();
 
-    assert_eq!(report.transferred_joules, 40, "exactly the adjacent deficit");
+    assert_eq!(
+        report.transferred_joules, 40,
+        "exactly the adjacent deficit"
+    );
     assert_eq!(d[0].balance_joules, 460);
     assert_eq!(d[1].balance_joules, 0, "deficit fully relieved");
-    assert_eq!(d[2].balance_joules, -80, "unconnected district does not receive");
+    assert_eq!(
+        d[2].balance_joules, -80,
+        "unconnected district does not receive"
+    );
     assert_eq!(d[3].balance_joules, 60, "no transfer to a non-deficit peer");
     assert_eq!(before, after, "distribution conserves total Joules");
 
@@ -60,12 +64,19 @@ fn surplus_spreads_across_adjacent_deficits() {
     let report = distribute_surplus(&mut d, &graph, &DistributionConfig::default());
 
     assert_eq!(report.transferred_joules, 60);
-    for i in 1..4 {
-        assert_eq!(d[i].balance_joules, 0, "every adjacent deficit relieved");
+    for district in d.iter().skip(1).take(3) {
+        assert_eq!(
+            district.balance_joules, 0,
+            "every adjacent deficit relieved"
+        );
     }
     assert_eq!(d[0].balance_joules, 240);
     let order: Vec<u32> = report.transfers.iter().map(|t| t.to).collect();
-    assert_eq!(order, vec![2, 3, 4], "recipients visited in ascending id order");
+    assert_eq!(
+        order,
+        vec![2, 3, 4],
+        "recipients visited in ascending id order"
+    );
 }
 
 /// A district keeps its reserve floor, losing at most the per-tick cap.
@@ -81,7 +92,10 @@ fn surplus_respects_floor_and_cap() {
 
     let report = distribute_surplus(&mut d, &graph, &cfg);
     assert_eq!(report.transferred_joules, 25);
-    assert_eq!(d[0].balance_joules, 475, "donor never dips below floor + give");
+    assert_eq!(
+        d[0].balance_joules, 475,
+        "donor never dips below floor + give"
+    );
     assert_eq!(d[1].balance_joules, -75);
 }
 

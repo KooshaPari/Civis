@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)] // constant asserts are intentional compile-time invariants; tracked for lane review
+
 //! Behavioral coverage for NFR-CIV-PORT-003 — headless server runs
 //! without a GPU backend on all platforms.
 //!
@@ -62,10 +64,7 @@ fn server_manifest_is_gpu_free_with_no_default_feature_gate() {
     // otherwise `--no-default-features` semantics change for CI.
     if let Some(features_pos) = lower.find("[features]") {
         let after = &lower[features_pos..];
-        let section_end = after[1..]
-            .find("\n[")
-            .map(|i| i + 1)
-            .unwrap_or(after.len());
+        let section_end = after[1..].find("\n[").map(|i| i + 1).unwrap_or(after.len());
         let features_section = &after[..section_end];
         if let Some(default_pos) = features_section.find("default") {
             let default_line = &features_section[default_pos..];

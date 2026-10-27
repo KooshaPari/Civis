@@ -427,8 +427,9 @@ mod plugin {
                 let visuals = ui.visuals();
                 let fill = visuals.window_fill.linear_multiply(alpha);
                 let stroke_color = visuals.window_stroke.color.linear_multiply(alpha);
-                let override_text =
-                    visuals.override_text_color.map(|c| c.linear_multiply(alpha));
+                let override_text = visuals
+                    .override_text_color
+                    .map(|c| c.linear_multiply(alpha));
                 let stroke_width = visuals.window_stroke.width;
                 let mut style = ui.style().as_ref().clone();
                 style.visuals.window_fill = fill;
@@ -621,6 +622,9 @@ mod tests {
         // Smoothstep inflection is at the midpoint.
         let mid = TOOLTIP_FADE_SECS * 0.5;
         let mid_alpha = tooltip_fade_alpha(mid);
-        assert!((mid_alpha - 0.5).abs() < 1e-3, "midpoint alpha = {mid_alpha}");
+        assert!(
+            (mid_alpha - 0.5).abs() < 1e-3,
+            "midpoint alpha = {mid_alpha}"
+        );
     }
 }

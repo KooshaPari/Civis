@@ -44,10 +44,7 @@ mod fr_fr_civ_market_004 {
         let mut m = MarketState::default();
         let before = m.prices().get("food").copied().unwrap();
         let after = m.apply_pressure("food", 100, 100); // balanced
-        assert_eq!(
-            after, before,
-            "Equal supply/demand should maintain price"
-        );
+        assert_eq!(after, before, "Equal supply/demand should maintain price");
     }
 
     /// Tâtonnement is deterministic: same inputs -> same price.

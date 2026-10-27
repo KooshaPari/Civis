@@ -58,10 +58,11 @@ async fn jsonrpc_corrupt_save_load_preserves_active_session() {
         Err(civ_engine::SaveBundleError::HashMismatch { .. })
     ));
 
-    let (before_state, before_world, before_rng) = {
+    let (before_state, before_state_debug, before_world, before_rng) = {
         let mut active = sim.lock().await;
         (
             active.state.clone(),
+            format!("{:?}", active.state),
             serde_json::to_value(active.snapshot()).expect("world snapshot"),
             active.rng_mut().clone(),
         )
@@ -82,6 +83,8 @@ async fn jsonrpc_corrupt_save_load_preserves_active_session() {
     assert!(response.get("result").is_none(), "{response}");
     let mut active = sim.lock().await;
     assert_eq!(active.state, before_state);
+    // WorldState's PartialEq intentionally compares only five fields.
+    assert_eq!(format!("{:?}", active.state), before_state_debug);
     assert_eq!(
         serde_json::to_value(active.snapshot()).unwrap(),
         before_world

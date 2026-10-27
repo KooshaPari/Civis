@@ -4394,6 +4394,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "tar",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -4402,6 +4403,7 @@ dependencies = [
  "tracing-opentelemetry",
  "tracing-subscriber",
  "uuid 1.24.1",
+ "zstd",
 ]
 
 [[package]]

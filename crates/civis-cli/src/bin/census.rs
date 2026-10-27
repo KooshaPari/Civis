@@ -124,30 +124,56 @@ async fn census_call(
             source: Box::new(err),
         })?;
 
-    let frame = timeout(request_timeout, ws.next())
-        .await
-        .map_err(|_| CensusCallError::Timeout {
-            url: url.to_string(),
-            timeout_ms: request_timeout.as_millis() as u64,
-        })?
-        .ok_or(CensusCallError::Closed)?
-        .map_err(|err| CensusCallError::Transport(Box::new(err)))?;
-
-    let text = match frame {
-        Message::Text(text) => text,
-        Message::Binary(bytes) => {
-            String::from_utf8(bytes).map_err(|err| CensusCallError::Decode { source: err })?
+    // The server pushes binary tick broadcasts to a connected client, so the
+    // first frame is usually NOT the JSON-RPC reply. Reading a single frame
+    // and decoding it as text yielded binary bytes instead of the reply, and
+    // the census then reported "no tick data". Read frames until one is a
+    // JSON-RPC reply for this request.
+    let deadline = request_timeout;
+    loop {
+        let frame = timeout(deadline, ws.next())
+            .await
+            .map_err(|_| CensusCallError::Timeout {
+                url: url.to_string(),
+                timeout_ms: request_timeout.as_millis() as u64,
+            })?
+            .ok_or(CensusCallError::Closed)?
+            .map_err(|err| CensusCallError::Transport(Box::new(err)))?;
+        match frame {
+            Message::Text(body) => {
+                if is_jsonrpc_reply(&body) {
+                    let _ = ws.close(None).await;
+                    return Ok(body);
+                }
+            }
+            Message::Binary(bytes) => {
+                // A binary tick broadcast. Skip it unless it happens to be a
+                // JSON-RPC reply in disguise.
+                match String::from_utf8(bytes) {
+                    Ok(body) => {
+                        if is_jsonrpc_reply(&body) {
+                            let _ = ws.close(None).await;
+                            return Ok(body);
+                        }
+                    }
+                    Err(err) => {
+                        // Not valid UTF-8, so it cannot be the JSON-RPC
+                        // reply. Keep reading rather than failing: the reply
+                        // may still arrive on a later frame.
+                        let _ = err;
+                    }
+                }
+            }
+            Message::Close(_) => return Err(CensusCallError::Closed),
+            other => {
+                return Err(CensusCallError::UnexpectedFrame {
+                    kind: format!("{other:?}"),
+                })
+            }
         }
-        Message::Close(_) => return Err(CensusCallError::Closed),
-        other => {
-            return Err(CensusCallError::UnexpectedFrame {
-                kind: format!("{other:?}"),
-            })
-        }
-    };
+    }
 
-    let _ = ws.close(None).await;
-    Ok(text)
+
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -182,13 +208,6 @@ enum CensusCallError {
     /// The transport raised a non-fatal error mid-stream.
     #[error("civ-server WS transport error: {0}")]
     Transport(#[source] Box<tokio_tungstenite::tungstenite::Error>),
-    /// The server sent a binary frame that was not valid UTF-8.
-    #[error("sim.status binary frame was not valid UTF-8: {source}")]
-    Decode {
-        /// Underlying UTF-8 error.
-        #[source]
-        source: std::string::FromUtf8Error,
-    },
     /// The server sent an unexpected WebSocket message type.
     #[error("civ-server sent an unexpected frame: {kind}")]
     UnexpectedFrame {
@@ -202,5 +221,20 @@ impl From<CensusError> for CensusCallError {
         CensusCallError::UnexpectedFrame {
             kind: format!("{err:?}"),
         }
+    }
+}
+
+/// Whether a frame body is the JSON-RPC reply we asked for.
+///
+/// The server interleaves binary tick broadcasts with JSON-RPC replies, so
+/// the reply has to be identified rather than assumed to be the first frame.
+fn is_jsonrpc_reply(body: &str) -> bool {
+    let trimmed = body.trim();
+    if !trimmed.starts_with('{') {
+        return false;
+    }
+    match serde_json::from_str::<serde_json::Value>(trimmed) {
+        Ok(value) => value.get("result").is_some() || value.get("error").is_some(),
+        Err(_) => false,
     }
 }

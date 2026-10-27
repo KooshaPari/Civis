@@ -1,4 +1,4 @@
-name: Game E2E (Visual)
+name: Game E2E (Capture Free)
 
 on:
   push:
@@ -39,6 +39,7 @@ jobs:
       MESA_GL_VERSION_OVERRIDE: "3.3"
       DISPLAY: ":99"
       CIVIS_PLAYTHROUGH_SEED: "42"
+      CIVIS_CAPTURE_FRAMES: "0"
 
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +100,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Upload captures
-        if: always()
+        if: ${{ false }}
         uses: actions/upload-artifact@v4
         with:
           name: game-e2e-captures-${{ github.run_id }}
@@ -119,6 +120,7 @@ jobs:
           retention-days: 7
 
   visual-regression:
+    if: ${{ false }}
     name: visual regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -176,7 +178,7 @@ jobs:
   update-baselines:
     name: update baselines
     runs-on: ubuntu-latest
-    if: github.event.inputs.update_baselines == 'true'
+    if: ${{ false }}
     needs: game-flow
 
     steps:

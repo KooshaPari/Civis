@@ -15,7 +15,7 @@ def _git(root: Path, *args: str) -> str:
 def _manifest(root: Path, sha: str) -> Path:
     path = root / ".ci" / "quality-manifest.json"
     path.parent.mkdir()
-    attestation = {"git_sha": sha, "gates": []}
+    attestation = {"git_sha": sha, "content_hash": "a" * 64, "gates": []}
     manifest_hash = hashlib.blake2b(
         json.dumps(attestation, separators=(",", ":")).encode(), digest_size=32
     ).hexdigest()
@@ -25,6 +25,7 @@ def _manifest(root: Path, sha: str) -> Path:
                 "version": "1",
                 "repo": "Civis",
                 "git_sha": sha,
+                "content_hash": attestation["content_hash"],
                 "manifest_hash": manifest_hash,
                 "gates": {},
             }
@@ -62,6 +63,9 @@ def test_collect_provenance_requires_exact_manifest_sha(tmp_path: Path) -> None:
     provenance = collect_provenance(tmp_path, manifest)
     assert provenance["repo_sha"] == sha
     assert provenance["manifest_sha"] == sha
+    writer = Path(__file__).resolve().parents[1] / "quality" / "write-quality-manifest.py"
+    subprocess.run([sys.executable, str(writer)], cwd=tmp_path, check=True)
+    assert collect_provenance(tmp_path, manifest)["manifest_sha"] == sha
     manifest.write_text(
         manifest.read_text(encoding="utf-8").replace(sha, "0" * 40), encoding="utf-8"
     )
@@ -87,7 +91,7 @@ def test_emit_records_exit_timeline_hash_and_not_claimed_defaults(
     evidence = emit(
         tmp_path,
         manifest,
-        [f"{sys.executable} -c 'print(\"ok\")'"],
+        [f"'{Path(sys.executable).as_posix()}' -c 'print(\"ok\")'"],
         [("raw", artifact)],
     )
     assert evidence["repo"]["repo_sha"] == sha
@@ -104,3 +108,37 @@ def test_emit_records_exit_timeline_hash_and_not_claimed_defaults(
     assert evidence["claims"]["ca"]["status"] == "not_claimed"
     assert evidence["claims"]["windowed"]["status"] == "not_claimed"
     assert evidence["claims"]["live_smoke"]["status"] == "claimed"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("content_hash", "b" * 64),
+    ("gates", {"web_test": {"status": "fail"}}),
+    ("manifest_hash", "0" * 64),
+])
+def test_collect_provenance_rejects_tampered_attestation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str, value: object,
+) -> None:
+    sha = "1" * 40
+    monkeypatch.setattr("live_smoke_evidence._git", lambda *args: sha)
+    manifest = _manifest(tmp_path, sha)
+    body = json.loads(manifest.read_text(encoding="utf-8"))
+    body[field] = value
+    manifest.write_text(json.dumps(body), encoding="utf-8")
+    with pytest.raises(EvidenceError, match="manifest_hash mismatch"):
+        collect_provenance(tmp_path, manifest)
+
+
+def test_collect_provenance_rejects_old_hash_schema(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sha = "1" * 40
+    monkeypatch.setattr("live_smoke_evidence._git", lambda *args: sha)
+    manifest = _manifest(tmp_path, sha)
+    body = json.loads(manifest.read_text(encoding="utf-8"))
+    body["manifest_hash"] = hashlib.blake2b(
+        json.dumps({"git_sha": sha, "gates": []}, separators=(",", ":")).encode(),
+        digest_size=32,
+    ).hexdigest()
+    manifest.write_text(json.dumps(body), encoding="utf-8")
+    with pytest.raises(EvidenceError, match="manifest_hash mismatch"):
+        collect_provenance(tmp_path, manifest)

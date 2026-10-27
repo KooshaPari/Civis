@@ -106,6 +106,7 @@ def collect_provenance(root: Path, manifest: Path) -> dict[str, str]:
         raise EvidenceError("quality manifest gates must be an object")
     attestation = {
         "git_sha": manifest_sha,
+        "content_hash": body.get("content_hash", ""),
         "gates": sorted(
             [
                 {"key": key, "status": value.get("status", "")}

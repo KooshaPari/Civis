@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from live_smoke_evidence import EvidenceError, collect_provenance, emit, redact_text
+from live_smoke_evidence import EvidenceError, collect_provenance, emit, redact_text, run_command
 
 
 def _git(root: Path, *args: str) -> str:
@@ -142,3 +142,14 @@ def test_collect_provenance_rejects_old_hash_schema(
     manifest.write_text(json.dumps(body), encoding="utf-8")
     with pytest.raises(EvidenceError, match="manifest_hash mismatch"):
         collect_provenance(tmp_path, manifest)
+
+
+def test_run_command_inherits_environment_without_copying(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        assert "env" not in kwargs
+        return subprocess.CompletedProcess(argv, 0, "ok\n", "")
+
+    monkeypatch.setattr("live_smoke_evidence.subprocess.run", fake_run)
+    assert run_command(tmp_path, "python -V", None)["exit_code"] == 0

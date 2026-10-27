@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import shlex
 import subprocess
@@ -165,7 +164,6 @@ def run_command(root: Path, command: str, timeout: float | None) -> dict[str, An
         result = subprocess.run(
             argv,
             cwd=root,
-            env=os.environ.copy(),
             capture_output=True,
             text=True,
             check=False,

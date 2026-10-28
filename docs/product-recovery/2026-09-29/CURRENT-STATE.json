@@ -1,0 +1,216 @@
+{
+  "schema_version": "1.0",
+  "program_id": "gaming-pair-20260929",
+  "product": "Civis",
+  "repository": "KooshaPari/Civis",
+  "observed_date": "2026-10-02",
+  "source_snapshot": "b3cd62a7394878cc64d024fbfcfd398b8bb88bf1",
+  "registry_source_snapshot": "85d7cd00cf59c379c05b740e8130a85b0d5bd31b",
+  "registry_research_commit": "7c7c724ebcfd0fa353da6b090c36e66ddb474b03",
+  "specification_branch": "spec/mature-recovery-20260929",
+  "implementation_candidate": "b5346457bd3162298da4d584248473ec282240ef",
+  "dependency_snapshots": [
+    {
+      "repository": "KooshaPari/phenodocs",
+      "path": "vendor/phenodocs",
+      "commit": "35e0e90a19dfd93ce4e1a81210ade92088b2bbbc",
+      "extent": "gitlink_only",
+      "contents_inspected": false
+    }
+  ],
+  "contract_authority": "RECOVERY_DRAFT_NOT_ACCEPTED",
+  "candidate_obligations_eligible_for_grading": false,
+  "invalid_or_unreviewed_catalogs_eligible_for_grading": false,
+  "scope_corrections": {
+    "global_bit_identical_determinism_required": false,
+    "actual_state_snapshot_restoration": "CURRENT_CHARTER",
+    "v1_multiplayer_coop_spectator": "OUT_OF_SCOPE_PER_CHARTER",
+    "v1_actor_rigging_animation": "IN_SCOPE_PER_CHARTER",
+    "authority_note": "May29-31 charter and May30 ADR accepted as recorded; original authorization and later explicit reversal still under archaeology"
+  },
+  "specification_design_complete": false,
+  "overall_percent": null,
+  "source_denominator": {
+    "family_ledger": "SOURCE-COVERAGE-LEDGER.md",
+    "file_history_conversation_denominator_closed": "REASONABLE_FALSIFICATION_STANDARD_EXCEPT_NAMED_AUTHORITY_POLICY_EXECUTION_EMPIRICAL_BLOCKERS",
+    "percentage": null
+  },
+  "dimensions": {
+    "functional_realization": "PARTIALLY_MAPPED_NOT_MEASURED",
+    "traceability": "NONEXEC_STRUCTURE_VALIDATED_EXECUTION_EDGES_OPEN",
+    "current_product_evidence": "SEMANTIC_PERSISTENCE_REDS_REPRODUCED_MOUNTED_USER_JOURNEY_NOT_RUN",
+    "journey_closure": "NOT_DEMONSTRATED_IN_THIS_PROGRAM",
+    "performance": "UNQUALIFIED",
+    "reliability": "UNQUALIFIED",
+    "security": "UNQUALIFIED",
+    "accessibility": "UNQUALIFIED",
+    "usability": "UNQUALIFIED",
+    "scientific_model_validity": "NOT_ESTABLISHED",
+    "external_user_validation": "NOT_ASSESSED",
+    "regression": "CANDIDATE_BOUND_PERSISTENCE_COUNTEREXAMPLES_REPRODUCED",
+    "velocity": null,
+    "uncertainty": "STATE_OWNER_EXPERIMENTS_RUNTIME_AND_POLICY_DECISIONS_REMAIN",
+    "transition_debt": "INVENTORY_STARTED_NOT_QUANTIFIED"
+  },
+  "gates": {
+    "source_ledger_fully_resolved": "NONEXEC_PASS_EXCEPT_NAMED_AUTHORITY_POLICY_EXECUTION_EMPIRICAL_BLOCKERS",
+    "alias_history_reasonably_exhausted": "REASONABLE_FALSIFICATION_PASS_CURRENT_PROGRAM",
+    "sota_completed": "NONEXEC_PASS_REFRESHED_2026-10-01",
+    "realistic_alternative_stack": "DEFINED",
+    "bootstrap_decisions_recorded": "RECORDED",
+    "differentiation_survives_attack": "PROVISIONAL_PASS_PILOT_REQUIRED",
+    "ontology_reviewed": "NONEXEC_PASS",
+    "all_accepted_obligations_represented": "NONEXEC_SEMANTIC_CONTRACT_PASS_AUTHORITY_DECISIONS_RETAINED",
+    "quality_properties_represented": "NONEXEC_PASS",
+    "journeys_represented": "NONEXEC_PASS",
+    "stage_projections_justified": "NONEXEC_PASS",
+    "oracle_design_complete": "NONEXEC_PASS_EXECUTION_ORACLES_UNRUN",
+    "high_risk_architecture_experimentally_closed": "HOST_INDEPENDENT_SEMANTIC_MANIFEST_COMPATIBILITY_OPT_IN_BRIDGE_STAGED_PUBLICATION_AND_RECONCILIATION_SUPPORTED_FILESYSTEM_DURABILITY_AND_FULL_STATE_DENOMINATOR_OPEN",
+    "implementation_mapping_complete": "NONEXEC_MAPPING_PASS_RUNTIME_REALIZATION_OPEN",
+    "traceability_structurally_valid": "NONEXEC_PASS_EXECUTION_EVIDENCE_EDGES_OPEN",
+    "registry_repo_truth_agree": "PASS_AFTER_2026_10_01_MACHINE_STATE_RECONCILIATION_EXCEPT_HISTORICAL_SUPERSEDED_RECORDS",
+    "invalid_generated_catalog_excluded": "PASS_QUARANTINED_UNLESS_INDEPENDENTLY_RECOVERED",
+    "no_unexplained_orphans": "NONEXEC_PASS_KNOWN_UNKNOWNS_EXPLICIT",
+    "no_unresolved_contradictions": "NONEXEC_PASS_NAMED_AUTHORITY_ALTERNATIVES_RETAINED",
+    "no_blocking_findings": "FAIL_EXECUTION_AND_AUTHORITY_BLOCKERS_REMAIN",
+    "independent_fresh_incompleteness_attack": "NONEXEC_PASS_2026_10_01"
+  },
+  "blockers": [
+    "C-BEH-01 confirmed: mutable economy_policy resets to default across CivSaveBundle load",
+    "C-BEH-02 confirmed: ResearchCache progress is lost across CivSaveBundle load",
+    "C-BEH-03 confirmed: guest memory survives without corresponding loaded mod identity",
+    "C-F02 metadata-selected legacy/current classification and cross-file identity remain unresolved",
+    "C-F03 atomic save/DB/filesystem reconciliation remains unqualified",
+    "C-F04 emergence/scientific-validity/scale claims remain untested",
+    "Authority unresolved for root FUNCTIONAL_REQUIREMENTS.md, docs/design per-ID catalogs, and historical civlab batch-analysis surface",
+    "Synthetic 155-ID emergence range and namespace collisions must not participate in grading",
+    "Complete authoritative-state denominator and mounted save/restart journey remain open",
+    "Authority review remains open for unsuperseded Draft FR/design-catalogue families; new 205-ID audit cannot be imported wholesale",
+    "State denominator has unresolved UNKNOWN and EPHEMERAL_CANDIDATE fields; no completeness percentage is valid",
+    "Nine candidate-bound semantic persistence/format-classification failures reproduced; keep each as a separate criterion",
+    "125 Simulation / 48 WorldState denominator remains intentionally non-terminal for rows requiring owner/boundary experiments; semantic ontology and closure rules are final",
+    "Mounted local/server UI and process-restart journeys remain execution-dependent"
+  ],
+  "next_bounded_work": [
+    "Do not expand non-execution prose without new evidence; nonexec finality has passed",
+    "Resolve only state rows whose terminal disposition requires implementation/boundary experiments",
+    "Run target Linux/Windows filesystem durability plus filesystem-vs-SQLite reconciliation experiments",
+    "Run mounted save -> process destruction -> load -> causal continuation and local/server journeys",
+    "Run emergence ablations, LOD transfer/conservation and named scale workloads",
+    "Obtain owner decisions on catalog authority, scientific claims, platform/client matrix, multiplayer horizon and compatibility promises",
+    "Run external product/research alternative-stack pilot"
+  ],
+  "no_third_product_program": true,
+  "merge_authorized": false,
+  "current_main_observed": "590fad0643eb85cae89edd9e64ed6b991461de6e",
+  "prototype_architecture_evidence": {
+    "production_reproduced_failures": [
+      "economy PolicyInput resets to default",
+      "research cache loses researched/queued state",
+      "guest memory survives without corresponding loaded mod identity",
+      "control policy kind resets capitalist to noop",
+      "market state price is lost",
+      "metadata-deleted modern save silently downgrades through legacy classification",
+      "tutorial progress resets across save/load",
+      "religious profiles are lost across save/load",
+      "active caravans in transit are lost across save/load"
+    ],
+    "production_control_run": {
+      "run_id": 36703825128,
+      "candidate": "7e9a348c23f1b5559c19a3d71ecad21ef4f43e91",
+      "result": "20 recovery tests: 10 passed, 9 production semantic/classifier controls failed, 1 prototype fault-assumption test failed",
+      "artifact_id": 11091337450,
+      "artifact_sha256": "0fa5ed6cc1b5bf8cec39ea61a0962274abf81a957c9fea759b01f8873c7d7b1f"
+    },
+    "validated_in_isolation": [
+      "semantic manifest restores economy policy, control-policy kind, research and market prices",
+      "semantic manifest detects orphan guest memory",
+      "outer classifier detects metadata-deleted modern bundle while preserving explicit legacy-candidate classification",
+      "missing required semantic component fails closed",
+      "unknown future semantic schema fails closed",
+      "mixed-generation semantic manifest is rejected",
+      "failed staged generation with missing required semantic-state does not replace CURRENT",
+      "successful generation commit switches CURRENT while preserving prior generation"
+    ],
+    "prototypes_pending": [
+      "filesystem durability/atomic replacement on target Linux and Windows filesystems",
+      "SQLite save-index versus filesystem generation authority/reconciliation",
+      "terminal durable-owner decisions requiring execution against 125 Simulation / 48 WorldState denominator",
+      "mounted local/server save-restart journey"
+    ],
+    "authority_model": "filesystem save generation canonical; SaveDb treated as rebuildable metadata index pending final review",
+    "latest_discrimination_run": {
+      "run_id": 36705777195,
+      "candidate": "e7295934c5b62847cb7242c54b3cdcb427896f27",
+      "result": "20 recovery tests: 11 prototype/guard tests passed; 9 unchanged production semantic/classifier controls failed",
+      "artifact_id": 11092510689,
+      "artifact_sha256": "752cc7c8a84033eb8b7889e69b5912107fe5efa0c7e34b244bff3251d549de6f"
+    },
+    "latest_integration_candidate_attempt": {
+      "run_id": 36717765574,
+      "candidate": "b8b99f9814fe8aa0401cf55c9735874829cf503d",
+      "conclusion": "compile_failure",
+      "classification": "bridge error-type mapping only; semantic tests did not execute",
+      "artifact_id": 11106071480,
+      "artifact_sha256": "5146ed4a8bbd2fb2a26233e039908316d90ba0b957f9962373aeb57f0bbbc2a4"
+    },
+    "latest_integration_candidate_run": {
+      "run_id": 36820662241,
+      "candidate": "b5346457bd3162298da4d584248473ec282240ef",
+      "conclusion": "success",
+      "result": "23 semantic lib tests passed; 0 failed; 882 filtered out",
+      "artifact_id": 11143995094,
+      "artifact_sha256": "072c646bd833ca430c5dfbf7b8befd6a3b7765bb971e8f777cc2e57cfc0e7299",
+      "scope": "vNext semantic bridge including tick-mirror resynchronization, semantic identity, migration, staged publication and reconciliation controls"
+    }
+  },
+  "current_repository_state": {
+    "current_main": "590fad0643eb85cae89edd9e64ed6b991461de6e",
+    "effective_current_code_snapshot": "54d5758970249c8d1f24688ea45920b530e77299",
+    "delta_from_effective_code_snapshot": "one docs-only commit adding docs/audits/spec-only-triage-2026-09-29.md; no code changes",
+    "original_program_snapshot": "b3cd62a7394878cc64d024fbfcfd398b8bb88bf1"
+  },
+  "authority_state": {
+    "draft_functional_requirements": "candidate source only; predates explicit May determinism/multiplayer corrections",
+    "latest_spec_only_audit": "supporting catalogue audit; 205 verdicts are not accepted mature obligations",
+    "later_charter_corrections": "higher authority for direct determinism/multiplayer contradictions"
+  },
+  "state_denominator": {
+    "simulation_fields": 125,
+    "world_state_fields": 48,
+    "manifest": "docs/product-recovery/2026-09-29/STATE-MANIFEST-v0.json",
+    "percentage": null
+  },
+  "non_execution_closure": {
+    "as_of": "2026-10-01-pass44",
+    "status": "STRUCTURALLY_CLOSED_WITH_NAMED_AUTHORITY_POLICY_AND_EXECUTION_BLOCKERS",
+    "contract": "NONEXEC-FINAL-CONTRACT-GATE.md",
+    "sota": "SOTA-EXISTENCE-GATE-FINAL.md",
+    "fresh_review": "FRESH-ADVERSARIAL-REVIEW.md",
+    "source_ledger": "SOURCE-COVERAGE-LEDGER.md",
+    "overall_spec_design_100": false,
+    "reason": "Original completion gate requires experimental closure, implementation mapping/runtime evidence, contradiction closure and independent proof across mounted behavior; named blockers remain and are not paper-completable.",
+    "remaining_authority_policy": [
+      "normative authority of contested historical/generated requirement catalogs",
+      "public scientific/model-validity claim boundary",
+      "final platform/client matrix and post-v1 multiplayer horizon",
+      "stable support/compatibility commitments"
+    ],
+    "execution_empirical": [
+      "terminal resolution of state rows needing owner/boundary experiments",
+      "target-filesystem durability and filesystem-vs-SQLite reconciliation",
+      "mounted save/restart/load and local/server journeys",
+      "emergence ablations, LOD experiments, scale benchmarks and external pilot"
+    ]
+  },
+  "nonexec_finality": {
+    "status": "PASS_TO_REASONABLE_FALSIFICATION_STANDARD",
+    "date": "2026-10-01",
+    "contract": "NONEXEC-FINAL-CONTRACT-GATE.md",
+    "adversarial_review": "FRESH-ADVERSARIAL-REVIEW.md",
+    "sota_existence_gate": "SOTA-EXISTENCE-GATE-FINAL.md",
+    "meaning": "Specification/documentation/research/trace/oracle-design layers are closed as far as current evidence permits; this is not overall spec/design 100% because execution/empirical/authority blockers remain.",
+    "amendment": "Pass45 exact candidate execution closed C-SI09 tick-mirror resynchronization for the opt-in vNext bridge: run 36820662241, 23/23 semantic lib tests green.",
+    "reopen_rule": "Reopen non-execution contract only for new user intent, contradictory source evidence, a newly discovered state-owner/model class, failed fresh-review challenge, or changed SOTA that materially alters build/bootstrap/existence decisions."
+  }
+}

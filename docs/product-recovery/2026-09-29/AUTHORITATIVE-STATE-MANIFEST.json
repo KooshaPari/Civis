@@ -1,0 +1,264 @@
+{
+  "schema_version": "0.1",
+  "observed_source": "54d5758970249c8d1f24688ea45920b530e77299",
+  "authority": "RECOVERY_DRAFT_NON_GRADING",
+  "rows": [
+    {
+      "id": "world_state.serialized",
+      "owner": "WorldState",
+      "disposition": "durable",
+      "save": "world_state.json after save_state_mirror_to",
+      "restore": "deserialize then assign sim.state",
+      "status": "PARTIAL_DENOMINATOR",
+      "notes": "WorldState serialization excludes six serde-skip extensions; PartialEq is not exhaustive."
+    },
+    {
+      "id": "mirror.faction_relations",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.faction_relations <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.grief_accumulator",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.grief_accumulator <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.stance_engine",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.stance_engine <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.deep_diplomacy",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.deep_diplomacy <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.language_state",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.language_state <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.faction_languages",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.faction_languages <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.institutions",
+      "owner": "Simulation",
+      "disposition": "durable_mirror_and_sidecar",
+      "save": "world_state.json + institutions.json overlap",
+      "restore": "state mirror + institutions sidecar",
+      "status": "DUPLICATE_AUTHORITY_REVIEW"
+    },
+    {
+      "id": "mirror.institution_levels_emitted",
+      "owner": "Simulation",
+      "disposition": "durable_mirror_and_sidecar",
+      "save": "world_state.json + institutions.json overlap",
+      "restore": "state mirror + institutions sidecar",
+      "status": "DUPLICATE_AUTHORITY_REVIEW"
+    },
+    {
+      "id": "mirror.build_sites",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.build_sites <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.econ_focus",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.econ_focus <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.cluster_cultures",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.cluster_cultures <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.faction_ideologies",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.faction_ideologies <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.faction_aggression",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.faction_aggression <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.unrest_settlement_gini",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.unrest_settlement_gini <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.riot_accumulator",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.riot_accumulator <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.migrant_accumulator",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.migrant_accumulator <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.scenario_taxation",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json",
+      "restore": "sim.scenario_taxation <- state",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mirror.era_progression",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json via save_state_mirror_to only",
+      "restore": "sim.era_progression <- state",
+      "status": "MAPPED_WITH_TICK_MIRROR_ASYMMETRY"
+    },
+    {
+      "id": "mirror.emergence_sample",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json via save_state_mirror_to only",
+      "restore": "sim.emergence_sample <- state",
+      "status": "MAPPED_WITH_TICK_MIRROR_ASYMMETRY"
+    },
+    {
+      "id": "mirror.significance",
+      "owner": "Simulation",
+      "disposition": "durable_mirror",
+      "save": "world_state.json via save_state_mirror_to only",
+      "restore": "sim.significance <- state",
+      "status": "MAPPED_WITH_TICK_MIRROR_ASYMMETRY"
+    },
+    {
+      "id": "environment.planet_moon_climate_weather_coastal",
+      "owner": "Simulation",
+      "disposition": "durable",
+      "save": "environment.json",
+      "restore": "SavedEnvironment -> Simulation",
+      "status": "MAPPED"
+    },
+    {
+      "id": "economy.cluster_stocks",
+      "owner": "Simulation",
+      "disposition": "durable",
+      "save": "cluster_stocks.json",
+      "restore": "cluster stocks sidecar",
+      "status": "MAPPED"
+    },
+    {
+      "id": "mods.guest_memory",
+      "owner": "ModHost",
+      "disposition": "durable_payload",
+      "save": "mod_state.json",
+      "restore": "restore_mod_guest_state",
+      "status": "MAPPED_IDENTITY_DEPENDENCY_OPEN"
+    },
+    {
+      "id": "mods.loaded_set",
+      "owner": "ModHost",
+      "disposition": "unknown_expected_durable_or_external_binding",
+      "save": null,
+      "restore": "Replay ModLoaded/ModUnloaded are no-op",
+      "status": "BLOCKING_UNMAPPED"
+    },
+    {
+      "id": "economy.policy_input",
+      "owner": "Simulation.economy_policy",
+      "disposition": "UNDECIDED",
+      "save": null,
+      "restore": "constructor default unless reapplied elsewhere",
+      "status": "BLOCKING_ORACLE_RUNNING"
+    },
+    {
+      "id": "research.cache",
+      "owner": "Simulation.research_cache",
+      "disposition": "expected_user_visible_continuity",
+      "save": null,
+      "restore": "ResearchOutcome replay does not rebuild cache",
+      "status": "BLOCKING_ORACLE_RUNNING"
+    },
+    {
+      "id": "economy.market_state",
+      "owner": "Simulation.market_state",
+      "disposition": "UNDECIDED_DERIVED_OR_DURABLE",
+      "save": null,
+      "restore": "no explicit component observed",
+      "status": "OPEN"
+    },
+    {
+      "id": "control.policy_object",
+      "owner": "Simulation.policy",
+      "disposition": "UNDECIDED",
+      "save": null,
+      "restore": "default policy from constructor",
+      "status": "OPEN"
+    },
+    {
+      "id": "rng.internal_state",
+      "owner": "Simulation RNG",
+      "disposition": "UNDECIDED_FUTURE_CONTINUITY",
+      "save": "replay seed only",
+      "restore": "RngDraw events are no-op",
+      "status": "OPEN_NOT_GLOBAL_DETERMINISM"
+    },
+    {
+      "id": "ecs.world",
+      "owner": "hecs World",
+      "disposition": "MIXED_RECONSTRUCTED_OR_DURABLE",
+      "save": "replay + other mirrors/sidecars",
+      "restore": "replay reconstruction",
+      "status": "OPEN_EXHAUSTIVE_COMPONENT_MAPPING"
+    },
+    {
+      "id": "worldstate.skipped_extensions",
+      "owner": "WorldState",
+      "disposition": "UNKNOWN",
+      "save": "excluded by serde(skip)",
+      "restore": "no general mapping established",
+      "status": "BLOCKING_DENOMINATOR"
+    }
+  ]
+}

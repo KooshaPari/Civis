@@ -171,8 +171,15 @@ rpc() {
     if [[ "${params}" == "null" ]]; then
         params='{"role":"operator"}'
     else
-        params="$(printf '%s' "${params}" | jq -c '. + {role: "operator"}' 2>/dev/null)" \
-            || params="${params}"
+        # Add the role only when jq actually succeeds. Assigning the command
+        # substitution straight into `params` and then "restoring" it on
+        # failure cannot work: by then params already holds the empty output,
+        # so `params="${params}"` was a no-op (shellcheck SC2269) and the
+        # original request was lost. Capture first, assign only on success.
+        local with_role
+        if with_role="$(printf '%s' "${params}" | jq -c '. + {role: "operator"}' 2>/dev/null)"; then
+            params="${with_role}"
+        fi
     fi
     payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
         "${id}" "$(json_quote "${method}")" "${params}")"

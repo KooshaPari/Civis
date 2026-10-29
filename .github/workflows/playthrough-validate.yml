@@ -57,7 +57,7 @@ jobs:
             CIV_WS_URL: ws://127.0.0.1:3000/ws
             CIV_SERVER_PORT: "3000"
             CIVIS_PLAYTHROUGH_SEED: ${{ github.event.inputs.civis_playthrough_seed || '42' }}
-            CIVIS_CAPTURE_FRAMES: ${{ github.event.inputs.capture_frames && '1' || '0' }}
+            CIVIS_CAPTURE_FRAMES: ${{ github.event.inputs.capture_frames == 'true' && '1' || '0' }}
             CIVIS_CAPTURE_DIR: ${{ github.workspace }}/captures
             CIVIS_SAVES_DIR: ${{ github.workspace }}/saves
             CIVIS_REPLAYS_DIR: ${{ github.workspace }}/replays

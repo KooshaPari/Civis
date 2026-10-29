@@ -177,39 +177,19 @@ rpc() {
     payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
         "${id}" "$(json_quote "${method}")" "${params}")"
 
-    # `websocat -n` opens a fresh connection per call (stateless, idempotent).
-    local url
+    # `-n` is --no-close. Without `-1` the socket stays open and the
+    # server's push stream (scene frames, binary F3D prefixes) is appended
+    # to the JSON-RPC reply. jq then rejects that stream.
+    local url raw
     url="$(ws_url)"
 
-    # -1 = exit after one full duplex exchange, --protocol=... for the
-    # Sec-WebSocket-Protocol header if a server requires it. We always use
-    # the default protocol.
-    #
-    # The server also pushes binary tick broadcasts to a connected client, so
-    # websocat's stdout mixes binary frames with the JSON-RPC reply. Those
-    # binary frames carry null bytes, which bash command substitution strips,
-    # leaving the JSON body corrupted and unreadable by jq. Capture the raw
-    # stream and keep only the JSON-RPC reply line.
-    local raw
-    raw="$(timeout "${RPC_TIMEOUT_SECONDS}" \
-        websocat -n --ping-interval 5 --ping-timeout 8 \
-            "${url}" < <(printf '%s\n' "${payload}") 2>/dev/null \
-        || true)"
-
-    # The reply is the single line that parses as a JSON-RPC object carrying
-    # this request's id. Binary frames are not valid JSON and are skipped.
-    local line id_str
-    while IFS= read -r line; do
-        [[ "${line}" == *\"id\"* ]] || continue
-        id_str="$(printf '%s' "${line}" | jq -r '.id // empty' 2>/dev/null || true)"
-        [[ "${id_str}" == "${id}" ]] || continue
-        printf '%s\n' "${line}"
-        return 0
-    done <<<"${raw}"
-
-    # No reply matched: fall back to the raw stream so the caller reports
-    # what actually arrived instead of an empty body.
-    printf '%s\n' "${raw}"
+    raw="$(
+        timeout "${RPC_TIMEOUT_SECONDS}" \
+            websocat -1 -n -t --ping-interval 5 --ping-timeout 8 \
+                "${url}" < <(printf '%s\n' "${payload}") 2>/dev/null \
+            || true
+    )"
+    printf '%s\n' "${raw}" | tr -d '\000' | awk '/^\{"jsonrpc"/ { print; exit }'
 }
 
 json_quote() {
@@ -298,7 +278,7 @@ step4_spawn_civilians() {
     while (( i < target )) && (( i < ${#coords[@]} )); do
         local params x y faction body
         read -r x y faction <<<"${coords[$i]}"
-        params="$(printf '{"x":%s,"y":%s,"faction":%s}' "${x}" "${y}" "${faction}")"
+        params="$(printf '{"x":%s,"y":%s,"faction":%s,"role":"operator"}' "${x}" "${y}" "${faction}")"
         body="$(rpc $((10 + i)) sim.spawn_civilian "${params}")"
         if [[ "$(json_ok "${body}")" != "true" ]]; then
             fail "spawn_civilian #${i} failed: ${body}"

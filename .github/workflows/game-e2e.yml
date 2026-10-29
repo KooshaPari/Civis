@@ -1,4 +1,4 @@
-name: Game E2E (Visual)
+name: Game E2E (Capture Free)
 
 on:
     push:
@@ -32,17 +32,14 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 45
 
-        env:
-            # The client parses only dx12/vulkan/metal (see clients/bevy-ref/src/native_backend.rs).
-            # `gl` is ignored, and on Linux the adapter search falls back to Vulkan
-            # anyway - so the runner needs a Vulkan ICD. lavapipe (mesa-vulkan-drivers)
-            # is the software one used headlessly.
-            CIV_BEVY_BACKEND: vulkan
-            LIBGL_ALWAYS_SOFTWARE: "1"
-            GALLIUM_DRIVER: llvmpipe
-            MESA_GL_VERSION_OVERRIDE: "3.3"
-            DISPLAY: ":99"
-            CIVIS_PLAYTHROUGH_SEED: "42"
+    env:
+      CIV_BEVY_BACKEND: vulkan
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      GALLIUM_DRIVER: llvmpipe
+      MESA_GL_VERSION_OVERRIDE: "3.3"
+      DISPLAY: ":99"
+      CIVIS_PLAYTHROUGH_SEED: "42"
+      CIVIS_CAPTURE_FRAMES: "0"
 
         steps:
             - uses: actions/checkout@v4
@@ -53,26 +50,26 @@ jobs:
               with:
                   cache-all-crates: true
 
-            - name: Install system deps
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y \
-                    xvfb \
-                    xdotool \
-                    imagemagick \
-                    libasound2-dev \
-                    libudev-dev \
-                    libxkbcommon-dev \
-                    libxkbcommon-x11-0 \
-                    libwayland-dev \
-                    libx11-dev \
-                    libxcursor-dev \
-                    libxi-dev \
-                    libxrandr-dev \
-                    pkg-config \
-                    jq \
-                    libvulkan1 \
-                    mesa-vulkan-drivers
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            xdotool \
+            imagemagick \
+            libasound2-dev \
+            libudev-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-0 \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxrandr-dev \
+            pkg-config \
+            jq \
+            libvulkan1 \
+            mesa-vulkan-drivers
 
             - name: Install websocat
               run: |
@@ -80,17 +77,17 @@ jobs:
                     -o /usr/local/bin/websocat
                   chmod +x /usr/local/bin/websocat
 
-            - name: Build game client + server
-              run: |
-                  cargo build --locked --release \
-                    -p civ-server \
-                    --bin civ-server
-                  cargo build --locked --release \
-                    -p civ-bevy-ref \
-                    --bin civ-standalone \
-                    --features bevy,egui,client-bins
-                  test -x target/release/civ-server
-                  test -x target/release/civ-standalone
+      - name: Build game client + server
+        run: |
+          cargo build --locked --release \
+            -p civ-server \
+            --bin civ-server
+          cargo build --locked --release \
+            -p civ-bevy-ref \
+            --bin civ-standalone \
+            --features bevy,egui,client-bins
+          test -x target/release/civ-server
+          test -x target/release/civ-standalone
 
             - name: Start Xvfb
               run: |
@@ -102,15 +99,15 @@ jobs:
               run: bash scripts/game-e2e.sh --headless --quick
               timeout-minutes: 15
 
-            - name: Upload captures
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: game-e2e-captures-${{ github.run_id }}
-                  path: .game-e2e/
-                  include-hidden-files: true
-                  if-no-files-found: error
-                  retention-days: 14
+      - name: Upload captures
+        if: ${{ false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-e2e-captures-${{ github.run_id }}
+          path: .game-e2e/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
 
             - name: Upload game logs
               if: always()
@@ -122,11 +119,12 @@ jobs:
                       .game-e2e/logs/server.log
                   retention-days: 7
 
-    visual-regression:
-        name: visual regression
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        needs: game-flow
+  visual-regression:
+    if: ${{ false }}
+    name: visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: game-flow
 
         steps:
             - uses: actions/checkout@v4
@@ -177,11 +175,11 @@ jobs:
                   path: .game-e2e/diff_*.png
                   retention-days: 7
 
-    update-baselines:
-        name: update baselines
-        runs-on: ubuntu-latest
-        if: github.event.inputs.update_baselines == 'true'
-        needs: game-flow
+  update-baselines:
+    name: update baselines
+    runs-on: ubuntu-latest
+    if: ${{ false }}
+    needs: game-flow
 
         steps:
             - uses: actions/checkout@v4

@@ -35,6 +35,10 @@ async fn main() {
         .ok()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("replays"));
+    let captures_dir: PathBuf = std::env::var("CIVIS_CAPTURE_DIR")
+        .ok()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("captures"));
     // `CIV_AUTOLOAD=1` seeds the bridge from the freshest on-disk save
     // (slot > autosave > manual, mtime desc within tier). Off by default so
     // CI runs stay reproducible against a fresh `Simulation::default()`.
@@ -62,6 +66,7 @@ async fn main() {
             tick_broadcast_format: TickBroadcastFormat::from_env(),
             saves_dir,
             replays_dir,
+            captures_dir,
         },
         sim,
     )

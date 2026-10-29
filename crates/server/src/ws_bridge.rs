@@ -142,6 +142,9 @@ pub struct WsBridgeConfig {
     /// relative and resolved under this directory with containment
     /// enforced via canonicalize (see `resolve_replay_path`).
     pub replays_dir: PathBuf,
+    /// Directory for `sim.capture_frame` PNG output (created on bridge
+    /// start; issue #1599).
+    pub captures_dir: PathBuf,
 }
 
 impl Default for WsBridgeConfig {
@@ -153,6 +156,7 @@ impl Default for WsBridgeConfig {
             tick_broadcast_format: TickBroadcastFormat::default(),
             saves_dir: PathBuf::from("saves"),
             replays_dir: PathBuf::from("replays"),
+            captures_dir: PathBuf::from("captures"),
         }
     }
 }
@@ -332,6 +336,7 @@ struct AppState {
     tick_broadcast_format: TickBroadcastFormat,
     saves_dir: PathBuf,
     replays_dir: PathBuf,
+    captures_dir: PathBuf,
     save_db: Arc<SaveDb>,
     session_id: String,
     metrics: Arc<ServerMetrics>,
@@ -630,6 +635,7 @@ async fn serve_ws_bridge(
     tracing::info!(addr = %addr, max_clients = config.max_clients, "ws bridge listening");
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
     std::fs::create_dir_all(&config.replays_dir).expect("create replays directory");
+    std::fs::create_dir_all(&config.captures_dir).expect("create captures directory");
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
     let save_db = Arc::new(SaveDb::open(&save_db_path).expect("failed to open save database"));
     let session_id = resolve_session_id();
@@ -649,6 +655,7 @@ async fn serve_ws_bridge(
         tick_broadcast_format: config.tick_broadcast_format,
         saves_dir: config.saves_dir,
         replays_dir: config.replays_dir,
+        captures_dir: config.captures_dir,
         save_db,
         session_id,
         metrics,
@@ -1235,7 +1242,11 @@ async fn handle_jsonrpc_text(
                     let snap = sim.snapshot();
                     (Some(snap.population), None)
                 }
-                JsonRpcMethod::SimSnapshot => {
+                JsonRpcMethod::SimSnapshot | JsonRpcMethod::SimCaptureFrame => {
+                    // `sim.capture_frame` (issue #1599) reuses the exact same
+                    // world-snapshot interface as `sim.snapshot` — its
+                    // renderer draws from live `spectator`/`weather_grid`/
+                    // `climate` fields, not a separate data path.
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
                     (
@@ -1345,6 +1356,7 @@ async fn handle_jsonrpc_text(
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
+                    captures_dir: Some(state.captures_dir.clone()),
                     emergence: None,
                     legends,
                     researched: research_researched,
@@ -2961,6 +2973,8 @@ mod tests {
         std::fs::create_dir_all(&saves_dir).expect("saves dir");
         let replays_dir = dir.path().join("replays");
         std::fs::create_dir_all(&replays_dir).expect("replays dir");
+        let captures_dir = dir.path().join("captures");
+        std::fs::create_dir_all(&captures_dir).expect("captures dir");
         let save_db_path = save_db_path_for_saves_dir(&saves_dir);
         let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
         let metrics_registry = Registry::new();
@@ -2978,6 +2992,7 @@ mod tests {
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir,
             replays_dir,
+            captures_dir,
             save_db,
             session_id: "test-session".to_string(),
             metrics,

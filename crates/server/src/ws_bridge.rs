@@ -2628,6 +2628,10 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    mod save_load_atomicity {
+        include!("save_load_atomicity.rs");
+    }
+
     #[tokio::test]
     async fn building_publication_keeps_older_tick_before_same_generation_spawn() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));

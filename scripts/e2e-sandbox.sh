@@ -73,9 +73,12 @@ SERVER_BINARY="target/release/civ-server"
 if [[ "${QUICK}" -eq 1 ]] && [[ -f "${SERVER_BINARY}" ]]; then
     step "Skipping build (--quick)"
 else
-    step "Building civ-server (release)..."
-    if ! cargo build --locked --release -p civ-server 2>&1 | tail -3; then
+    step "Building civ-server and civis-census (release)..."
+    if ! cargo build --locked --release -p civ-server --bin civ-server 2>&1 | tail -3; then
         fail "Build failed"; exit 1
+    fi
+    if ! cargo build --locked --release -p civis-cli --bin civis-census 2>&1 | tail -3; then
+        fail "Census build failed"; exit 1
     fi
     ok "Build complete"
 fi
@@ -142,7 +145,13 @@ fi
 
 # Post-playthrough verification
 step "Verifying..."
-CENSUS_OUT=$("${CENSUS_BINARY}" 2>/dev/null || echo '{}')
+CENSUS_BIN="${REPO_ROOT}/target/release/civis-census"
+if [[ ! -x "${CENSUS_BIN}" ]]; then
+    fail "Census binary missing: ${CENSUS_BIN}"; exit 4
+fi
+CENSUS_OUT="$("${CENSUS_BIN}" 2>"${LOG_DIR}/census.err")" || {
+    fail "Census command failed"; cat "${LOG_DIR}/census.err" >&2; exit 4
+}
 if echo "$CENSUS_OUT" | jq -e '.tick // .simulation.tick // .result.tick' &>/dev/null; then
     ok "Census: valid snapshot"
 else

@@ -8,9 +8,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_0104_006 {
-    use civ_engine::constraints::{
-        run_all_checks, MinimalConstraintParams, ViolationSeverity,
-    };
+    use civ_engine::constraints::{run_all_checks, MinimalConstraintParams, ViolationSeverity};
     use civ_engine::Fixed;
     use std::collections::BTreeMap;
 
@@ -86,8 +84,8 @@ mod fr_fr_civ_0104_006 {
             Fixed::from_num(1) / Fixed::from_num(10),
             &BTreeMap::new(),
             false,
-            Fixed::from_num(5) / Fixed::from_num(10),  // opacity 0.5 >> 0.15
-            Fixed::from_num(5) / Fixed::from_num(10),  // poor ledger compliance
+            Fixed::from_num(5) / Fixed::from_num(10), // opacity 0.5 >> 0.15
+            Fixed::from_num(5) / Fixed::from_num(10), // poor ledger compliance
             Fixed::from_num(5) / Fixed::from_num(100),
             Fixed::from_num(2) / Fixed::from_num(10),
             Fixed::from_num(1) / Fixed::from_num(10),
@@ -115,9 +113,9 @@ mod fr_fr_civ_0104_006 {
             false,
             Fixed::from_num(5) / Fixed::from_num(100),
             Fixed::from_num(95) / Fixed::from_num(100),
-            Fixed::ZERO,                                // zero adaptation
-            Fixed::from_num(5) / Fixed::from_num(10),  // high scarcity
-            Fixed::from_num(3) / Fixed::from_num(10),  // high damage > 0.25
+            Fixed::ZERO,                              // zero adaptation
+            Fixed::from_num(5) / Fixed::from_num(10), // high scarcity
+            Fixed::from_num(3) / Fixed::from_num(10), // high damage > 0.25
             Fixed::from_num(5) / Fixed::from_num(10),
             Fixed::from_num(4) / Fixed::from_num(10),
             5,

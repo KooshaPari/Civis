@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_producer_03 {
-    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+    use civ_legends::{EventKind, RawSimEvent, SagaGraph, SourceCrate};
 
     /// FR-CIV-LEGENDS-PRODUCER-03: RawSimEvent can be created and ingested.
     #[test]

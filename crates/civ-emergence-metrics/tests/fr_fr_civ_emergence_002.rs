@@ -11,12 +11,15 @@ mod fr_fr_civ_emergence_002 {
     fn verify_fr_civ_emergence_002_basic() {
         // All inputs at band centres → indicator ~1.0
         let inputs = CriticalityInputs {
-            branching_sigma: 0.95,  // centre of [0.85, 1.05]
-            power_law_alpha: 1.7,   // centre of [1.4, 2.0]
-            entropy_norm: 0.75,     // centre of [0.6, 0.9]
+            branching_sigma: 0.95, // centre of [0.85, 1.05]
+            power_law_alpha: 1.7,  // centre of [1.4, 2.0]
+            entropy_norm: 0.75,    // centre of [0.6, 0.9]
         };
         let value = criticality_indicator(inputs, &CriticalityBands::default());
-        assert!(value > 0.8, "all-centre inputs should yield high indicator, got {value}");
+        assert!(
+            value > 0.8,
+            "all-centre inputs should yield high indicator, got {value}"
+        );
     }
 
     #[test]
@@ -29,7 +32,10 @@ mod fr_fr_civ_emergence_002 {
             entropy_norm: 0.0,
         };
         let value = criticality_indicator(inputs, &CriticalityBands::default());
-        assert!(value > 0.0 && value < 0.2, "zero defaults should give a low finite score, got {value}");
+        assert!(
+            value > 0.0 && value < 0.2,
+            "zero defaults should give a low finite score, got {value}"
+        );
     }
 
     #[test]
@@ -40,7 +46,7 @@ mod fr_fr_civ_emergence_002 {
             entropy_norm: 0.75,
         };
         let out = CriticalityInputs {
-            branching_sigma: 0.5,  // way below band
+            branching_sigma: 0.5, // way below band
             power_law_alpha: 1.7,
             entropy_norm: 0.75,
         };

@@ -10,7 +10,7 @@ mod fr_fr_civ_rts_013 {
     /// MilitaryUnit has strength field (proxy for experience/leveling).
     #[test]
     fn military_unit_has_strength() {
-        use civ_engine::{MilitaryUnit, UnitType, Position, Fixed};
+        use civ_engine::{Fixed, MilitaryUnit, Position, UnitType};
         let unit = MilitaryUnit {
             unit_type: UnitType::Soldier,
             strength: Fixed::from_num(10),
@@ -26,7 +26,7 @@ mod fr_fr_civ_rts_013 {
     /// Strength can be increased (leveling up).
     #[test]
     fn strength_increments() {
-        use civ_engine::{MilitaryUnit, UnitType, Position, Fixed};
+        use civ_engine::{Fixed, MilitaryUnit, Position, UnitType};
         let mut unit = MilitaryUnit {
             unit_type: UnitType::Soldier,
             strength: Fixed::from_num(10),
@@ -36,7 +36,7 @@ mod fr_fr_civ_rts_013 {
             position: Position { x: 0, y: 0 },
             faction_id: 1,
         };
-        unit.strength = unit.strength + Fixed::from_num(5);
+        unit.strength += Fixed::from_num(5);
         assert_eq!(unit.strength, Fixed::from_num(15));
     }
 }

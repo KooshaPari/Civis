@@ -55,16 +55,16 @@ pub use coordination::{AgentGroup, CoordinationProtocol, NegotiationOutcome};
 pub use events::{DecisionEvent, DecisionLog};
 pub use fair_play::FairPlayCap;
 pub use goal::{Goal, GoalChoice, Need};
-pub use personality::{PersonalityDrift, PersonalityKind, PersonalityProfile};
-pub use utility::{Move, ScoredMove, UtilityScorer, UtilityWeights};
 pub use mcts::{GameState as MctsGameState, MctsConfig, MctsTree};
 pub use mood::*;
+pub use personality::{PersonalityDrift, PersonalityKind, PersonalityProfile};
 pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};
 pub use providers::DummyAiProvider;
 pub use psyche_lod::*;
 pub use registry::{ProviderRegistry, ProviderRole};
 pub use social_graph::*;
+pub use utility::{Move, ScoredMove, UtilityScorer, UtilityWeights};
 
 use serde::{Deserialize, Serialize};
 

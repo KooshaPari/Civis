@@ -82,12 +82,7 @@ mod fr_fr_civ_0104_007 {
             c4_adaptive_climate: ConstraintCheck::Ok,
             c5_coalition_compatible: ConstraintCheck::Ok,
         };
-        state.update(
-            11,
-            Fixed::from_num(7) / Fixed::from_num(10),
-            &params,
-            &halt,
-        );
+        state.update(11, Fixed::from_num(7) / Fixed::from_num(10), &params, &halt);
         assert!(state.ablation_mode);
 
         // Recovery for next 100 ticks.

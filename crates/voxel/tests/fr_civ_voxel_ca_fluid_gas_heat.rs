@@ -230,7 +230,10 @@ fn fr_civ_voxel_025_temperature_propagates_to_adjacent_cells() {
 
     let cold_left = g.get_temp(0, 0, 0);
     let cold_right = g.get_temp(2, 0, 0);
-    assert!(cold_left < 900 && cold_right < 900, "precondition: cold neighbours");
+    assert!(
+        cold_left < 900 && cold_right < 900,
+        "precondition: cold neighbours"
+    );
 
     let r = reg();
     for _ in 0..10 {
@@ -320,8 +323,7 @@ fn fr_civ_voxel_030_generated_world_is_valid() {
             // Row-major `x + y*dx + z*dx*dy`; y=0 is the world floor.
             let floor = world.cells[x + z * dx * dy];
             assert_ne!(
-                floor,
-                AIR,
+                floor, AIR,
                 "column ({x},0,{z}) has air at the world floor; world invalid after gen"
             );
         }

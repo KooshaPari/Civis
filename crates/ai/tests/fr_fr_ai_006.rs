@@ -39,9 +39,27 @@ fn events_filterable_by_leader() {
     use civ_ai::{DecisionEvent, DecisionLog};
 
     let mut log = DecisionLog::default();
-    log.emit(DecisionEvent { tick: 1, leader_id: "A".into(), chosen_action: "x".into(), score: 1.0, candidates_count: 1 });
-    log.emit(DecisionEvent { tick: 2, leader_id: "B".into(), chosen_action: "y".into(), score: 0.5, candidates_count: 2 });
-    log.emit(DecisionEvent { tick: 3, leader_id: "A".into(), chosen_action: "z".into(), score: 0.7, candidates_count: 3 });
+    log.emit(DecisionEvent {
+        tick: 1,
+        leader_id: "A".into(),
+        chosen_action: "x".into(),
+        score: 1.0,
+        candidates_count: 1,
+    });
+    log.emit(DecisionEvent {
+        tick: 2,
+        leader_id: "B".into(),
+        chosen_action: "y".into(),
+        score: 0.5,
+        candidates_count: 2,
+    });
+    log.emit(DecisionEvent {
+        tick: 3,
+        leader_id: "A".into(),
+        chosen_action: "z".into(),
+        score: 0.7,
+        candidates_count: 3,
+    });
 
     let a_events = log.for_leader("A");
     assert_eq!(a_events.len(), 2);

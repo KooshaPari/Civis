@@ -75,7 +75,10 @@ mod tests {
         // A bare sim has no citizens×buildings product yet.
         if !verdict.passed {
             assert!((verdict.threshold - 1.0).abs() < f64::EPSILON);
-            assert!(verdict.measured < 1.0, "unbuilt world cannot show stratification");
+            assert!(
+                verdict.measured < 1.0,
+                "unbuilt world cannot show stratification"
+            );
         }
         // Measured value is exactly the citizen×building product.
         let snap = sim.snapshot();

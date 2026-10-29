@@ -20,10 +20,7 @@ mod fr_fr_civ_llm_003 {
             a.state.energy_budget_joules, b.state.energy_budget_joules,
             "energy budget must match"
         );
-        assert_eq!(
-            a.state.rng_seed, b.state.rng_seed,
-            "rng seed must match"
-        );
+        assert_eq!(a.state.rng_seed, b.state.rng_seed, "rng seed must match");
     }
 
     /// Verify different seeds produce different RNG seeds.

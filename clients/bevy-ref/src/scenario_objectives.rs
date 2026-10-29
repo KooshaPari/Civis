@@ -35,11 +35,8 @@ impl Plugin for ScenarioObjectivesPlugin {
         // overlay and gameplay HUD also initialise it, but standalone only
         // installs this panel, so make the dependency explicit here.
         app.init_resource::<OutcomeProgressHud>()
-            .add_systems(
-            Update,
-            request_objective_progress.run_if(in_playing_state),
-        )
-        .add_systems(EguiPrimaryContextPass, draw_scenario_objectives);
+            .add_systems(Update, request_objective_progress.run_if(in_playing_state))
+            .add_systems(EguiPrimaryContextPass, draw_scenario_objectives);
     }
 }
 
@@ -47,10 +44,7 @@ impl Plugin for ScenarioObjectivesPlugin {
 /// block (`OutcomeProgressHud`) is filled with server-authoritative counters.
 /// Idempotent: the `Local<bool>` gate ensures only one RPC is sent per
 /// session.
-fn request_objective_progress(
-    bridge: Option<Res<ServerBridge>>,
-    mut sent: Local<bool>,
-) {
+fn request_objective_progress(bridge: Option<Res<ServerBridge>>, mut sent: Local<bool>) {
     if *sent {
         return;
     }

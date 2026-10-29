@@ -118,7 +118,9 @@ fn undocumented_pub_items(module: &str, source: &str) -> Vec<String> {
             continue;
         }
 
-        let is_pub_item = ITEM_PREFIXES.iter().any(|prefix| trimmed.starts_with(prefix));
+        let is_pub_item = ITEM_PREFIXES
+            .iter()
+            .any(|prefix| trimmed.starts_with(prefix));
         if is_pub_item {
             if !doc_seen {
                 undocumented.push(format!("{module}.rs: {trimmed}"));

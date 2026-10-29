@@ -10,7 +10,7 @@
 #[cfg(test)]
 mod fr_fr_civ_3d_006 {
     use civ_engine::{create_rng, step, Fixed, WorldState};
-    use rand::SeedableRng;
+
     use rand::Rng;
 
     /// Same seed produces identical RNG sequences.
@@ -32,7 +32,10 @@ mod fr_fr_civ_3d_006 {
 
         let vals1: Vec<u64> = (0..10).map(|_| rng1.gen()).collect();
         let vals2: Vec<u64> = (0..10).map(|_| rng2.gen()).collect();
-        assert_ne!(vals1, vals2, "Different seeds must produce different sequences");
+        assert_ne!(
+            vals1, vals2,
+            "Different seeds must produce different sequences"
+        );
     }
 
     /// Determinism: same WorldState + same seed -> same step output.

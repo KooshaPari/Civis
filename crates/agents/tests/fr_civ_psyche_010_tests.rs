@@ -27,9 +27,15 @@ fn psyche_010_nudges_toward_recent_experience() {
     nudge_temperament(&mut t, 1.0, 1.0, 0.0);
 
     assert!(t.reactivity > 0.2, "reactivity should rise toward 1.0");
-    assert!(t.reactivity < 1.0, "reactivity must not overshoot the target");
+    assert!(
+        t.reactivity < 1.0,
+        "reactivity must not overshoot the target"
+    );
     assert!(t.sociability > 0.2, "sociability should rise toward 1.0");
-    assert!(t.sociability < 1.0, "sociability must not overshoot the target");
+    assert!(
+        t.sociability < 1.0,
+        "sociability must not overshoot the target"
+    );
 }
 
 /// FR-CIV-PSYCHE-010 — the pull is symmetric: a low-variance period lowers
@@ -40,7 +46,10 @@ fn psyche_010_low_variance_lowers_reactivity() {
     nudge_temperament(&mut t, 0.0, 0.5, 0.0);
 
     assert!(t.reactivity < 0.8, "stable period should reduce reactivity");
-    assert!(t.reactivity > 0.0, "reactivity must not undershoot the target");
+    assert!(
+        t.reactivity > 0.0,
+        "reactivity must not undershoot the target"
+    );
     // An exactly-on-target social signal leaves that axis untouched.
     assert!((t.sociability - 0.5).abs() < EPS);
 }

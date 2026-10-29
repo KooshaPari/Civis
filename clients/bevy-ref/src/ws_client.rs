@@ -183,7 +183,8 @@ pub struct WsClient {
     /// Optional sender for test-mode inbound JSON frames.
     inbound_json_tx: Option<Sender<String>>,
     /// Stable connection identifier originating this client (matches replies).
-    #[allow(dead_code)] // consumed by the Clone impl and request_rpc; the field-level allow silences the field-specific lint
+    #[allow(dead_code)]
+    // consumed by the Clone impl and request_rpc; the field-level allow silences the field-specific lint
     connection_id: String,
 }
 

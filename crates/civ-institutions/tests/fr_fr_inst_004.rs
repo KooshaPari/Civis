@@ -13,7 +13,10 @@ fn collapse_triggers_type_transition() {
     assert!(state.legitimacy.is_collapsed());
     // Tick should trigger collapse.
     let result = state.tick(10, 0, 100);
-    assert!(result.collapse_transition.is_some(), "must emit collapse event");
+    assert!(
+        result.collapse_transition.is_some(),
+        "must emit collapse event"
+    );
     let event = result.collapse_transition.unwrap();
     assert_eq!(event.from_type, GovernanceType::Democracy);
     assert_eq!(event.cause, CollapseCause::LegitimacyLoss);

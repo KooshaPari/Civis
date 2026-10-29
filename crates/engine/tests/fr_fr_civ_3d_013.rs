@@ -45,7 +45,11 @@ mod fr_fr_civ_3d_013 {
         ];
         for bt in &types {
             let name = format!("{:?}", bt);
-            assert!(seen.insert(name.clone()), "Duplicate building type: {}", name);
+            assert!(
+                seen.insert(name.clone()),
+                "Duplicate building type: {}",
+                name
+            );
         }
     }
 }

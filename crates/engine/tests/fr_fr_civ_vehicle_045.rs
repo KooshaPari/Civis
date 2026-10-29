@@ -15,7 +15,9 @@ mod fr_fr_civ_vehicle_045 {
         // there is no compatible vehicle -> unmet demand
         let available_lanes = [LaneClass::Trail, LaneClass::Road, LaneClass::Highway];
         let cargo_needs_water = Medium::Water;
-        let has_compatible = available_lanes.iter().any(|l| l.admits_medium(cargo_needs_water));
+        let has_compatible = available_lanes
+            .iter()
+            .any(|l| l.admits_medium(cargo_needs_water));
         assert!(!has_compatible, "no water lane available = unmet demand");
     }
 }

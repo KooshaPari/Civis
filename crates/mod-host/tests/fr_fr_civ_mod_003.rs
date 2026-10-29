@@ -19,7 +19,7 @@ mod fr_fr_civ_mod_003 {
     /// FR-CIV-MOD-003: CapabilitySet from empty permissions denies all domains.
     #[test]
     fn empty_perms_no_access() {
-        use civ_mod_host::{CapabilitySet, WorldDomain, ModPermissions};
+        use civ_mod_host::{CapabilitySet, ModPermissions, WorldDomain};
         let perms = ModPermissions::default();
         let cap = CapabilitySet::from_permissions(&perms);
         assert!(!cap.can_read_domain(WorldDomain::Economy));

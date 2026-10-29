@@ -83,6 +83,18 @@ else
     ok "Build complete"
 fi
 
+# The post-playthrough census verification runs target/release/civis-census,
+# so that binary has to exist. Only civ-server was built above, which left the
+# census step running a missing binary and reporting "Census: no tick data".
+CENSUS_BINARY="target/release/civis-census"
+if [[ ! -x "${CENSUS_BINARY}" ]] || [[ "${QUICK}" -ne 1 ]]; then
+    step "Building civis-census (release)..."
+    if ! cargo build --locked --release -p civis-cli --bin civis-census 2>&1 | tail -3; then
+        fail "Build failed"; exit 1
+    fi
+    ok "Build complete"
+fi
+
 # Start server
 step "Starting civ-server on port $SERVER_PORT..."
 "$SERVER_BINARY" > "${LOG_DIR}/server.log" 2>&1 &

@@ -149,7 +149,10 @@ impl WarDeclarationManager {
 
     /// Record casualties for an active war side.
     pub fn record_casualties(&mut self, pair: &Pair, casualties: u32) -> Result<(), WarError> {
-        let war = self.active_wars.get_mut(pair).ok_or(WarError::NoActiveWar(*pair))?;
+        let war = self
+            .active_wars
+            .get_mut(pair)
+            .ok_or(WarError::NoActiveWar(*pair))?;
         // lo side casualties
         if pair.lo != pair.hi {
             war.casualties.0 = war.casualties.0.saturating_add(casualties);

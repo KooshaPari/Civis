@@ -241,7 +241,12 @@ fn draw_outcome_overlay(
                     let frame_alpha = (240.0 * alpha) as u8;
                     let stroke_alpha = (255.0 * alpha) as u8;
                     egui::Frame::NONE
-                        .fill(egui::Color32::from_rgba_unmultiplied(9, 10, 12, frame_alpha))
+                        .fill(egui::Color32::from_rgba_unmultiplied(
+                            9,
+                            10,
+                            12,
+                            frame_alpha,
+                        ))
                         .stroke(egui::Stroke::new(
                             1.5,
                             egui::Color32::from_rgba_unmultiplied(
@@ -263,21 +268,11 @@ fn draw_outcome_overlay(
                                 egui::RichText::new(label).size(36.0).strong(),
                             );
                             ui.colored_label(
-                                egui::Color32::from_rgba_unmultiplied(
-                                    255,
-                                    255,
-                                    255,
-                                    stroke_alpha,
-                                ),
+                                egui::Color32::from_rgba_unmultiplied(255, 255, 255, stroke_alpha),
                                 egui::RichText::new(&outcome.reason).size(20.0),
                             );
                             ui.colored_label(
-                                egui::Color32::from_rgba_unmultiplied(
-                                    180,
-                                    180,
-                                    180,
-                                    stroke_alpha,
-                                ),
+                                egui::Color32::from_rgba_unmultiplied(180, 180, 180, stroke_alpha),
                                 format!("Tick {}", outcome.tick),
                             );
 

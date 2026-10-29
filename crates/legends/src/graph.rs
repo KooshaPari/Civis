@@ -437,9 +437,7 @@ impl SagaGraph {
         }
 
         if evicted > 0 {
-            tracing::debug!(
-                "legends: evicted {evicted} nodes to respect max_graph_nodes={cap}"
-            );
+            tracing::debug!("legends: evicted {evicted} nodes to respect max_graph_nodes={cap}");
         }
         evicted
     }

@@ -3,13 +3,13 @@
 //! Covers: FR-CORE-005/006/007, FR-LOD-001/002/004,
 //! NFR-CIV-DET-001/002, NFR-CIV-PERF-001/002
 
+use civ_agents::LodTier;
 use civ_engine::hash_chain::{
     chain_advance, chain_root_from_ticks, tick_event_bytes, tick_hash, HashChainState, GENESIS,
     HASH_LEN,
 };
 use civ_engine::lod::{aggregate_strategic, should_tick_entity, HexCellSnapshot, LodPolicy};
 use civ_engine::perf::{phases_over_budget, tick_over_budget, TickProfile};
-use civ_agents::LodTier;
 
 // ===========================================================================
 // FR-CORE-005 / FR-CORE-006 — Hash chain determinism
@@ -68,7 +68,10 @@ fn fr_core_006_chain_root_matches_manual() {
     let root = chain_root_from_ticks(ticks.iter().copied()).unwrap();
     let manual = chain_advance(
         &chain_advance(
-            &chain_advance(&chain_advance(&GENESIS, &tick_event_bytes(0)), &tick_event_bytes(1)),
+            &chain_advance(
+                &chain_advance(&GENESIS, &tick_event_bytes(0)),
+                &tick_event_bytes(1),
+            ),
             &tick_event_bytes(2),
         ),
         &tick_event_bytes(3),
@@ -142,7 +145,10 @@ fn fr_nfr_civ_perf_002_tick_over_budget() {
 #[test]
 fn fr_lod_001_hot_always_ticks() {
     for tick in 0..100 {
-        assert!(should_tick_entity(tick, LodTier::Hot), "Hot should tick at tick {tick}");
+        assert!(
+            should_tick_entity(tick, LodTier::Hot),
+            "Hot should tick at tick {tick}"
+        );
     }
 }
 

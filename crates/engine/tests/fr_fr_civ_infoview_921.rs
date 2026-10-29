@@ -22,8 +22,16 @@ mod fr_fr_civ_infoview_921 {
             availability: OverlayAvailability::Near,
             legend_kind: LegendKind::Continuous,
             legend_stops: vec![
-                LegendStop { position: 0.0, label: "Static".into(), color: [0.5, 0.5, 0.5] },
-                LegendStop { position: 1.0, label: "High Flow".into(), color: [0.1, 0.5, 0.9] },
+                LegendStop {
+                    position: 0.0,
+                    label: "Static".into(),
+                    color: [0.5, 0.5, 0.5],
+                },
+                LegendStop {
+                    position: 1.0,
+                    label: "High Flow".into(),
+                    color: [0.1, 0.5, 0.9],
+                },
             ],
             description: "Agent migration arrows",
         };

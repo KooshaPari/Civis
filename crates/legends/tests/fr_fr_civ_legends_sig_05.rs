@@ -1,3 +1,7 @@
+#![allow(clippy::field_reassign_with_default)]
+// State built via Default::default() + explicit field assignments for readability;
+// restructuring into an initializer is out of scope for this no-behavior-change cleanup.
+
 //! Tests for FR-CIV-LEGENDS-SIG-05 — Significance scoring
 //!
 //! Epic: FR-CIV-LEGENDS
@@ -5,8 +9,8 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_sig_05 {
-    use civ_legends::significance::*;
     use civ_legends::model::{EventKind, Role};
+    use civ_legends::significance::*;
 
     /// FR-CIV-LEGENDS-SIG-05: Significance accumulator starts empty.
     #[test]

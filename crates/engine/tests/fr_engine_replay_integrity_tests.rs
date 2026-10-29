@@ -28,7 +28,11 @@ fn fr_replay_002_max_entity_slots() {
 #[test]
 fn fr_civ_tactics_041_combat_event_bytes_length() {
     let bytes = combat_event_bytes(100, 1, 2, 10, 20, 30, 5, 100, 50);
-    assert_eq!(bytes.len(), 63, "combat event should be exactly 63 bytes (6+8*6+1+4*2)");
+    assert_eq!(
+        bytes.len(),
+        63,
+        "combat event should be exactly 63 bytes (6+8*6+1+4*2)"
+    );
 }
 
 /// FR-CIV-TACTICS-041 — combat_event_bytes starts with "combat" tag.
@@ -106,7 +110,7 @@ fn fr_core_004_chain_root_mixed_payloads() {
 #[test]
 fn fr_core_004_chain_root_empty_payloads() {
     let empty: [&[u8]; 0] = [];
-    assert!(chain_root_from_payloads(&empty).is_none());
+    assert!(chain_root_from_payloads(empty).is_none());
 }
 
 // ===========================================================================

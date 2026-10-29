@@ -10,10 +10,10 @@
 #[cfg(test)]
 mod fr_fr_civ_0104_002 {
     use civ_engine::constraints::{
-        check_bounded_coercion, check_subsistence_floor, check_transparent_ledger,
-        check_adaptive_climate_response, check_coalition_compatible_strategy,
-        BoundedCoercionParams, SubsistenceFloorParams, TransparentLedgerParams,
-        AdaptiveClimateParams, CoalitionStrategyParams, ConstraintCheck, ViolationSeverity,
+        check_adaptive_climate_response, check_bounded_coercion,
+        check_coalition_compatible_strategy, check_subsistence_floor, check_transparent_ledger,
+        AdaptiveClimateParams, BoundedCoercionParams, CoalitionStrategyParams, ConstraintCheck,
+        SubsistenceFloorParams, TransparentLedgerParams, ViolationSeverity,
     };
     use civ_engine::Fixed;
     use std::collections::BTreeMap;
@@ -72,7 +72,7 @@ mod fr_fr_civ_0104_002 {
     fn c3_high_opacity_emits_critical() {
         let params = TransparentLedgerParams::default();
         let result = check_transparent_ledger(
-            Fixed::from_num(3) / Fixed::from_num(10),  // 0.3 > 0.15
+            Fixed::from_num(3) / Fixed::from_num(10), // 0.3 > 0.15
             Fixed::from_num(95) / Fixed::from_num(100),
             &params,
         );
@@ -89,8 +89,8 @@ mod fr_fr_civ_0104_002 {
     fn c3_low_ledger_rate_emits_warning() {
         let params = TransparentLedgerParams::default();
         let result = check_transparent_ledger(
-            Fixed::from_num(5) / Fixed::from_num(100),  // opacity OK
-            Fixed::from_num(8) / Fixed::from_num(10),   // 0.8 < 0.92
+            Fixed::from_num(5) / Fixed::from_num(100), // opacity OK
+            Fixed::from_num(8) / Fixed::from_num(10),  // 0.8 < 0.92
             &params,
         );
         match result {
@@ -108,7 +108,7 @@ mod fr_fr_civ_0104_002 {
         let result = check_adaptive_climate_response(
             Fixed::from_num(5) / Fixed::from_num(100),
             Fixed::from_num(2) / Fixed::from_num(10),
-            Fixed::from_num(3) / Fixed::from_num(10),  // 0.3 > 0.25
+            Fixed::from_num(3) / Fixed::from_num(10), // 0.3 > 0.25
             &params,
         );
         match result {

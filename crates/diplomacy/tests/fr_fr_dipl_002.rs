@@ -3,7 +3,7 @@
 //! Peace SHALL be negotiated via signed treaty, producing
 //! `diplomacy.peace.signed.v1` events.
 
-use civ_diplomacy::{PeaceEvent, PeaceError, PeaceTreatyManager, PolityId};
+use civ_diplomacy::{PeaceError, PeaceEvent, PeaceTreatyManager, PolityId};
 
 fn p(id: u32) -> PolityId {
     PolityId::new(id)
@@ -13,7 +13,9 @@ fn p(id: u32) -> PolityId {
 #[test]
 fn peace_signed_emits_event() {
     let mut mgr = PeaceTreatyManager::new();
-    let event = mgr.sign_treaty(p(1), p(2), 500, 100, false, 10).expect("sign");
+    let event = mgr
+        .sign_treaty(p(1), p(2), 500, 100, false, 10)
+        .expect("sign");
     assert!(matches!(event, PeaceEvent::PeaceSigned { .. }));
     if let PeaceEvent::PeaceSigned { treaty, tick } = event {
         assert_eq!(treaty.parties, (p(1), p(2)));
@@ -47,7 +49,8 @@ fn peace_has_peace_check() {
 #[test]
 fn peace_treaty_expires() {
     let mut mgr = PeaceTreatyManager::new();
-    mgr.sign_treaty(p(1), p(2), 100, 0, false, 10).expect("sign");
+    mgr.sign_treaty(p(1), p(2), 100, 0, false, 10)
+        .expect("sign");
     assert!(mgr.has_peace(p(1), p(2)));
 
     // Before expiry
@@ -74,7 +77,8 @@ fn peace_events_drained() {
 #[test]
 fn peace_territorial_concessions_recorded() {
     let mut mgr = PeaceTreatyManager::new();
-    mgr.sign_treaty(p(1), p(2), 500, 200, true, 1).expect("sign");
+    mgr.sign_treaty(p(1), p(2), 500, 200, true, 1)
+        .expect("sign");
     let treaties = mgr.treaties_for(p(1));
     assert_eq!(treaties.len(), 1);
     assert!(treaties[0].territorial_concessions);

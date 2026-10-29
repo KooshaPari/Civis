@@ -466,8 +466,18 @@ pub struct WorldState {
     /// Global unrest pressure used by emergence coupling.
     pub unrest: u64,
     /// Emergent trade routes that should be retained while active.
+    ///
+    /// The key is a tuple, which serde_json cannot use as a JSON object key -
+    /// serializing it fails with "key must be a string", which breaks every
+    /// save once a trade route exists. This is transient bookkeeping that the
+    /// settlement helpers rebuild, so it is not part of the persisted state.
+    #[serde(skip)]
     pub emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
     /// Idle-tick counters for emergent trade routes.
+    ///
+    /// Tuple key, so skipped for the same reason as
+    /// `emergent_trade_route_keys` above.
+    #[serde(skip)]
     pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
 
@@ -1765,7 +1775,7 @@ impl Simulation {
         &self.weather_grid
     }
 
-// FR-CIV-ENGINE-REPLAY-003
+    // FR-CIV-ENGINE-REPLAY-003
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
         self.replay_log.record_damage(self.state.tick, event);
@@ -1952,7 +1962,7 @@ impl Simulation {
         &mut self.building_graph
     }
 
-// FR-CIV-ENGINE-INT-014
+    // FR-CIV-ENGINE-INT-014
     /// Borrow the most recent cohort diffusion statistics.
     pub fn last_cohort_stats(&self) -> Option<&CohortStats> {
         self.last_cohort_stats.as_ref()
@@ -2467,10 +2477,7 @@ impl Simulation {
     ///
     /// Used by the Bevy in-process client that maintains its own `CaGrid`
     /// for GPU-backed terrain simulation.
-    pub fn tick_with_emergence_source(
-        &mut self,
-        _ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>,
-    ) {
+    pub fn tick_with_emergence_source(&mut self, _ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>) {
         // The external CaGrid is currently informational — the core tick
         // phases read from `self.voxel` (the kernel-side VoxelWorld).
         // When the client wires its CA grid into the simulation, this
@@ -2788,7 +2795,7 @@ impl Simulation {
         }
     }
 
-// FR-CIV-ENGINE-INT-011
+    // FR-CIV-ENGINE-INT-011
     /// Top-level buildings (layouts) phase (FR-CIV-ARCH wiring).
     ///
     /// Iterates over each settlement's stored list of
@@ -3220,10 +3227,7 @@ impl Simulation {
         &self.faction_languages
     }
 
-    pub fn set_faction_languages(
-        &mut self,
-        faction_languages: BTreeMap<u32, LanguageState>,
-    ) {
+    pub fn set_faction_languages(&mut self, faction_languages: BTreeMap<u32, LanguageState>) {
         self.faction_languages = faction_languages;
         self.language_state = self
             .faction_languages

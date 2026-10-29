@@ -335,12 +335,8 @@ mod tests {
 
     #[test]
     fn one_atlas_per_lod() {
-        let sprites = rasterise_at_build(&[
-            src("a", 8, 8, 0),
-            src("b", 8, 8, 1),
-            src("c", 8, 8, 1),
-        ])
-        .unwrap();
+        let sprites =
+            rasterise_at_build(&[src("a", 8, 8, 0), src("b", 8, 8, 1), src("c", 8, 8, 1)]).unwrap();
         let atlases = pack_atlas_per_lod(&sprites).unwrap();
         assert_eq!(atlases.len(), 2, "one atlas per distinct LOD");
         assert_eq!(atlases[0].lod, LodLevel(0));
@@ -360,8 +356,8 @@ mod tests {
 
     #[test]
     fn built_event_on_success_failed_event_on_error() {
-        let atlases = pack_atlas_per_lod(&rasterise_at_build(&[src("a", 4, 4, 0)]).unwrap())
-            .unwrap();
+        let atlases =
+            pack_atlas_per_lod(&rasterise_at_build(&[src("a", 4, 4, 0)]).unwrap()).unwrap();
         let ok = atlas_build_event(&Ok(atlases));
         assert_eq!(ok["event_type"], EVENT_ATLAS_BUILT);
 

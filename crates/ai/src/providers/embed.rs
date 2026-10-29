@@ -133,7 +133,18 @@ impl AiProvider for EmbedProvider {
     fn capabilities(&self) -> Capabilities {
         Capabilities {
             generate: false,
-            embed: self.model.is_some(),
+            // `model` only exists with the `embed` feature, so the "is a model
+            // loaded" check has to be feature-gated the same way.
+            embed: {
+                #[cfg(feature = "embed")]
+                {
+                    self.model.is_some()
+                }
+                #[cfg(not(feature = "embed"))]
+                {
+                    false
+                }
+            },
             cloud: false,
         }
     }
@@ -142,6 +153,9 @@ impl AiProvider for EmbedProvider {
 #[cfg(all(test, feature = "embed"))]
 mod tests {
     use super::EmbedProvider;
+    // `embed` and `capabilities` are `AiProvider` trait methods, so the trait
+    // has to be in scope to call them on an `EmbedProvider` value.
+    use crate::AiProvider;
 
     #[test]
     fn missing_model_artifact_fails_loudly_without_download() {
@@ -172,6 +186,7 @@ mod tests {
         let vectors = rt
             .block_on(provider.embed(&super::EmbedRequest {
                 texts: vec!["hello world".into()],
+                input_snapshot_hash: *blake3::hash(b"hello world").as_bytes(),
             }))
             .expect("embed failed");
         assert_eq!(vectors.len(), 1);

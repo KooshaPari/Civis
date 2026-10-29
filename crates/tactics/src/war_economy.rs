@@ -125,14 +125,20 @@ mod tests {
             );
             assert!(drain.treasury_drain > 0, "active war must drain every tick");
             treasury = apply_war_drain(treasury, &drain);
-            assert!(treasury < prev, "war tick must strictly reduce the treasury");
+            assert!(
+                treasury < prev,
+                "war tick must strictly reduce the treasury"
+            );
             prev = treasury;
             total_attrition += drain.population_loss;
         }
         // Attrition: 2 000 estimated casualties x 0.001 per unit ⇒ 2 population
         // lost per tick, 20 over the ten-tick campaign.
         assert_eq!(total_attrition, 20, "cumulative war attrition");
-        assert!(treasury < 10_000, "sustained war must leave the treasury poorer");
+        assert!(
+            treasury < 10_000,
+            "sustained war must leave the treasury poorer"
+        );
 
         // Exhaustion flag: a balance pinned at the floor (remaining <=
         // max(treasury/10, 10)) is economically exhausted; a healthy treasury

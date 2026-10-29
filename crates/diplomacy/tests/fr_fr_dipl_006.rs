@@ -89,8 +89,14 @@ fn espionage_multiple_detections() {
 
     let events = eng.drain_events();
     assert_eq!(events.len(), 2, "two detection events");
-    assert!(matches!(events[0], civ_diplomacy::EspionageEvent::Detected { .. }));
-    assert!(matches!(events[1], civ_diplomacy::EspionageEvent::Detected { .. }));
+    assert!(matches!(
+        events[0],
+        civ_diplomacy::EspionageEvent::Detected { .. }
+    ));
+    assert!(matches!(
+        events[1],
+        civ_diplomacy::EspionageEvent::Detected { .. }
+    ));
 }
 
 /// FR-DIPL-006: Detection event includes tick information.

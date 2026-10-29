@@ -415,11 +415,22 @@ mod tests {
         let back: RawSimEvent = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(back, event, "RawSimEvent must round-trip losslessly");
 
-        let key_a =
-            summary_key(&EventKind::Battle, &[LegendEntityId(11), LegendEntityId(12)], 0.75, Epoch(0));
-        let key_b =
-            summary_key(&EventKind::Battle, &[LegendEntityId(11), LegendEntityId(12)], 0.75, Epoch(0));
-        assert_eq!(key_a, key_b, "identical events must share a prose-cache key");
+        let key_a = summary_key(
+            &EventKind::Battle,
+            &[LegendEntityId(11), LegendEntityId(12)],
+            0.75,
+            Epoch(0),
+        );
+        let key_b = summary_key(
+            &EventKind::Battle,
+            &[LegendEntityId(11), LegendEntityId(12)],
+            0.75,
+            Epoch(0),
+        );
+        assert_eq!(
+            key_a, key_b,
+            "identical events must share a prose-cache key"
+        );
         let key_other = summary_key(&EventKind::Battle, &[LegendEntityId(11)], 0.75, Epoch(0));
         assert_ne!(key_a, key_other, "different participants must differ");
     }

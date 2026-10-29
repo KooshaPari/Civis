@@ -1389,24 +1389,33 @@ mod tests {
         let code: String = source
             .lines()
             .filter(|line| !line.trim_start().starts_with("//"))
+            .flat_map(|line| [line, "\n"])
             .collect();
+        // The needle is assembled at runtime: the test's own source is part of
+        // `include_str!("emergence.rs")`, so a literal here would always match.
+        let needle_a = ["thread", "_rng"].concat();
         assert!(
-            !code.contains("thread_rng"),
-            "unseeded thread_rng in emergence.rs"
+            !code.contains(needle_a.as_str()),
+            "unseeded RNG entry point found in emergence.rs"
+        );
+        let needle_b = ["rand::", "random"].concat();
+        let needle_c = ["Os", "Rng"].concat();
+        assert!(
+            !code.contains(needle_b.as_str()),
+            "unseeded entropy call in emergence.rs"
         );
         assert!(
-            !code.contains("rand::random"),
-            "unseeded rand::random in emergence.rs"
-        );
-        assert!(
-            !code.contains("OsRng"),
-            "unseeded OsRng in emergence.rs"
+            !code.contains(needle_c.as_str()),
+            "unseeded OS entropy source in emergence.rs"
         );
         // Every ChaCha8Rng construction in the module seeds from the world
         // seed or a deterministic XOR extension of it.
+        // Needles are built at runtime so this loop does not match itself.
+        let ctor_a = ["ChaCha8Rng", "::"].concat();
+        let ctor_b = [":", ":new()"].concat();
         for line in code.lines() {
-            if line.contains("ChaCha8Rng::") && line.contains("::new()") {
-                panic!("unseeded ChaCha8Rng::new() in emergence.rs: {line}");
+            if line.contains(ctor_a.as_str()) && line.contains(ctor_b.as_str()) {
+                panic!("unseeded RNG construction in emergence.rs: {line}");
             }
         }
         assert!(source.contains("rng_seed"));
@@ -1418,7 +1427,9 @@ mod tests {
             run_ticks(&mut sim, 3);
             let mut sig = 0u64;
             for (_, dna) in sim.world.query::<&Dna>().iter() {
-                sig = sig.wrapping_mul(31).wrapping_add(dna_class_fingerprint(dna));
+                sig = sig
+                    .wrapping_mul(31)
+                    .wrapping_add(dna_class_fingerprint(dna));
             }
             sig
         };

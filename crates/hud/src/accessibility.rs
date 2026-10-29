@@ -115,7 +115,12 @@ impl PaletteEntry {
     /// for ensuring `faction_id` is unique within the palette.
     #[must_use]
     pub const fn new(faction_id: u32, r: u8, g: u8, b: u8) -> Self {
-        Self { faction_id, r, g, b }
+        Self {
+            faction_id,
+            r,
+            g,
+            b,
+        }
     }
 
     /// Luminance proxy (Rec. 601). Returns a value in `[0, 255]` —
@@ -392,7 +397,8 @@ impl TooltipRegistry {
 
     /// Register or replace a tooltip.
     pub fn add(&mut self, descriptor: TooltipDescriptor) {
-        self.entries.insert(descriptor.element_id.clone(), descriptor);
+        self.entries
+            .insert(descriptor.element_id.clone(), descriptor);
     }
 
     /// Look up a tooltip by element id. Returns `None` for unregistered

@@ -21,8 +21,11 @@ mod fr_fr_civ_mod_002 {
     /// FR-CIV-MOD-002: PolicyActionKind roundtrips through emit_type.
     #[test]
     fn policy_action_roundtrip() {
-        use civ_mod_host::{PolicyActionKind, policy_action_to_emit_type};
-        for kind in [PolicyActionKind::SetTaxRate, PolicyActionKind::SetSubsidyRate] {
+        use civ_mod_host::{policy_action_to_emit_type, PolicyActionKind};
+        for kind in [
+            PolicyActionKind::SetTaxRate,
+            PolicyActionKind::SetSubsidyRate,
+        ] {
             let emit = kind.to_emit_type();
             let back = policy_action_to_emit_type(emit);
             assert!(back.is_some(), "roundtrip failed for {emit}");

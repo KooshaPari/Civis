@@ -83,8 +83,16 @@ mod tests {
     #[test]
     fn aggregate_gdp_sums_regions() {
         let regions = vec![
-            RegionGdp { region_id: 0, production_joules: 1000, waste_joules: 100 },
-            RegionGdp { region_id: 1, production_joules: 500, waste_joules: 50 },
+            RegionGdp {
+                region_id: 0,
+                production_joules: 1000,
+                waste_joules: 100,
+            },
+            RegionGdp {
+                region_id: 1,
+                production_joules: 500,
+                waste_joules: 50,
+            },
         ];
         let result = compute_gdp(&regions);
         assert_eq!(result.total_gdp, 900 + 450);

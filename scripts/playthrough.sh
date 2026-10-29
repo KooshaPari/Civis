@@ -163,6 +163,17 @@ rpc() {
     # the raw response payload on stdout. Stderr is captured for diagnostics.
     local id="$1" method="$2" params="${3:-null}"
     local payload
+    # Every call opens a fresh connection (see `websocat -n` below), and the
+    # connection role is only read from the FIRST request on that connection.
+    # Operator-only methods - sim.spawn_civilian, sim.command, diplomacy
+    # actions, god actions - are refused without it, so every request carries
+    # the role.
+    if [[ "${params}" == "null" ]]; then
+        params='{"role":"operator"}'
+    else
+        params="$(printf '%s' "${params}" | jq -c '. + {role: "operator"}' 2>/dev/null)" \
+            || params="${params}"
+    fi
     payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
         "${id}" "$(json_quote "${method}")" "${params}")"
 

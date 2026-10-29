@@ -19,24 +19,36 @@ fn weights_differ_per_profile() {
     let w_iso = isolationist.apply_to(&base);
 
     // Expansionist should boost resource over diplomat.
-    assert!(w_exp.resource_value > w_dip.resource_value,
+    assert!(
+        w_exp.resource_value > w_dip.resource_value,
         "expansionist resource ({}) > diplomat resource ({})",
-        w_exp.resource_value, w_dip.resource_value);
+        w_exp.resource_value,
+        w_dip.resource_value
+    );
 
     // Diplomat should boost diplomatic over expansionist.
-    assert!(w_dip.diplomatic_value > w_exp.diplomatic_value,
+    assert!(
+        w_dip.diplomatic_value > w_exp.diplomatic_value,
         "diplomat diplomatic ({}) > expansionist diplomatic ({})",
-        w_dip.diplomatic_value, w_exp.diplomatic_value);
+        w_dip.diplomatic_value,
+        w_exp.diplomatic_value
+    );
 
     // Militant should boost strategic over isolationist.
-    assert!(w_mil.strategic_value > w_iso.strategic_value,
+    assert!(
+        w_mil.strategic_value > w_iso.strategic_value,
         "militant strategic ({}) > isolationist strategic ({})",
-        w_mil.strategic_value, w_iso.strategic_value);
+        w_mil.strategic_value,
+        w_iso.strategic_value
+    );
 
     // Isolationist should boost safety over militant.
-    assert!(w_iso.safety_value > w_mil.safety_value,
+    assert!(
+        w_iso.safety_value > w_mil.safety_value,
         "isolationist safety ({}) > militant safety ({})",
-        w_iso.safety_value, w_mil.safety_value);
+        w_iso.safety_value,
+        w_mil.safety_value
+    );
 }
 
 #[test]

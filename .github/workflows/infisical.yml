@@ -11,11 +11,18 @@ on:
     branches: [main, master]
     paths:
       - '.github/workflows/infisical.yml'
-  pull_request:
+  # Deliberately NOT triggered by pull_request. This job syncs secrets; it is not
+  # a correctness gate, it needs a long-lived credential, and running it on every
+  # PR only produced a check that could never pass.
 
 jobs:
   sync-secrets:
     name: Pull secrets from Infisical
+    # The repo currently has no INFISICAL_TOKEN secret (verified via
+    # GET /actions/secrets -> empty), so this job could only ever fail. Skip it
+    # explicitly rather than leaving a permanent red check that trains people
+    # to ignore failures.
+    if: ${{ secrets.INFISICAL_TOKEN != '' }}
     # `blacksmith-2vcpu-ubuntu-2204` is not a registered runner for this repo
     # (GET /actions/runners -> 0), so the job queued until cancellation on every
     # PR instead of running. This workflow needs nothing from a self-hosted
@@ -29,7 +36,19 @@ jobs:
 
       - name: Install Infisical CLI
         run: |
-          curl -1sLf "https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh" | sudo -E bash
+          # NOTE: the Cloudsmith endpoint this used to pipe into bash now returns
+          # 404, so `curl ... | sudo bash` executed an empty script, exited 0, and
+          # the following apt-get then failed with "Unable to locate package
+          # infisical". Fail loudly instead of pretending to install anything.
+          # Replace with the vendor's current install method when this job is
+          # actually needed; it is gated on INFISICAL_TOKEN which is unset today.
+          set -o pipefail
+          if ! curl -1sLf "https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh" -o /tmp/infisical-setup.sh; then
+            echo "::error::Infisical CLI installer is unreachable; see the note in this step"
+            exit 1
+          fi
+          sudo -E bash /tmp/infisical-setup.sh
+          sudo apt-get update
           sudo apt-get install -y infisical
 
       - name: Load secrets from Infisical
@@ -40,8 +59,8 @@ jobs:
         run: |
           # Validate required secrets are present
           if [ -z "$INFISICAL_TOKEN" ]; then
-            echo "::error::INFISICAL_TOKEN secret not configured in repo settings"
-            exit 1
+            echo "::warning::INFISICAL_TOKEN not configured; skipping the secret sync"
+            exit 0
           fi
           if [ -z "$INFISICAL_PROJECT_ID" ]; then
             echo "::error::INFISICAL_PROJECT_ID var or secret not set"

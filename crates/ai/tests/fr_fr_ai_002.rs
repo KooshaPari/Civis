@@ -41,8 +41,8 @@ impl MctsGameState for DepthGame {
             return None;
         }
         // "right" then "continue" = 1.0, everything else < 1.0.
-        if self.path.get(0).map_or(false, |a| a == "right")
-            && self.path.get(1).map_or(false, |a| a == "continue")
+        if self.path.first().is_some_and(|a| a == "right")
+            && self.path.get(1).is_some_and(|a| a == "continue")
         {
             Some(1.0)
         } else {
@@ -69,8 +69,11 @@ fn lookahead_depth_gt_1() {
 
     // MCTS must look ahead and find "right" as the best first move.
     let best = tree.best_action();
-    assert_eq!(best, Some("right".into()),
-        "MCTS with depth > 1 should find the two-step winning path starting with 'right'");
+    assert_eq!(
+        best,
+        Some("right".into()),
+        "MCTS with depth > 1 should find the two-step winning path starting with 'right'"
+    );
 }
 
 #[test]
@@ -86,6 +89,12 @@ fn tree_expands_beyond_root() {
 
     // After 1000 iterations the tree should have expanded beyond the root.
     let root = tree.root();
-    assert!(!root.children.is_empty(), "root must have children after search");
-    assert!(root.visits >= 1000, "root should have been visited many times");
+    assert!(
+        !root.children.is_empty(),
+        "root must have children after search"
+    );
+    assert!(
+        root.visits >= 1000,
+        "root should have been visited many times"
+    );
 }

@@ -140,7 +140,11 @@ impl PartyActionsState {
                 self.local_last_acked_tick = tick;
             }
         }
-        if let Some(existing) = self.players.iter_mut().find(|p| p.connection_id == connection_id) {
+        if let Some(existing) = self
+            .players
+            .iter_mut()
+            .find(|p| p.connection_id == connection_id)
+        {
             if tick > existing.last_acked_tick {
                 existing.last_acked_tick = tick;
             }
@@ -154,11 +158,7 @@ impl PartyActionsState {
         }
         if self.players.len() >= PLAYER_LIST_CAP {
             // Prefer evicting a non-local entry; fall back to the oldest.
-            let evict_idx = self
-                .players
-                .iter()
-                .position(|p| !p.is_local)
-                .unwrap_or(0);
+            let evict_idx = self.players.iter().position(|p| !p.is_local).unwrap_or(0);
             self.players.remove(evict_idx);
         }
         self.players.push(PlayerEntry {
@@ -198,11 +198,7 @@ impl PartyActionsState {
     /// when transitioning to ready. Returns the new value.
     pub fn toggle_ready(&mut self, current_tick: u64) -> bool {
         self.ready_for_tick = !self.ready_for_tick;
-        self.ready_since_tick = if self.ready_for_tick {
-            current_tick
-        } else {
-            0
-        };
+        self.ready_since_tick = if self.ready_for_tick { current_tick } else { 0 };
         self.ready_for_tick
     }
 
@@ -333,10 +329,7 @@ fn draw_party_actions_panel(
             ui.label(
                 egui::RichText::new(format!(
                     "Local session: {}",
-                    state
-                        .local_session_id
-                        .as_deref()
-                        .unwrap_or("(connecting…)")
+                    state.local_session_id.as_deref().unwrap_or("(connecting…)")
                 ))
                 .color(ACCENT)
                 .small(),
@@ -399,9 +392,7 @@ fn draw_connected_players(ui: &mut egui::Ui, state: &PartyActionsState) {
             ui.label(
                 egui::RichText::new(format!(
                     "{} {} tick={}",
-                    ready_marker,
-                    label,
-                    player.last_acked_tick,
+                    ready_marker, label, player.last_acked_tick,
                 ))
                 .color(if player.is_local { ACCENT } else { DIM })
                 .small(),
@@ -447,9 +438,13 @@ fn draw_action_log(ui: &mut egui::Ui, state: &PartyActionsState) {
                             .small(),
                     );
                     ui.label(
-                        egui::RichText::new(format!("{} → {}", short_id(&entry.connection_id), entry.action))
-                            .color(GREEN)
-                            .small(),
+                        egui::RichText::new(format!(
+                            "{} → {}",
+                            short_id(&entry.connection_id),
+                            entry.action
+                        ))
+                        .color(GREEN)
+                        .small(),
                     );
                 });
                 if !entry.detail.is_empty() {
@@ -486,7 +481,10 @@ fn draw_action_buttons(
             .size(12.0),
     )
     .fill(ACCENT);
-    if ui.add_sized([ui.available_width(), 24.0], trade_btn).clicked() {
+    if ui
+        .add_sized([ui.available_width(), 24.0], trade_btn)
+        .clicked()
+    {
         if let Some(bridge) = bridge {
             bridge.send_rpc(
                 "sim.diplomacy_action",
@@ -524,11 +522,13 @@ fn draw_action_buttons(
                 .strong()
                 .size(11.0),
         )
-        .fill(if has_text { GOLD } else { DIM.gamma_multiply(0.4) });
+        .fill(if has_text {
+            GOLD
+        } else {
+            DIM.gamma_multiply(0.4)
+        });
         let clicked = ui.add_sized([70.0, 22.0], send_btn).clicked()
-            || (resp.lost_focus()
-                && ui.input(|i| i.key_pressed(egui::Key::Enter))
-                && has_text);
+            || (resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && has_text);
         if clicked && has_text {
             let text = draft.message.trim().to_string();
             if let Some(bridge) = bridge {
@@ -558,21 +558,16 @@ fn draw_action_buttons(
     } else {
         ("Ready for next tick", GREEN.gamma_multiply(0.7), GREEN)
     };
-    let ready_btn = egui::Button::new(
-        egui::RichText::new(label)
-            .color(color)
-            .strong()
-            .size(12.0),
-    )
-    .fill(fill);
-    if ui.add_sized([ui.available_width(), 24.0], ready_btn).clicked() {
+    let ready_btn =
+        egui::Button::new(egui::RichText::new(label).color(color).strong().size(12.0)).fill(fill);
+    if ui
+        .add_sized([ui.available_width(), 24.0], ready_btn)
+        .clicked()
+    {
         let new_state = state.toggle_ready(last_tick);
         if let Some(bridge) = bridge {
             let action = if new_state { "ready" } else { "unready" };
-            bridge.send_rpc(
-                "sim.command",
-                serde_json::json!({ "action": action }),
-            );
+            bridge.send_rpc("sim.command", serde_json::json!({ "action": action }));
         }
         state.record_action(
             &local_id,
@@ -690,12 +685,7 @@ mod tests {
 
         // Overflow evicts the oldest entry, keeping cap invariant.
         for i in 0..(ACTION_LOG_CAP + 4) {
-            state.record_action(
-                "conn-local",
-                "noop",
-                format!("filler {i}"),
-                100 + i as u64,
-            );
+            state.record_action("conn-local", "noop", format!("filler {i}"), 100 + i as u64);
         }
         assert_eq!(
             state.action_log.len(),

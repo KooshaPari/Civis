@@ -15,8 +15,16 @@ use civ_render::camera::{CameraInput, RtsCamera, SelectableUnit, MAX_ZOOM, MIN_Z
 #[test]
 fn rts_camera_controls() {
     let units = [
-        SelectableUnit { id: 7, x: 40.0, y: 40.0 },
-        SelectableUnit { id: 8, x: 900.0, y: 900.0 },
+        SelectableUnit {
+            id: 7,
+            x: 40.0,
+            y: 40.0,
+        },
+        SelectableUnit {
+            id: 8,
+            x: 900.0,
+            y: 900.0,
+        },
     ];
     let mut cam = RtsCamera::new();
     assert_eq!(cam.centre().q, 0);
@@ -40,7 +48,12 @@ fn rts_camera_controls() {
 
     // Unit selection by screen-space rectangle.
     cam.apply(
-        CameraInput::SelectRect { x0: 0.0, y0: 0.0, x1: 100.0, y1: 100.0 },
+        CameraInput::SelectRect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 100.0,
+            y1: 100.0,
+        },
         &units,
     );
     assert_eq!(cam.selection(), &[7]);

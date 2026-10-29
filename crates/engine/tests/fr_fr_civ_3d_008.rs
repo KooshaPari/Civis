@@ -27,9 +27,21 @@ mod fr_fr_civ_3d_008 {
     #[test]
     fn resources_struct_usable() {
         let r = civ_engine::Resources::default();
-        assert!(r.food >= civ_engine::Fixed::ZERO, "Food must be non-negative");
-        assert!(r.wood >= civ_engine::Fixed::ZERO, "Wood must be non-negative");
-        assert!(r.metal >= civ_engine::Fixed::ZERO, "Metal must be non-negative");
-        assert!(r.energy >= civ_engine::Fixed::ZERO, "Energy must be non-negative");
+        assert!(
+            r.food >= civ_engine::Fixed::ZERO,
+            "Food must be non-negative"
+        );
+        assert!(
+            r.wood >= civ_engine::Fixed::ZERO,
+            "Wood must be non-negative"
+        );
+        assert!(
+            r.metal >= civ_engine::Fixed::ZERO,
+            "Metal must be non-negative"
+        );
+        assert!(
+            r.energy >= civ_engine::Fixed::ZERO,
+            "Energy must be non-negative"
+        );
     }
 }

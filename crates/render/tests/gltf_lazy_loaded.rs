@@ -59,7 +59,9 @@ fn gltf_lazy_loaded() {
     // Unknown and non-2.0 documents are rejected.
     assert_eq!(
         loader.load("ghost"),
-        Err(GltfError::UnknownAsset { name: "ghost".into() })
+        Err(GltfError::UnknownAsset {
+            name: "ghost".into()
+        })
     );
 
     let mut legacy = GltfLoader::new();
@@ -69,7 +71,9 @@ fn gltf_lazy_loaded() {
     );
     assert_eq!(
         legacy.load("old"),
-        Err(GltfError::UnsupportedVersion { found: "1.0".into() })
+        Err(GltfError::UnsupportedVersion {
+            found: "1.0".into()
+        })
     );
     assert!(!legacy.is_loaded("old"), "rejected asset stays unloaded");
 }

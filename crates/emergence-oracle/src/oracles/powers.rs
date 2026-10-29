@@ -75,7 +75,11 @@ mod tests {
                 "duplicate power id: {}",
                 power.id
             );
-            assert!(!power.label.is_empty(), "power {} has empty label", power.id);
+            assert!(
+                !power.label.is_empty(),
+                "power {} has empty label",
+                power.id
+            );
             assert!(
                 !power.coupling_note.is_empty(),
                 "power {} has empty coupling_note",

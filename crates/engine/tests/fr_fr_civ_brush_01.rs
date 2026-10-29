@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_brush_01 {
-    use civ_engine::brush_types::{BrushCluster, BrushSettings};
+    use civ_engine::brush_types::BrushSettings;
 
     /// FR-CIV-BRUSH-01 — BrushSettings struct exists with required fields
     /// and default values for radius, strength, falloff, and shape.

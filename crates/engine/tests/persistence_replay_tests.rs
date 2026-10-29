@@ -1,10 +1,10 @@
 //! Focused persistence/replay regression tests for Civis engine.
 
-use civ_engine::replay::{ReplayLog, ReplayEvent};
-use civ_engine::replay_format::{decode_civreplay, encode_civreplay};
 use civ_engine::hash_chain::{chain_advance, GENESIS};
-use civ_save_db::format_session_saved_event_json;
+use civ_engine::replay::{ReplayEvent, ReplayLog};
+use civ_engine::replay_format::{decode_civreplay, encode_civreplay};
 use civ_mod_host::format_mod_error_event_json;
+use civ_save_db::format_session_saved_event_json;
 
 #[test]
 fn research_event_extends_hash_chain() {
@@ -16,7 +16,10 @@ fn research_event_extends_hash_chain() {
     log.record_research(5, snapshot_hash.clone(), true);
 
     // Hash chain must be set after recording research
-    assert!(log.running_hash.is_some(), "Hash chain should be extended after record_research");
+    assert!(
+        log.running_hash.is_some(),
+        "Hash chain should be extended after record_research"
+    );
     assert_eq!(log.events.len(), 1);
     assert!(matches!(&log.events[0], ReplayEvent::ResearchOutcome { tick, .. } if *tick == 5));
 }
@@ -34,7 +37,10 @@ fn research_hash_chain_matches_manual_advance() {
     let payload = civ_engine::hash_chain::research_event_bytes(3, &[0xAA, 0xBB], true);
     let expected = chain_advance(&prev, &payload);
 
-    assert_eq!(chain_hash, expected, "Research event hash must match manual computation");
+    assert_eq!(
+        chain_hash, expected,
+        "Research event hash must match manual computation"
+    );
 }
 
 #[test]
@@ -44,7 +50,9 @@ fn record_mod_permission_violation_valid_json() {
     // Valid mod permission violation should record
     log.record_mod_permission_violation("test-mod", 42, "some-call", None);
     assert_eq!(log.events.len(), 1);
-    assert!(matches!(&log.events[0], ReplayEvent::ModPermissionViolation { tick, .. } if *tick == 42));
+    assert!(
+        matches!(&log.events[0], ReplayEvent::ModPermissionViolation { tick, .. } if *tick == 42)
+    );
 }
 
 #[test]
@@ -57,7 +65,10 @@ fn mod_permission_violation_rejects_malformed_bus_json() {
 
     // Should not record an event with empty/invalid bus_json
     let recorded = log.mod_permission_violation_bus_at_tick(42);
-    assert!(recorded.is_empty(), "Malformed JSON should not produce recorded events");
+    assert!(
+        recorded.is_empty(),
+        "Malformed JSON should not produce recorded events"
+    );
 }
 
 #[test]

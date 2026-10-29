@@ -27,8 +27,10 @@ mod fr_fr_thry_004 {
     #[test]
     fn invariant_error_variants_exist() {
         // Compile-time check: these variants must exist for the checker to report them.
-        let _tick_err =
-            invariants::InvariantError::TickMonotonicity { tick: 0, recorded_ticks: 0 };
+        let _tick_err = invariants::InvariantError::TickMonotonicity {
+            tick: 0,
+            recorded_ticks: 0,
+        };
         let _pop_err = invariants::InvariantError::NegativePopulation { population: 0 };
         let _energy_err = invariants::InvariantError::NegativeEnergyBudget { raw: -1 };
     }

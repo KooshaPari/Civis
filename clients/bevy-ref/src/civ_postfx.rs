@@ -646,8 +646,7 @@ impl CivPostFxDispatcher {
             self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
         }
         if self.toggle.will_dispatch_vignette() {
-            self.stats.vignette_dispatch_count =
-                self.stats.vignette_dispatch_count.wrapping_add(1);
+            self.stats.vignette_dispatch_count = self.stats.vignette_dispatch_count.wrapping_add(1);
             self.stats.total_dispatch_count = self.stats.total_dispatch_count.wrapping_add(1);
         }
         if self.toggle.will_dispatch_chromatic() {
@@ -956,7 +955,8 @@ impl CivPostFxGpu {
         let bloom_texture = device.create_texture(&tex_descriptor("civ-postfx::bloom_texture"));
         let ssgi_texture = device.create_texture(&tex_descriptor("civ-postfx::ssgi_texture"));
         let aces_texture = device.create_texture(&tex_descriptor("civ-postfx::aces_texture"));
-        let vignette_texture = device.create_texture(&tex_descriptor("civ-postfx::vignette_texture"));
+        let vignette_texture =
+            device.create_texture(&tex_descriptor("civ-postfx::vignette_texture"));
         let chromatic_texture =
             device.create_texture(&tex_descriptor("civ-postfx::chromatic_texture"));
         let lut_texture = device.create_texture(&tex_descriptor("civ-postfx::lut_texture"));
@@ -1123,17 +1123,32 @@ impl CivPostFxGpu {
         queue.write_buffer(&self.bloom_input, 0, bytemuck::cast_slice(&bloom_data));
 
         let ssgi_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
-            .map(|i| (tick as u32).wrapping_add(2).wrapping_mul(1597).wrapping_add(i * 53))
+            .map(|i| {
+                (tick as u32)
+                    .wrapping_add(2)
+                    .wrapping_mul(1597)
+                    .wrapping_add(i * 53)
+            })
             .collect();
         queue.write_buffer(&self.ssgi_input, 0, bytemuck::cast_slice(&ssgi_data));
 
         let aces_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
-            .map(|i| (tick as u32).wrapping_add(3).wrapping_mul(2246822519).wrapping_add(i * 89))
+            .map(|i| {
+                (tick as u32)
+                    .wrapping_add(3)
+                    .wrapping_mul(2246822519)
+                    .wrapping_add(i * 89)
+            })
             .collect();
         queue.write_buffer(&self.aces_input, 0, bytemuck::cast_slice(&aces_data));
 
         let vignette_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
-            .map(|i| (tick as u32).wrapping_add(4).wrapping_mul(1013904223).wrapping_add(i * 113))
+            .map(|i| {
+                (tick as u32)
+                    .wrapping_add(4)
+                    .wrapping_mul(1013904223)
+                    .wrapping_add(i * 113)
+            })
             .collect();
         queue.write_buffer(
             &self.vignette_input,
@@ -1142,7 +1157,12 @@ impl CivPostFxGpu {
         );
 
         let chromatic_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
-            .map(|i| (tick as u32).wrapping_add(5).wrapping_mul(374761393).wrapping_add(i * 23))
+            .map(|i| {
+                (tick as u32)
+                    .wrapping_add(5)
+                    .wrapping_mul(374761393)
+                    .wrapping_add(i * 23)
+            })
             .collect();
         queue.write_buffer(
             &self.chromatic_input,
@@ -1151,7 +1171,12 @@ impl CivPostFxGpu {
         );
 
         let lut_data: Vec<u32> = (0..INPUT_TEXEL_COUNT)
-            .map(|i| (tick as u32).wrapping_add(6).wrapping_mul(668265263).wrapping_add(i * 67))
+            .map(|i| {
+                (tick as u32)
+                    .wrapping_add(6)
+                    .wrapping_mul(668265263)
+                    .wrapping_add(i * 67)
+            })
             .collect();
         queue.write_buffer(&self.lut_input, 0, bytemuck::cast_slice(&lut_data));
 
@@ -1212,11 +1237,7 @@ impl CivPostFxGpu {
                 }
             }
             if toggle.will_dispatch_vignette() {
-                queue.write_buffer(
-                    &self.uniforms,
-                    0,
-                    bytemuck::cast_slice(&vignette_uniforms),
-                );
+                queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&vignette_uniforms));
                 if let Some(bg) = self.vignette_bind_group.as_ref() {
                     cpass.set_pipeline(&self.vignette_pipeline);
                     cpass.set_bind_group(0, bg, &[]);
@@ -1225,11 +1246,7 @@ impl CivPostFxGpu {
                 }
             }
             if toggle.will_dispatch_chromatic() {
-                queue.write_buffer(
-                    &self.uniforms,
-                    0,
-                    bytemuck::cast_slice(&chromatic_uniforms),
-                );
+                queue.write_buffer(&self.uniforms, 0, bytemuck::cast_slice(&chromatic_uniforms));
                 if let Some(bg) = self.chromatic_bind_group.as_ref() {
                     cpass.set_pipeline(&self.chromatic_pipeline);
                     cpass.set_bind_group(0, bg, &[]);
@@ -1322,10 +1339,7 @@ pub struct CivPostFxRenderState {
     pub tick: u64,
 }
 
-fn init_civ_postfx_gpu(
-    mut state: ResMut<CivPostFxRenderState>,
-    render_device: Res<RenderDevice>,
-) {
+fn init_civ_postfx_gpu(mut state: ResMut<CivPostFxRenderState>, render_device: Res<RenderDevice>) {
     if state.gpu.is_some() {
         return;
     }
@@ -1375,7 +1389,10 @@ mod tests {
 
     #[test]
     fn ssao_wgsl_has_compute_entry_point_and_workgroup_size() {
-        assert!(SSAO_WGSL.contains("@compute"), "SSAO WGSL must declare @compute");
+        assert!(
+            SSAO_WGSL.contains("@compute"),
+            "SSAO WGSL must declare @compute"
+        );
         assert!(
             SSAO_WGSL.contains("@workgroup_size(4, 4, 1)"),
             "SSAO WGSL must pin a 4x4x1 workgroup"
@@ -1677,35 +1694,33 @@ mod tests {
     fn dispatch_headless_smoke() {
         use std::sync::Arc;
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
-        let adapter = match pollster::block_on(instance.request_adapter(
-            &wgpu::RequestAdapterOptions {
+        let adapter =
+            match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::LowPower,
                 force_fallback_adapter: false,
                 compatible_surface: None,
-            },
-        )) {
-            Ok(a) => a,
-            Err(e) => {
-                eprintln!("skipping: no wgpu adapter available: {e:?}");
-                return;
-            }
-        };
-        let (device, queue) = match pollster::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
+            })) {
+                Ok(a) => a,
+                Err(e) => {
+                    eprintln!("skipping: no wgpu adapter available: {e:?}");
+                    return;
+                }
+            };
+        let (device, queue) =
+            match pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
                 label: Some("civ-postfx::headless"),
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::downlevel_defaults(),
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
                 memory_hints: wgpu::MemoryHints::default(),
                 trace: wgpu::Trace::Off,
-            },
-        )) {
-            Ok(dq) => dq,
-            Err(err) => {
-                eprintln!("skipping: device request failed: {err}");
-                return;
-            }
-        };
+            })) {
+                Ok(dq) => dq,
+                Err(err) => {
+                    eprintln!("skipping: device request failed: {err}");
+                    return;
+                }
+            };
         let mut gpu = CivPostFxGpu::new(&device);
         gpu.rebuild_bind_groups(&device);
         let mut stats = CivPostFxStats::default();

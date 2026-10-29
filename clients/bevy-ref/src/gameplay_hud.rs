@@ -347,11 +347,7 @@ fn draw_outcome_banner(ui: &mut egui::Ui, tag: &str, reason: &str, tick: u64, al
     ui.vertical_centered(|ui| {
         ui.label(egui::RichText::new(label).color(color).size(22.0).strong());
         if !reason.is_empty() {
-            ui.label(
-                egui::RichText::new(reason)
-                    .color(reason_color)
-                    .size(13.0),
-            );
+            ui.label(egui::RichText::new(reason).color(reason_color).size(13.0));
         }
         ui.label(
             egui::RichText::new(format!("Tick {tick}"))

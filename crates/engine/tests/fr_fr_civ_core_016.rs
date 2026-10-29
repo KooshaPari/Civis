@@ -29,10 +29,7 @@ mod fr_fr_civ_core_016 {
         })
         .unwrap();
         let first = q.pop().unwrap();
-        assert_eq!(
-            first.tick_issued, 20,
-            "FIFO: first pushed comes first"
-        );
+        assert_eq!(first.tick_issued, 20, "FIFO: first pushed comes first");
         let second = q.pop().unwrap();
         assert_eq!(second.tick_issued, 10);
     }

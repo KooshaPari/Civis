@@ -56,10 +56,16 @@ fn nfr_civ_maint_002_quality_gate_complexity_caps_match_nfr_spec() {
         body.contains("COGNITIVE_MAX"),
         "gate 7 must report the COGNITIVE_MAX cap"
     );
-    assert!(body.contains("radon cc"), "gate 7 must run radon cyclomatic check");
+    assert!(
+        body.contains("radon cc"),
+        "gate 7 must run radon cyclomatic check"
+    );
     assert!(
         body.contains("C901"),
         "gate 7 must run ruff's cognitive-complexity rule (C901)"
     );
-    assert!(body.contains("gocyclo"), "gate 7 must run gocyclo for Go sources");
+    assert!(
+        body.contains("gocyclo"),
+        "gate 7 must run gocyclo for Go sources"
+    );
 }

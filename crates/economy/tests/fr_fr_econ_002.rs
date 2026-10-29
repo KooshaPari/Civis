@@ -4,8 +4,8 @@
 //! Matrix check: `consumption::deducted_before_distribution`.
 
 use civ_economy::{
-    deduct_consumption, distribute_surplus, step_distribution, DistributionConfig, DistrictEnergyState,
-    DistrictGraph,
+    deduct_consumption, distribute_surplus, step_distribution, DistributionConfig,
+    DistrictEnergyState, DistrictGraph,
 };
 
 /// Deduction runs strictly before distribution, so a donor's giveaway is
@@ -26,7 +26,10 @@ fn deducted_before_distribution() {
     assert_eq!(districts[1].balance_joules, -30);
 
     let report = distribute_surplus(&mut districts, &graph, &DistributionConfig::default());
-    assert_eq!(report.transferred_joules, 30, "post-deduction deficit is relieved");
+    assert_eq!(
+        report.transferred_joules, 30,
+        "post-deduction deficit is relieved"
+    );
     assert_eq!(districts[0].balance_joules, 40);
     assert_eq!(districts[1].balance_joules, 0);
 
@@ -38,7 +41,10 @@ fn deducted_before_distribution() {
     let combined = step_distribution(&mut again, &graph, &DistributionConfig::default(), 30);
     assert_eq!(combined.deducted_joules, 60);
     assert_eq!(combined.transferred_joules, 30);
-    assert_eq!(again, districts, "step_distribution matches the manual order");
+    assert_eq!(
+        again, districts,
+        "step_distribution matches the manual order"
+    );
 
     // Counterfactual: if distribution ran first there would be no deficit to
     // relieve (both districts are non-negative), so nothing would move. The
@@ -48,7 +54,10 @@ fn deducted_before_distribution() {
         DistrictEnergyState::new(2, 0),
     ];
     let pre = distribute_surplus(&mut reversed, &graph, &DistributionConfig::default());
-    assert_eq!(pre.transferred_joules, 0, "distribution first moves nothing");
+    assert_eq!(
+        pre.transferred_joules, 0,
+        "distribution first moves nothing"
+    );
     assert!(pre.transfers.is_empty());
 }
 

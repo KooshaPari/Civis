@@ -127,7 +127,10 @@ mod tests {
         let config = Co2Config::default();
         let before = t.co2_ppm;
         t.accumulate_tick(1000, &config);
-        assert!(t.co2_ppm > before, "CO₂ should rise after industrial consumption");
+        assert!(
+            t.co2_ppm > before,
+            "CO₂ should rise after industrial consumption"
+        );
     }
 
     #[test]

@@ -31,7 +31,10 @@ fn nfr_s_05_budget_constant_is_five_mb_per_min() {
 /// run that lands just inside the envelope.
 #[test]
 fn nfr_s_05_growth_within_budget_accepted() {
-    assert!(event_log_budget_met(0), "no growth is trivially within budget");
+    assert!(
+        event_log_budget_met(0),
+        "no growth is trivially within budget"
+    );
     // A lightly-loaded session: ~1 MB/min.
     assert!(event_log_budget_met(1_000_000));
     // Tightest legal rate: 1 byte/minute under the budget.

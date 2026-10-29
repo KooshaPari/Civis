@@ -25,10 +25,7 @@ mod fr_fr_civ_core_det_001 {
             sim_b.state.energy_budget_joules
         );
         assert_eq!(sim_a.state.factions, sim_b.state.factions);
-        assert_eq!(
-            sim_a.state.faction_treasury,
-            sim_b.state.faction_treasury
-        );
+        assert_eq!(sim_a.state.faction_treasury, sim_b.state.faction_treasury);
     }
 
     /// Replay logs are identical across same-seed instances.

@@ -19,7 +19,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn repo_path(rel: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join(rel)
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(rel)
 }
 
 fn read_repo(rel: &str) -> String {

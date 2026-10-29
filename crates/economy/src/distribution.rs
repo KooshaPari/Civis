@@ -201,10 +201,12 @@ pub fn distribute_surplus(
             if move_amount <= 0 {
                 continue;
             }
-            districts[donor_idx].balance_joules =
-                districts[donor_idx].balance_joules.saturating_sub(move_amount);
-            districts[recipient_idx].balance_joules =
-                districts[recipient_idx].balance_joules.saturating_add(move_amount);
+            districts[donor_idx].balance_joules = districts[donor_idx]
+                .balance_joules
+                .saturating_sub(move_amount);
+            districts[recipient_idx].balance_joules = districts[recipient_idx]
+                .balance_joules
+                .saturating_add(move_amount);
             remaining -= move_amount;
             report.transferred_joules = report.transferred_joules.saturating_add(move_amount);
             report.transfers.push(Transfer {
@@ -293,7 +295,10 @@ mod tests {
 
         assert_eq!(report.transferred_joules, 40);
         assert_eq!(districts[1].balance_joules, 0);
-        assert_eq!(districts[2].balance_joules, -80, "unconnected district untouched");
+        assert_eq!(
+            districts[2].balance_joules, -80,
+            "unconnected district untouched"
+        );
         assert_eq!(report.transfers.len(), 1);
         assert_eq!(report.transfers[0].to, 2);
     }

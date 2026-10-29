@@ -373,7 +373,10 @@ impl MigrationEngine {
     /// Returns the sum; useful for engine-side gauges that show total pull.
     #[must_use]
     pub fn total_attractiveness(clusters: &[&ClusterMigration]) -> f32 {
-        clusters.iter().map(|c| c.opportunity.attractiveness()).sum()
+        clusters
+            .iter()
+            .map(|c| c.opportunity.attractiveness())
+            .sum()
     }
 
     /// Advance one migration tick.
@@ -627,7 +630,10 @@ mod tests {
         let max_push = MigrationEngine::max_stress_pressure(&clusters);
         let total_pull = MigrationEngine::total_attractiveness(&clusters);
 
-        assert!(max_push > 0.0 && max_push <= 1.0, "push in (0,1]: {max_push}");
+        assert!(
+            max_push > 0.0 && max_push <= 1.0,
+            "push in (0,1]: {max_push}"
+        );
         assert_eq!(
             max_push,
             stressed.stress.pressure(),
@@ -670,7 +676,10 @@ mod tests {
             reports_a, reports_b,
             "same seed + same cluster state ⇒ identical flow reports"
         );
-        assert_eq!(a, b, "same seed + same cluster state ⇒ identical engine state");
+        assert_eq!(
+            a, b,
+            "same seed + same cluster state ⇒ identical engine state"
+        );
     }
 
     #[test]
@@ -914,7 +923,10 @@ mod tests {
 
             let left = report.emigrants_from(origin);
             let arrived = report.immigrants_to(dest);
-            assert!(left > 0, "tick {tick}: stressed origin must dispatch migrants");
+            assert!(
+                left > 0,
+                "tick {tick}: stressed origin must dispatch migrants"
+            );
             assert_eq!(left, arrived, "tick {tick}: every departure has an arrival");
             assert_eq!(
                 prev_origin - now_origin,
@@ -1005,7 +1017,10 @@ mod tests {
         // The origin's attributes are carried, not mutated.
         let src = eng.cluster(ClusterId(1)).unwrap();
         assert_eq!(src.culture, src_before.culture, "source culture unchanged");
-        assert_eq!(src.language, src_before.language, "source language unchanged");
+        assert_eq!(
+            src.language, src_before.language,
+            "source language unchanged"
+        );
         assert_eq!(src.belief, src_before.belief, "source belief unchanged");
 
         // The FR's observable outcome: divergence between the pair shrinks.

@@ -125,7 +125,10 @@ impl Plugin for HolocronPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<HolocronState>()
             .init_resource::<HolocronOpenedAt>()
-            .add_systems(Update, (toggle_cmdk, track_holocron_open_edge).run_if(in_playing_state))
+            .add_systems(
+                Update,
+                (toggle_cmdk, track_holocron_open_edge).run_if(in_playing_state),
+            )
             .add_systems(
                 EguiPrimaryContextPass,
                 draw_holocron_overlay.run_if(in_playing_state),
@@ -250,9 +253,8 @@ fn draw_holocron_overlay(
 
     egui::CentralPanel::default()
         .frame(
-            egui::Frame::NONE.fill(
-                egui::Color32::from_black_alpha(200).gamma_multiply(overlay_alpha),
-            ),
+            egui::Frame::NONE
+                .fill(egui::Color32::from_black_alpha(200).gamma_multiply(overlay_alpha)),
         )
         .show(ctx, |ui| {
             let avail = ui.available_size();

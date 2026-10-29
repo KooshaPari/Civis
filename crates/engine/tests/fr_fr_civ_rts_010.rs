@@ -10,7 +10,7 @@ mod fr_fr_civ_rts_010 {
     /// MilitaryUnit struct has hp field for siege health.
     #[test]
     fn military_unit_has_hp() {
-        use civ_engine::{MilitaryUnit, UnitType, Position, Fixed};
+        use civ_engine::{Fixed, MilitaryUnit, Position, UnitType};
         let unit = MilitaryUnit {
             unit_type: UnitType::Soldier,
             strength: Fixed::from_num(10),
@@ -26,7 +26,7 @@ mod fr_fr_civ_rts_010 {
     /// MilitaryUnit can take damage (hp decreases).
     #[test]
     fn military_unit_takes_damage() {
-        use civ_engine::{MilitaryUnit, UnitType, Position, Fixed};
+        use civ_engine::{Fixed, MilitaryUnit, Position, UnitType};
         let mut unit = MilitaryUnit {
             unit_type: UnitType::Soldier,
             strength: Fixed::from_num(10),
@@ -36,7 +36,7 @@ mod fr_fr_civ_rts_010 {
             position: Position { x: 0, y: 0 },
             faction_id: 1,
         };
-        unit.hp = unit.hp - Fixed::from_num(30);
+        unit.hp -= Fixed::from_num(30);
         assert_eq!(unit.hp, Fixed::from_num(70));
     }
 }

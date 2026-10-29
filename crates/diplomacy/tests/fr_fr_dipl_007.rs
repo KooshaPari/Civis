@@ -4,8 +4,8 @@
 //! accumulating per tick.
 
 use civ_diplomacy::{
-    NonNegativeU64, ShadowFlow, ShadowFlowType, ShadowNetworkConfig, ShadowNetworkEvent,
-    ShadowNetworkState, PolityId, Pair,
+    NonNegativeU64, Pair, PolityId, ShadowFlow, ShadowFlowType, ShadowNetworkConfig,
+    ShadowNetworkEvent, ShadowNetworkState,
 };
 
 fn p(id: u32) -> PolityId {
@@ -64,7 +64,10 @@ fn shadow_non_negative_u64_saturating_sub() {
     assert_eq!(val.saturating_sub(5), NonNegativeU64::new(5));
     assert_eq!(val.saturating_sub(100), NonNegativeU64::new(0));
     // Cannot go negative
-    assert_eq!(NonNegativeU64::new(0).saturating_sub(1), NonNegativeU64::new(0));
+    assert_eq!(
+        NonNegativeU64::new(0).saturating_sub(1),
+        NonNegativeU64::new(0)
+    );
 }
 
 /// FR-DIPL-007: Flow events are recorded and can be drained.
@@ -81,7 +84,9 @@ fn shadow_events_recorded() {
 
     let events = state.drain_events();
     assert_eq!(events.len(), 1);
-    assert!(matches!(&events[0], ShadowNetworkEvent::FlowRecorded { flow } if flow.quantity == 100));
+    assert!(
+        matches!(&events[0], ShadowNetworkEvent::FlowRecorded { flow } if flow.quantity == 100)
+    );
 }
 
 /// FR-DIPL-007: Influence per flow type is tracked separately.

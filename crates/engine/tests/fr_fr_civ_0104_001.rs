@@ -9,9 +9,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_0104_001 {
-    use civ_engine::constraints::{
-        check_all, run_all_checks, ConstraintSetResult, MinimalConstraintParams,
-    };
+    use civ_engine::constraints::{check_all, run_all_checks, MinimalConstraintParams};
     use civ_engine::Fixed;
     use std::collections::BTreeMap;
 
@@ -26,12 +24,12 @@ mod fr_fr_civ_0104_001 {
             (2, Fixed::from_num(97) / Fixed::from_num(100)),
         ]);
         let result = run_all_checks(
-            Fixed::from_num(3) / Fixed::from_num(10),  // enforcement 0.3
-            Fixed::from_num(7) / Fixed::from_num(10),   // legitimacy 0.7
-            Fixed::from_num(8) / Fixed::from_num(10),   // governance integrity 0.8
-            Fixed::from_num(1) / Fixed::from_num(10),   // selectivity 0.1
+            Fixed::from_num(3) / Fixed::from_num(10), // enforcement 0.3
+            Fixed::from_num(7) / Fixed::from_num(10), // legitimacy 0.7
+            Fixed::from_num(8) / Fixed::from_num(10), // governance integrity 0.8
+            Fixed::from_num(1) / Fixed::from_num(10), // selectivity 0.1
             &cohorts,
-            false,                                        // coupling disabled
+            false,                                      // coupling disabled
             Fixed::from_num(5) / Fixed::from_num(100),  // opacity 0.05
             Fixed::from_num(95) / Fixed::from_num(100), // ledger write 0.95
             Fixed::from_num(5) / Fixed::from_num(100),  // adaptation 0.05
@@ -39,7 +37,7 @@ mod fr_fr_civ_0104_001 {
             Fixed::from_num(1) / Fixed::from_num(10),   // climate damage 0.1
             Fixed::from_num(5) / Fixed::from_num(10),   // C0 0.5
             Fixed::from_num(4) / Fixed::from_num(10),   // L0 0.4
-            5,                                           // coalition members
+            5,                                          // coalition members
             &params,
         );
         assert!(
@@ -134,7 +132,7 @@ mod fr_fr_civ_0104_001 {
             Fixed::from_num(1) / Fixed::from_num(10),
             &empty_cohorts,
             false,
-            Fixed::from_num(3) / Fixed::from_num(10),  // opacity 0.3 > O_max 0.15
+            Fixed::from_num(3) / Fixed::from_num(10), // opacity 0.3 > O_max 0.15
             Fixed::from_num(95) / Fixed::from_num(100),
             Fixed::from_num(5) / Fixed::from_num(100),
             Fixed::from_num(2) / Fixed::from_num(10),

@@ -6,7 +6,10 @@ mod fr_fr_civ_qol_200 {
     fn chronicle_for_notification_events() {
         let ws = civ_engine::WorldState::default();
         // Chronicle is the engine-side event feed for notifications.
-        assert!(ws.chronicle.is_empty(), "Fresh world starts with empty chronicle");
+        assert!(
+            ws.chronicle.is_empty(),
+            "Fresh world starts with empty chronicle"
+        );
     }
 
     #[test]

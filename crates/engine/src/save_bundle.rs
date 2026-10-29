@@ -220,7 +220,11 @@ fn hex_digest(bytes: &[u8]) -> String {
 fn canonical_listing_bytes(components: &[ComponentDigest]) -> Vec<u8> {
     let mut buf = Vec::new();
     for c in components {
-        for field in [c.component.as_str(), c.blake3.as_str(), c.len.to_string().as_str()] {
+        for field in [
+            c.component.as_str(),
+            c.blake3.as_str(),
+            c.len.to_string().as_str(),
+        ] {
             buf.extend_from_slice(&(field.len() as u64).to_le_bytes());
             buf.extend_from_slice(field.as_bytes());
         }
@@ -244,11 +248,7 @@ fn compute_integrity_manifest(
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {
             let name = entry.file_name().to_string_lossy().into_owned();
-            entry
-                .file_type()
-                .ok()
-                .filter(|t| t.is_file())
-                .map(|_| name)
+            entry.file_type().ok().filter(|t| t.is_file()).map(|_| name)
         })
         .filter(|name| name != INTEGRITY_FILE && name != "metadata.json")
         .collect();
@@ -256,6 +256,20 @@ fn compute_integrity_manifest(
 
     let mut components = Vec::with_capacity(names.len());
     for name in names {
+        // The verifier refuses any component name that is not a plain file
+        // name directly under the save root, so a name it would reject must
+        // not be manifested either. Silently dropping it would produce a
+        // bundle that cannot be loaded back (the file is on disk but not in
+        // the manifest), so refuse the directory outright instead.
+        if !is_plain_component_name(&name) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: format!(
+                    "cannot save a directory containing {:?}: that name is not a plain file name \
+                     directly under the save root",
+                    name
+                ),
+            });
+        }
         let path = dir.join(&name);
         let bytes = fs::read(&path).map_err(|e| io_err(&path, e))?;
         components.push(ComponentDigest {
@@ -369,6 +383,30 @@ fn verify_integrity_manifest(
     Ok(())
 }
 
+/// Reject a save directory that already holds a file name the integrity
+/// verifier would refuse, before any write touches the existing contents.
+///
+/// A missing directory holds nothing to reject, so this returns `Ok(())` and
+/// lets the caller create it.
+fn ensure_dir_is_manifestable(dir: &Path) -> Result<(), SaveBundleError> {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return Ok(());
+    };
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !is_plain_component_name(&name) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: format!(
+                    "cannot save into a directory containing {:?}: that name is not a plain file \
+                     name directly under the save root",
+                    name
+                ),
+            });
+        }
+    }
+    Ok(())
+}
+
 /// FR-SAVE-006 - reject any manifest component name that is not a single plain
 /// file name.
 ///
@@ -379,14 +417,20 @@ fn is_plain_component_name(name: &str) -> bool {
     if name.is_empty() || name == "." || name == ".." {
         return false;
     }
+    // A backslash is a path separator on Windows but an ordinary character on
+    // Unix. A name like `nested\..\..\escape.json` is one file name here yet a
+    // traversal when the save is opened on Windows, so refuse it everywhere.
+    if name.contains('\\') {
+        return false;
+    }
     // `Path::components` yields exactly one `Component::Normal` only for a name
     // with no separator, no prefix, and no `.`/`..` element. Using it instead of
     // string matching keeps the check aligned with the platform's own path
     // grammar rather than a hand-rolled allowlist of separators.
     let mut components = Path::new(name).components();
-    matches!(components.next(), Some(std::path::Component::Normal(_))) && components.next().is_none()
+    matches!(components.next(), Some(std::path::Component::Normal(_)))
+        && components.next().is_none()
 }
-
 
 fn archive_err(message: impl std::fmt::Display) -> SaveBundleError {
     SaveBundleError::Archive(message.to_string())
@@ -594,6 +638,14 @@ impl CivSaveBundle {
     /// Write an uncompressed save folder at `dir` (typically `*.civsave/`).
     pub fn save_dir(dir: impl AsRef<Path>, sim: &Simulation) -> Result<(), SaveBundleError> {
         let dir = dir.as_ref();
+        // Refuse a directory that already holds a name the verifier would
+        // reject *before* writing anything. The same check also runs inside
+        // `compute_integrity_manifest`, but that happens after every component
+        // has been written, so failing there would leave the previous save
+        // half-overwritten and its `integrity.json` no longer describing the
+        // directory it sits in. Validating up front makes the refusal
+        // non-destructive.
+        ensure_dir_is_manifestable(dir)?;
         fs::create_dir_all(dir).map_err(|e| io_err(dir, e))?;
 
         let metadata = CivSaveMetadata {
@@ -716,7 +768,8 @@ impl CivSaveBundle {
                     component: INTEGRITY_FILE,
                 });
             }
-            let raw = fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
+            let raw =
+                fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
             let manifest: SaveIntegrityManifest =
                 serde_json::from_str(&raw).map_err(SaveBundleError::Json)?;
             if manifest.spec_id != CIVSAVE_SPEC_ID {
@@ -786,8 +839,7 @@ impl CivSaveBundle {
             // phase_policy_econ resume with the same authoritative
             // post-save values.
             sim.institutions = sim.state.institutions.clone();
-            sim.institution_levels_emitted =
-                sim.state.institution_levels_emitted.clone();
+            sim.institution_levels_emitted = sim.state.institution_levels_emitted.clone();
             sim.build_sites = sim.state.build_sites.clone();
             sim.econ_focus = sim.state.econ_focus.clone();
             // Mirror persisted culture, ideology, aggression, and
@@ -797,8 +849,7 @@ impl CivSaveBundle {
             sim.cluster_cultures = sim.state.cluster_cultures.clone();
             sim.faction_ideologies = sim.state.faction_ideologies.clone();
             sim.faction_aggression = sim.state.faction_aggression.clone();
-            sim.unrest_settlement_gini =
-                sim.state.unrest_settlement_gini.clone();
+            sim.unrest_settlement_gini = sim.state.unrest_settlement_gini.clone();
             // Mirror persisted riot/migrant accumulators and scenario
             // taxation back onto the live Simulation so phase_unrest /
             // apply_scenario_taxation resume with the same authoritative
@@ -1184,7 +1235,11 @@ mod tests {
         assert_eq!(manifest.spec_id, CIVSAVE_SPEC_ID);
         assert_eq!(manifest.format_version, CIVSAVE_FORMAT_VERSION);
         assert_eq!(manifest.tick, sim.state.tick);
-        assert_eq!(manifest.root.len(), 64, "root must be a hex BLAKE3-256 digest");
+        assert_eq!(
+            manifest.root.len(),
+            64,
+            "root must be a hex BLAKE3-256 digest"
+        );
 
         let on_disk: BTreeSet<String> = fs::read_dir(&save)
             .expect("read_dir")
@@ -1203,7 +1258,10 @@ mod tests {
             if name == INTEGRITY_FILE || name == "metadata.json" {
                 continue;
             }
-            assert!(listed.contains(name), "{name} on disk is missing from the manifest");
+            assert!(
+                listed.contains(name),
+                "{name} on disk is missing from the manifest"
+            );
         }
         assert!(listed.contains("world_state.json"));
         assert!(listed.contains("replay.civreplay"));
@@ -1222,7 +1280,10 @@ mod tests {
         // Recomputing the manifest from the same directory is deterministic.
         let again = compute_integrity_manifest(&save, CIVSAVE_FORMAT_VERSION, sim.state.tick)
             .expect("recompute");
-        assert_eq!(again, manifest, "manifest computation must be deterministic");
+        assert_eq!(
+            again, manifest,
+            "manifest computation must be deterministic"
+        );
     }
 
     #[test]
@@ -1253,8 +1314,7 @@ mod tests {
             bytes[mid] ^= 0x01;
             fs::write(&target, &bytes).expect("write tampered component");
 
-            let err = CivSaveBundle::load_dir(&save)
-                .expect_err("tampered save must not load");
+            let err = CivSaveBundle::load_dir(&save).expect_err("tampered save must not load");
             match err {
                 SaveBundleError::HashMismatch { component: c, .. } => {
                     assert_eq!(c, component, "mismatch must name the tampered component");
@@ -1309,7 +1369,10 @@ mod tests {
             .clone();
         let victim_path = extracted.join(&victim);
         let mut payload = fs::read(&victim_path).expect("read victim component");
-        assert!(!payload.is_empty(), "victim component must have bytes to corrupt");
+        assert!(
+            !payload.is_empty(),
+            "victim component must have bytes to corrupt"
+        );
         let last = payload.len() - 1;
         payload[last] = payload[last].wrapping_add(0x7f);
         fs::write(&victim_path, &payload).expect("write tampered component");
@@ -1325,8 +1388,11 @@ mod tests {
         // archive entry point is covered and not just the directory loader.
         let tampered_archive = dir.path().join("tampered.civsave.zst");
         let tar_bytes = tar_dir(&extracted).expect("tar the tampered dir");
-        fs::write(&tampered_archive, encode_all(tar_bytes.as_slice(), 3).expect("compress"))
-            .expect("write tampered archive");
+        fs::write(
+            &tampered_archive,
+            encode_all(tar_bytes.as_slice(), 3).expect("compress"),
+        )
+        .expect("write tampered archive");
         let arch_err = CivSaveBundle::load_archive(&tampered_archive)
             .expect_err("a tampered archive must not load");
         assert!(
@@ -1406,6 +1472,98 @@ mod tests {
     // refused before it is ever joined onto a path and read, otherwise the
     // integrity check becomes an arbitrary-file-read primitive.
     #[test]
+    fn fr_save_006_refusal_leaves_the_prior_save_untouched() {
+        // The refusal above must not be destructive. `save_dir` writes every
+        // component before it computes the manifest, so when the name check
+        // lived only inside `compute_integrity_manifest` a bad name in the
+        // directory meant the previous save had already been overwritten by
+        // the time the error surfaced - with an `integrity.json` that no
+        // longer described the directory it sat in.
+        let mut sim = Simulation::with_seed(41);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+
+        CivSaveBundle::save_dir(&save, &sim).expect("first save_dir");
+        let manifest_path = save.join(INTEGRITY_FILE);
+        let before_manifest = fs::read(&manifest_path).expect("read manifest");
+        let before_files = fs::read_dir(&save)
+            .expect("read_dir")
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        let mut before_sorted = before_files.clone();
+        before_sorted.sort();
+
+        // A name the verifier refuses, added the way a Unix fs would hold it.
+        fs::write(save.join("foo\\bar"), b"{}").expect("write awkward name");
+
+        // Advance the sim so a successful second save would definitely rewrite
+        // the components with different content.
+        sim.tick();
+        sim.tick();
+
+        let err = CivSaveBundle::save_dir(&save, &sim)
+            .expect_err("a directory holding a backslash name must be refused");
+        match err {
+            SaveBundleError::SaveCorruption { detail } => assert!(
+                detail.contains("not a plain file name"),
+                "expected the containment refusal, got {detail}"
+            ),
+            other => panic!("expected SaveCorruption, got {other:?}"),
+        }
+
+        // The prior save is intact: manifest byte-identical, and no component
+        // was rewritten. The only addition is the awkward name the test made.
+        let after_manifest = fs::read(&manifest_path).expect("read manifest");
+        assert_eq!(
+            before_manifest, after_manifest,
+            "the refusal must not rewrite integrity.json"
+        );
+
+        let mut after_files = fs::read_dir(&save)
+            .expect("read_dir")
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n != "foo\\bar")
+            .collect::<Vec<_>>();
+        after_files.sort();
+        assert_eq!(
+            before_sorted, after_files,
+            "the refusal must not add or remove any component"
+        );
+    }
+
+    fn fr_save_006_refuses_to_save_a_directory_holding_a_backslash_file_name() {
+        // A backslash is an ordinary character in a Unix file name, so a Unix
+        // directory can legitimately contain a file called `foo\bar`. Such a
+        // name cannot be represented in a bundle: the verifier refuses it as
+        // not a plain file name (it is a separator on Windows, so a name like
+        // `nested\..\..\escape.json` is a traversal there), and the loader
+        // refuses a file that is on disk but absent from the manifest. So
+        // `save_dir` must refuse such a directory outright rather than write a
+        // bundle that can never be loaded back.
+        let mut sim = Simulation::with_seed(37);
+        sim.tick();
+        let dir = tempdir().expect("tempdir");
+        let save = dir.path().join("slot");
+        CivSaveBundle::save_dir(&save, &sim).expect("save_dir");
+
+        // Add the awkward name the way a Unix filesystem would hold it, then
+        // rebuild the manifest so the save path sees it.
+        fs::write(save.join("foo\\bar"), b"{}").expect("write awkward name");
+
+        let err = compute_integrity_manifest(&save, CIVSAVE_FORMAT_VERSION, sim.state.tick)
+            .expect_err("a directory holding a backslash name must be refused");
+        match err {
+            SaveBundleError::SaveCorruption { detail } => assert!(
+                detail.contains("not a plain file name"),
+                "expected the containment refusal for the backslash name, got {detail}"
+            ),
+            other => panic!("expected SaveCorruption, got {other:?}"),
+        }
+    }
+
     fn fr_save_006_rejects_manifest_components_that_escape_the_save_root() {
         for hostile in [
             "../escape.json",
@@ -1470,10 +1628,14 @@ mod tests {
 
         fs::write(save.join("injected_state.json"), "{}").expect("write injected file");
 
-        let err =
-            CivSaveBundle::load_dir(&save).expect_err("an unlisted component must fail verification");
+        let err = CivSaveBundle::load_dir(&save)
+            .expect_err("an unlisted component must fail verification");
         match err {
-            SaveBundleError::UnlistedComponent { component, manifest, .. } => {
+            SaveBundleError::UnlistedComponent {
+                component,
+                manifest,
+                ..
+            } => {
                 assert_eq!(component, "injected_state.json");
                 assert_eq!(manifest, INTEGRITY_FILE);
             }

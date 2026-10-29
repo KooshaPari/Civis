@@ -49,7 +49,10 @@ impl DecisionLog {
     /// Filter events for a specific leader.
     #[must_use]
     pub fn for_leader(&self, leader_id: &str) -> Vec<&DecisionEvent> {
-        self.events.iter().filter(|e| e.leader_id == leader_id).collect()
+        self.events
+            .iter()
+            .filter(|e| e.leader_id == leader_id)
+            .collect()
     }
 }
 
@@ -74,8 +77,20 @@ mod tests {
     #[test]
     fn for_leader_filters() {
         let mut log = DecisionLog::default();
-        log.emit(DecisionEvent { tick: 1, leader_id: "a".into(), chosen_action: "x".into(), score: 1.0, candidates_count: 1 });
-        log.emit(DecisionEvent { tick: 1, leader_id: "b".into(), chosen_action: "y".into(), score: 0.5, candidates_count: 1 });
+        log.emit(DecisionEvent {
+            tick: 1,
+            leader_id: "a".into(),
+            chosen_action: "x".into(),
+            score: 1.0,
+            candidates_count: 1,
+        });
+        log.emit(DecisionEvent {
+            tick: 1,
+            leader_id: "b".into(),
+            chosen_action: "y".into(),
+            score: 0.5,
+            candidates_count: 1,
+        });
         assert_eq!(log.for_leader("a").len(), 1);
         assert_eq!(log.for_leader("c").len(), 0);
     }

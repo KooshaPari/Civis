@@ -20,7 +20,11 @@ mod fr_fr_civ_mod_015 {
     #[test]
     fn all_variants_have_emit_type() {
         use civ_mod_host::PolicyActionKind;
-        for kind in [PolicyActionKind::SetTaxRate, PolicyActionKind::SetSubsidyRate, PolicyActionKind::TransferFunds] {
+        for kind in [
+            PolicyActionKind::SetTaxRate,
+            PolicyActionKind::SetSubsidyRate,
+            PolicyActionKind::TransferFunds,
+        ] {
             let emit = kind.to_emit_type();
             assert!(emit > 0, "emit_type for {kind:?} should be > 0");
         }

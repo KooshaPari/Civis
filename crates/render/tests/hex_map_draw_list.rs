@@ -47,5 +47,8 @@ fn hex_map_60fps() {
         (draw_list.visible_tiles as usize) < renderer.tile_count(),
         "off-screen tiles must be culled"
     );
-    assert!(draw_list.draw_calls() <= 4, "batched by terrain => few calls");
+    assert!(
+        draw_list.draw_calls() <= 4,
+        "batched by terrain => few calls"
+    );
 }

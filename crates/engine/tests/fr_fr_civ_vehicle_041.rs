@@ -15,8 +15,14 @@ mod fr_fr_civ_vehicle_041 {
         // A wagon has capacity 12; a cart has 4
         let wagon = find_archetype(&catalog, VehicleKind::Wagon).unwrap();
         let cart = find_archetype(&catalog, VehicleKind::Cart).unwrap();
-        assert!(wagon.capacity > cart.capacity, "wagon must carry more than cart");
+        assert!(
+            wagon.capacity > cart.capacity,
+            "wagon must carry more than cart"
+        );
         // Two carts = 8 units, still less than one wagon
-        assert!(wagon.capacity > cart.capacity * 2, "wagon capacity > 2x cart");
+        assert!(
+            wagon.capacity > cart.capacity * 2,
+            "wagon capacity > 2x cart"
+        );
     }
 }

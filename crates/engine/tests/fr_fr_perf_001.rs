@@ -57,7 +57,11 @@ fn sustained_10_ticks_per_sec() {
     let cells = reference_hex_map();
     assert_eq!(cells.len(), HEX_CELLS);
     let distinct: BTreeSet<(i32, i32)> = cells.iter().map(|c| (c.q, c.r)).collect();
-    assert_eq!(distinct.len(), HEX_CELLS, "each hex cell is a distinct coordinate");
+    assert_eq!(
+        distinct.len(),
+        HEX_CELLS,
+        "each hex cell is a distinct coordinate"
+    );
 
     let start = Instant::now();
     for _ in 0..TICKS {
@@ -65,7 +69,11 @@ fn sustained_10_ticks_per_sec() {
     }
     let elapsed = start.elapsed();
 
-    assert_eq!(sim.state.tick, u64::from(TICKS), "exactly one tick per call");
+    assert_eq!(
+        sim.state.tick,
+        u64::from(TICKS),
+        "exactly one tick per call"
+    );
     assert!(
         elapsed < PER_TICK_BUDGET * TICKS,
         "{TICKS} ticks took {elapsed:?}; the 10 ticks/s budget for {TICKS} ticks is {:?}",

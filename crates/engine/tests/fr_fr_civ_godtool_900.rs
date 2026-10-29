@@ -1,4 +1,4 @@
-﻿//! Tests for FR-CIV-GODTOOL-900 - God Tool Request Dispatch
+//! Tests for FR-CIV-GODTOOL-900 - God Tool Request Dispatch
 //!
 //! Epic: FR-CIV-FRAME
 //! God-tool substrate SHALL dispatch requests through Simulation.
@@ -11,5 +11,3 @@ mod fr_fr_civ_godtool_900 {
         assert_eq!(ws.tick, 0, "fresh state at tick zero ready for dispatch");
     }
 }
-
-

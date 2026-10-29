@@ -16,7 +16,10 @@ mod fr_fr_civ_brush_03 {
             icon: "raise",
             group: ModeGroup::Precise,
         };
-        assert_eq!(mode.kind, civ_engine::brush_types::ActionKind::TerraformRaise);
+        assert_eq!(
+            mode.kind,
+            civ_engine::brush_types::ActionKind::TerraformRaise
+        );
         assert_eq!(mode.label, "Raise");
         assert_eq!(mode.group, ModeGroup::Precise);
     }

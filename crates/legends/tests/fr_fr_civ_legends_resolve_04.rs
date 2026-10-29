@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod fr_fr_civ_legends_resolve_04 {
-    use civ_legends::{SagaGraph, EventKind, RawSimEvent, SourceCrate};
+    use civ_legends::{EventKind, RawSimEvent, SagaGraph, SourceCrate};
 
     /// FR-CIV-LEGENDS-RESOLVE-04: High-magnitude events promote entities.
     #[test]

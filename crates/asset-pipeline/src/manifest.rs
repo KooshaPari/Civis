@@ -66,13 +66,14 @@ pub fn check_manifest_completeness(
     manifest_path: &Path,
     atlas_paths: &[&Path],
 ) -> Result<(), CompletenessError> {
-    let manifest = std::fs::read_to_string(manifest_path)
-        .map_err(|e| CompletenessError::Io(e.to_string()))?;
+    let manifest =
+        std::fs::read_to_string(manifest_path).map_err(|e| CompletenessError::Io(e.to_string()))?;
     let manifest_assets = count_occurrences(&manifest, "\"asset_id\"") as u32;
 
     let mut atlas_total: u32 = 0;
     for atlas in atlas_paths {
-        let body = std::fs::read_to_string(atlas).map_err(|e| CompletenessError::Io(e.to_string()))?;
+        let body =
+            std::fs::read_to_string(atlas).map_err(|e| CompletenessError::Io(e.to_string()))?;
         atlas_total = atlas_total.saturating_add(parse_count_field(&body));
     }
 
@@ -89,7 +90,8 @@ pub fn check_manifest_completeness(
 /// top-level key. Returns the first missing key, or `Ok(())` if all are
 /// present.
 pub fn check_manifest_schema(manifest_path: &Path) -> Result<(), SchemaError> {
-    let body = std::fs::read_to_string(manifest_path).map_err(|e| SchemaError::Io(e.to_string()))?;
+    let body =
+        std::fs::read_to_string(manifest_path).map_err(|e| SchemaError::Io(e.to_string()))?;
     for key in REQUIRED_MANIFEST_KEYS {
         if !body.contains(&format!("\"{key}\"")) {
             return Err(SchemaError::MissingKey(key));
@@ -168,10 +170,7 @@ mod tests {
 
     #[test]
     fn completeness_rejects_count_mismatch() {
-        let m = write_tmp(
-            "manifest_bad.json",
-            "{\"assets\":[{\"asset_id\":\"a\"}]}",
-        );
+        let m = write_tmp("manifest_bad.json", "{\"assets\":[{\"asset_id\":\"a\"}]}");
         let a1 = write_tmp("atlas_a2.json", "{\"count\":2}");
         let a2 = write_tmp("atlas_b2.json", "{\"count\":3}");
         assert_eq!(
@@ -211,7 +210,12 @@ mod tests {
     fn schema_conformance_reports_missing_keys_in_order() {
         assert_eq!(
             REQUIRED_MANIFEST_KEYS,
-            ["manifest_version", "build_timestamp", "pipeline_hash", "assets"]
+            [
+                "manifest_version",
+                "build_timestamp",
+                "pipeline_hash",
+                "assets"
+            ]
         );
         assert_eq!(REQUIRED_MANIFEST_VERSION, "1.0");
 

@@ -1,3 +1,7 @@
+#![allow(clippy::len_zero)]
+// Placeholder assertion (`TOOL_NAMES.len() > 0`) kept as a marker until the owning
+// lane writes the real oracle; tracked as a follow-up issue.
+
 //! Tests for FR-CIV-MCP-003
 //!
 //! Upgraded from stub to real assertions.

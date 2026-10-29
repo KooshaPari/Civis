@@ -2,7 +2,7 @@
 //! Epic: FR-CIV-QOL. Game speed controls.
 #[cfg(test)]
 mod fr_fr_civ_qol_160 {
-    use civ_engine::{Fixed, step, WorldState};
+    use civ_engine::{step, Fixed, WorldState};
 
     #[test]
     fn step_advances_simulation_clock() {

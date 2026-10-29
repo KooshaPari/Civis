@@ -113,7 +113,9 @@ impl Plugin for GodPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GodPanelState>().add_systems(
             Update,
-            (toggle_god_panel, draw_god_panel).chain().run_if(in_playing_state),
+            (toggle_god_panel, draw_god_panel)
+                .chain()
+                .run_if(in_playing_state),
         );
     }
 }
@@ -195,10 +197,7 @@ fn draw_god_panel(
         .title_bar(true)
         .frame(
             egui::Frame::window(ctx.style().as_ref())
-                .fill(
-                    egui::Color32::from_rgba_premultiplied(9, 10, 12, 230)
-                        .gamma_multiply(alpha),
-                )
+                .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 230).gamma_multiply(alpha))
                 .stroke(egui::Stroke::new(
                     1.5,
                     egui::Color32::from_rgb(126, 186, 181).gamma_multiply(alpha),
@@ -206,8 +205,12 @@ fn draw_god_panel(
         )
         .show(ctx, |ui| {
             if alpha < 1.0 {
-                ui.visuals_mut().override_text_color =
-                    Some(ui.visuals().override_text_color.unwrap_or(ui.style().visuals.text_color()).gamma_multiply(alpha));
+                ui.visuals_mut().override_text_color = Some(
+                    ui.visuals()
+                        .override_text_color
+                        .unwrap_or(ui.style().visuals.text_color())
+                        .gamma_multiply(alpha),
+                );
             }
             ui.label(
                 egui::RichText::new("Direct Intervention")

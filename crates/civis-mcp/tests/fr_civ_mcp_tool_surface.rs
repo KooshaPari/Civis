@@ -218,9 +218,11 @@ fn fr_civ_mcp_003_envelope_holds_for_arbitrary_methods_and_params() {
 /// and needs a live server to observe, so it is not asserted here.
 #[test]
 fn fr_civ_mcp_003_unknown_method_still_forms_a_valid_envelope() {
-    let parsed: serde_json::Value =
-        serde_json::from_str(&build_rpc_request("sim.does_not_exist", serde_json::json!({})))
-            .expect("an unknown method must still yield a parseable envelope");
+    let parsed: serde_json::Value = serde_json::from_str(&build_rpc_request(
+        "sim.does_not_exist",
+        serde_json::json!({}),
+    ))
+    .expect("an unknown method must still yield a parseable envelope");
 
     assert_eq!(
         parsed["method"], "sim.does_not_exist",

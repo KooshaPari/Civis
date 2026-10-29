@@ -103,7 +103,14 @@ impl Plugin for SandboxEventFeedPlugin {
         app.init_resource::<SandboxEventFeedOpen>()
             .init_resource::<SandboxEventFeedOpenedAt>()
             .init_resource::<EmergenceEventTracker>()
-            .add_systems(Update, (toggle_sandbox_feed, detect_emergence_events, track_sandbox_feed_open_edge))
+            .add_systems(
+                Update,
+                (
+                    toggle_sandbox_feed,
+                    detect_emergence_events,
+                    track_sandbox_feed_open_edge,
+                ),
+            )
             .add_systems(EguiPrimaryContextPass, draw_sandbox_event_feed);
     }
 }

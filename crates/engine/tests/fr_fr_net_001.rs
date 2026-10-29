@@ -11,7 +11,10 @@ mod fr_fr_net_001 {
     fn world_state_initializes_at_tick_zero() {
         let ws = civ_engine::WorldState::default();
         assert_eq!(ws.tick, 0, "initial tick must be zero");
-        assert!(ws.energy_budget_joules > civ_engine::Fixed::ZERO, "initial energy must be positive");
+        assert!(
+            ws.energy_budget_joules > civ_engine::Fixed::ZERO,
+            "initial energy must be positive"
+        );
         assert_eq!(ws.population, 0, "initial population is zero");
     }
 

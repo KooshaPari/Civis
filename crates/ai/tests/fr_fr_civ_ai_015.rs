@@ -5,15 +5,13 @@
 //! (heuristic anomaly detection -> SLM triage; offline/CI batch). Runs
 //! headless; emits a human-readable balance report; never in shipping sim.
 
-use civ_ai::{
-    AiConfig, DummyAiProvider, GenRequest, ProviderRegistry, ProviderRole,
-};
+use civ_ai::{AiConfig, DummyAiProvider, GenRequest, ProviderRegistry, ProviderRole};
 use std::sync::Arc;
 
 #[cfg(test)]
 mod fr_fr_civ_ai_015 {
-    use civ_ai::AiProvider;
     use super::*;
+    use civ_ai::AiProvider;
 
     /// FR-CIV-AI-015 — Balance analyst runs headless: the provider can generate
     /// a report from structured telemetry without any sim/world-state dependency.
@@ -76,7 +74,10 @@ mod fr_fr_civ_ai_015 {
     fn balance_analyst_config_defaults() {
         let config = AiConfig::default();
         // Cloud is off by default — balance analyst is offline/CI
-        assert!(!config.enable_cloud, "balance analyst must not require cloud");
+        assert!(
+            !config.enable_cloud,
+            "balance analyst must not require cloud"
+        );
         // Token budget sufficient for a balance report
         assert!(config.gen_token_budget >= 200, "need budget for report");
     }

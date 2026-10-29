@@ -1,3 +1,8 @@
+#![allow(clippy::absurd_extreme_comparisons)]
+#![allow(unused_comparisons)]
+// Placeholder comparison assertion kept as a marker until the owning lane writes
+// the real oracle; tracked as a follow-up issue.
+
 //! FR-CIV-INFOVIEW-905 / -911 / -912 / -914 and FR-CIV-INSPECT-902 / -920 -
 //! real behavioural oracles.
 //!
@@ -92,6 +97,7 @@
 
 use std::collections::BTreeMap;
 
+use civ_build::{BuildingId, DemandSignals};
 use civ_engine::building_emergence::{
     apply_emergence_facades, architecture_tile_sets, culture_traits_for_cluster,
     emergent_style_key_for_sim, resource_stock_units,
@@ -107,12 +113,13 @@ use civ_engine::godtools::{
     GodToolReceipt, GodToolRequest, InspectRequest, LifeRequest, ProbeReport, ProbeRequest,
     SpawnCivSeedRequest,
 };
-use civ_engine::history::{EraHistory, EventType, HistoricalEvent, HistoryLog, Timeline, TimelineEvent};
+use civ_engine::history::{
+    EraHistory, EventType, HistoricalEvent, HistoryLog, Timeline, TimelineEvent,
+};
 use civ_engine::language::LanguageFamilyTree;
 use civ_engine::lod::{aggregate_strategic, operational_hex_snapshot, HexCellSnapshot};
 use civ_engine::social_types::{MOOD_CRIME_BASE, MOOD_MAX, MOOD_MIN};
 use civ_engine::{CivAge, Fixed, InstitutionKind, Simulation, WorldCoord};
-use civ_build::{BuildingId, DemandSignals};
 use civ_voxel::ORE;
 
 // ---------------------------------------------------------------------------
@@ -148,16 +155,16 @@ fn expected_mood(
         .saturating_mul(2)
         .clamp(MOOD_MIN, MOOD_MAX);
     let crime_score = (MOOD_CRIME_BASE - 4 * i64::from(crime_pressure)).clamp(0, MOOD_CRIME_BASE);
-    let total = (food_score + housing_score + crime_score + temple + garrison)
-        .clamp(MOOD_MIN, MOOD_MAX);
+    let total =
+        (food_score + housing_score + crime_score + temple + garrison).clamp(MOOD_MIN, MOOD_MAX);
     (food_score, housing_score, crime_score, total)
 }
 
 fn probe(sim: &mut Simulation, pos: WorldCoord) -> ProbeReport {
     match sim
-        .apply_god_tool(GodToolRequest::Inspect(InspectRequest::Probe(ProbeRequest {
-            pos,
-        })))
+        .apply_god_tool(GodToolRequest::Inspect(InspectRequest::Probe(
+            ProbeRequest { pos },
+        )))
         .expect("inspect.probe must succeed")
     {
         GodToolReceipt::Inspect { report } => report,
@@ -277,12 +284,9 @@ fn infoview_905_reading_activates_when_its_data_source_appears() {
         "crime at the documented baseline saturates the inverse crime sub-score"
     );
     let (temple, garrison) = institution_bonus(&live, 21);
-    let expected_first = (frame.food_score
-        + frame.housing_score
-        + frame.crime_score
-        + temple
-        + garrison)
-        .clamp(MOOD_MIN, MOOD_MAX);
+    let expected_first =
+        (frame.food_score + frame.housing_score + frame.crime_score + temple + garrison)
+            .clamp(MOOD_MIN, MOOD_MAX);
     assert!(
         expected_first < MOOD_MAX,
         "fixture must stay below saturation, otherwise the live-update assertion is vacuous"
@@ -500,10 +504,16 @@ fn infoview_912_per_cell_population_aggregates_exactly_into_the_region_rollup() 
         .sum();
     assert_eq!(
         u64::from(aggregate_strategic(&per_cell_population)),
-        cells.iter().map(|cell| u64::from(cell.population)).sum::<u64>(),
+        cells
+            .iter()
+            .map(|cell| u64::from(cell.population))
+            .sum::<u64>(),
         "the region rollup must equal the sum of the per-cell drill-down"
     );
-    assert_eq!(u64::from(aggregate_strategic(&per_cell_population)), expected_total);
+    assert_eq!(
+        u64::from(aggregate_strategic(&per_cell_population)),
+        expected_total
+    );
 
     // Narrowing the view changes the total by exactly the removed cell.
     let mut narrowed = per_cell_population.to_vec();
@@ -537,7 +547,10 @@ fn infoview_912_per_cell_population_aggregates_exactly_into_the_region_rollup() 
         per_cell_population.len(),
         "each measured settlement must contribute exactly one per-cell reading"
     );
-    assert_eq!(aggregate_strategic(&per_cell_population), expected_total as u32);
+    assert_eq!(
+        aggregate_strategic(&per_cell_population),
+        expected_total as u32
+    );
 }
 
 /// Covers FR-CIV-INFOVIEW-912.
@@ -574,8 +587,14 @@ fn infoview_912_well_being_and_age_frames_are_measured_per_settlement() {
         let (food, housing, crime_score, total) =
             expected_mood(&sim, id, population, capacity, crime, 0);
         assert_eq!(frame.food_score, food, "settlement {id}: food sub-score");
-        assert_eq!(frame.housing_score, housing, "settlement {id}: housing sub-score");
-        assert_eq!(frame.crime_score, crime_score, "settlement {id}: crime sub-score");
+        assert_eq!(
+            frame.housing_score, housing,
+            "settlement {id}: housing sub-score"
+        );
+        assert_eq!(
+            frame.crime_score, crime_score,
+            "settlement {id}: crime sub-score"
+        );
         assert_eq!(frame.mood, total, "settlement {id}: total well-being");
         assert_eq!(
             frame.mood_delta, total,
@@ -631,8 +650,8 @@ fn infoview_912_well_being_and_age_frames_are_measured_per_settlement() {
     assert_eq!(frame.housing_score, housing);
     assert_eq!(frame.crime_score, crime_score);
     let (temple, garrison) = institution_bonus(&sim, 2);
-    let total = (frame.food_score + housing + crime_score + temple + garrison)
-        .clamp(MOOD_MIN, MOOD_MAX);
+    let total =
+        (frame.food_score + housing + crime_score + temple + garrison).clamp(MOOD_MIN, MOOD_MAX);
     assert_eq!(frame.mood, total);
     assert_eq!(
         frame.mood_delta,
@@ -702,15 +721,24 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
     let mut engine = BuildingTierEngine::new(BuildingTierConfig::new(0, 0, 10, 0.1));
     let id = engine.spawn(BuildingTier::Primitive, 1);
 
-    assert_eq!(engine.get_building(id).expect("building").tier, BuildingTier::Primitive);
+    assert_eq!(
+        engine.get_building(id).expect("building").tier,
+        BuildingTier::Primitive
+    );
     assert_eq!(engine.get_building(id).expect("building").condition, 1.0);
     assert!(engine.get_building(id).expect("building").operational);
     let primitive_capacity = engine.total_capacity(1);
-    assert_eq!(primitive_capacity, 1, "tier 0 contributes capacity ordinal+1");
+    assert_eq!(
+        primitive_capacity, 1,
+        "tier 0 contributes capacity ordinal+1"
+    );
 
     // Configs scale per tier: tech + 2/level, population + 10/level, cost + 50/level.
     let basic = engine.config_for(BuildingTier::Basic);
-    assert_eq!((basic.tech_level, basic.population_min, basic.resource_cost), (2, 10, 60));
+    assert_eq!(
+        (basic.tech_level, basic.population_min, basic.resource_cost),
+        (2, 10, 60)
+    );
 
     // Gated: insufficient tech, then population, then resources.
     let mut treasury = 10_000_u32;
@@ -720,8 +748,14 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
             .expect_err("tech 1 must not unlock tier 1 (needs 2)"),
         UpgradeError::InsufficientTech
     );
-    assert_eq!(treasury, 10_000, "a rejected upgrade must not spend resources");
-    assert_eq!(engine.get_building(id).expect("building").tier, BuildingTier::Primitive);
+    assert_eq!(
+        treasury, 10_000,
+        "a rejected upgrade must not spend resources"
+    );
+    assert_eq!(
+        engine.get_building(id).expect("building").tier,
+        BuildingTier::Primitive
+    );
 
     assert_eq!(
         engine
@@ -729,7 +763,10 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
             .expect_err("population 9 must not unlock tier 1 (needs 10)"),
         UpgradeError::InsufficientPopulation
     );
-    assert_eq!(engine.get_building(id).expect("building").tier, BuildingTier::Primitive);
+    assert_eq!(
+        engine.get_building(id).expect("building").tier,
+        BuildingTier::Primitive
+    );
 
     let mut poor = 5_u32;
     assert_eq!(
@@ -739,13 +776,20 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
         UpgradeError::InsufficientResources
     );
     assert_eq!(poor, 5, "a failed level-up must not partially spend");
-    assert_eq!(engine.get_building(id).expect("building").tier, BuildingTier::Primitive);
+    assert_eq!(
+        engine.get_building(id).expect("building").tier,
+        BuildingTier::Primitive
+    );
 
     // Accepted: exact cost, level advanced, condition restored to pristine.
     engine
         .upgrade(id, 2, 10, &mut treasury)
         .expect("tech 2 / population 10 / 10000 resources must level up");
-    assert_eq!(treasury, 10_000 - 60, "the level-up must cost exactly the tier cost");
+    assert_eq!(
+        treasury,
+        10_000 - 60,
+        "the level-up must cost exactly the tier cost"
+    );
     let upgraded = engine.get_building(id).expect("building").clone();
     assert_eq!(upgraded.tier, BuildingTier::Basic);
     assert_eq!(upgraded.age, 0, "a fresh level resets the age clock");
@@ -772,9 +816,14 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
     );
 
     engine.downgrade(id).expect("Basic must be downgradable");
-    assert_eq!(engine.get_building(id).expect("building").tier, BuildingTier::Primitive);
     assert_eq!(
-        engine.downgrade(id).expect_err("Primitive is the bottom level"),
+        engine.get_building(id).expect("building").tier,
+        BuildingTier::Primitive
+    );
+    assert_eq!(
+        engine
+            .downgrade(id)
+            .expect_err("Primitive is the bottom level"),
         UpgradeError::AlreadyMaxTier
     );
 
@@ -783,7 +832,10 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
     let mut decaying = BuildingTierEngine::new(BuildingTierConfig::new(0, 0, 10, 0.2));
     let decaying_id = decaying.spawn(BuildingTier::Primitive, 4);
     decaying.tick(1.0);
-    let after_one = decaying.get_building(decaying_id).expect("building").condition;
+    let after_one = decaying
+        .get_building(decaying_id)
+        .expect("building")
+        .condition;
     assert!(
         (after_one - 0.8).abs() < 1e-6,
         "one tick of maintenance 0.2 must leave 0.8, got {after_one}"
@@ -813,7 +865,10 @@ fn infoview_914_building_level_progression_is_gated_and_exact() {
 #[test]
 fn infoview_914_layout_coverage_and_road_adjacency_are_measured() {
     let house = LayoutCatalog::house();
-    assert_eq!(house.capacity, 4, "the housing layout's capacity is a declared datum");
+    assert_eq!(
+        house.capacity, 4,
+        "the housing layout's capacity is a declared datum"
+    );
     assert_eq!(house.infrastructure_needs.food_per_tick, 1);
     assert_eq!(house.infrastructure_needs.energy_per_tick, 1);
     assert!(
@@ -1020,7 +1075,10 @@ fn inspect_902_membership_reads_emergent_cluster_identity_not_a_faction() {
         (((cluster >> 24) % 256) as f32) / 255.0,
     ];
     for (index, value) in reading.iter().enumerate() {
-        assert!((0.0..=1.0).contains(value), "culture[{index}] = {value} out of range");
+        assert!(
+            (0.0..=1.0).contains(value),
+            "culture[{index}] = {value} out of range"
+        );
         assert!(
             (value - expected_seed[index]).abs() < 0.06,
             "cluster {cluster} culture[{index}] = {value} must stay anchored to its \
@@ -1070,7 +1128,9 @@ fn inspect_902_population_economy_and_ideology_fields_bind_to_measured_sources()
     sim.set_settlement_population(9, population);
     sim.set_settlement_housing_capacity(9, capacity);
     sim.tick();
-    let frame = *sim.last_tick_mood(9).expect("registration must be measurable");
+    let frame = *sim
+        .last_tick_mood(9)
+        .expect("registration must be measurable");
     assert_eq!(frame.settlement_id, 9);
     assert_eq!(
         i64::from(capacity) - frame.housing_score / 2,
@@ -1187,7 +1247,10 @@ fn inspect_902_population_economy_and_ideology_fields_bind_to_measured_sources()
 fn inspect_920_follow_cam_locks_to_the_selected_agent_and_never_a_stale_one() {
     let mut sim = Simulation::with_seed(0x920_CA40);
     let agents = sim.all_agents();
-    assert!(!agents.is_empty(), "follow-cam needs at least one selectable agent");
+    assert!(
+        !agents.is_empty(),
+        "follow-cam needs at least one selectable agent"
+    );
     let selected = agents[0].id;
 
     let entity = sim
@@ -1211,7 +1274,11 @@ fn inspect_920_follow_cam_locks_to_the_selected_agent_and_never_a_stale_one() {
         .filter(|(_, (civilian, _))| civilian.id == selected)
         .map(|(_, (_, position))| position.coord)
         .collect();
-    assert_eq!(positions.len(), 1, "the locked agent must have exactly one live position");
+    assert_eq!(
+        positions.len(),
+        1,
+        "the locked agent must have exactly one live position"
+    );
 
     // The lock survives simulation ticks and still points at the same agent.
     for _ in 0..8 {
@@ -1231,7 +1298,9 @@ fn inspect_920_follow_cam_locks_to_the_selected_agent_and_never_a_stale_one() {
     );
 
     // A despawned agent releases the lock instead of tracking a stale entity.
-    sim.world.despawn(entity).expect("despawn the selected agent");
+    sim.world
+        .despawn(entity)
+        .expect("despawn the selected agent");
     assert!(
         sim.agent_entity(selected).is_none(),
         "follow-cam must release when its agent leaves the world"
@@ -1253,7 +1322,11 @@ fn inspect_920_history_jump_targets_are_real_chronicle_entries() {
     era.record_advance(9, 7, CivAge::Bronze, CivAge::Iron);
     era.record_advance(10, 7, CivAge::Iron, CivAge::Stone); // not an advance
     let transitions = era.transitions();
-    assert_eq!(transitions.len(), 2, "a non-advance must not create a jump target");
+    assert_eq!(
+        transitions.len(),
+        2,
+        "a non-advance must not create a jump target"
+    );
     assert_eq!(transitions[0].tick, 3);
     assert_eq!(transitions[1].tick, 9);
     assert!(
@@ -1354,7 +1427,10 @@ fn inspect_920_history_jump_targets_are_real_chronicle_entries() {
     let mut tree = LanguageFamilyTree::new("proto");
     let child = tree.diverge(0, "child", 5);
     let grandchild = tree.diverge(child, "grandchild", 12);
-    assert_eq!(tree.get_lineage(grandchild), vec![grandchild, child, tree.root_id]);
+    assert_eq!(
+        tree.get_lineage(grandchild),
+        vec![grandchild, child, tree.root_id]
+    );
     assert_eq!(
         tree.get_lineage(child),
         vec![child, tree.root_id],

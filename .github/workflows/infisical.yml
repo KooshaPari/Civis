@@ -5,81 +5,81 @@
 name: Infisical Sync
 
 on:
-  workflow_call:
-  workflow_dispatch:
-  push:
-    branches: [main, master]
-    paths:
-      - '.github/workflows/infisical.yml'
-  # Deliberately NOT triggered by pull_request. This job syncs secrets; it is not
-  # a correctness gate, it needs a long-lived credential, and running it on every
-  # PR only produced a check that could never pass.
+    workflow_call:
+    workflow_dispatch:
+    push:
+        branches: [main, master]
+        paths:
+            - ".github/workflows/infisical.yml"
+    # Deliberately NOT triggered by pull_request. This job syncs secrets; it is not
+    # a correctness gate, it needs a long-lived credential, and running it on every
+    # PR only produced a check that could never pass.
 
 jobs:
-  sync-secrets:
-    name: Pull secrets from Infisical
-    # The repo currently has no INFISICAL_TOKEN secret (verified via
-    # GET /actions/secrets -> empty), so this job could only ever fail. Skip it
-    # explicitly rather than leaving a permanent red check that trains people
-    # to ignore failures.
-    if: ${{ secrets.INFISICAL_TOKEN != '' }}
-    # `blacksmith-2vcpu-ubuntu-2204` is not a registered runner for this repo
-    # (GET /actions/runners -> 0), so the job queued until cancellation on every
-    # PR instead of running. This workflow needs nothing from a self-hosted
-    # machine: it installs the Infisical CLI from Cloudsmith and reads a repo
-    # secret, so a stock GitHub runner is sufficient.
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    sync-secrets:
+        name: Pull secrets from Infisical
+        # The repo currently has no INFISICAL_TOKEN secret (verified via
+        # GET /actions/secrets -> empty), so this job could only ever fail. Skip it
+        # explicitly rather than leaving a permanent red check that trains people
+        # to ignore failures.
+        if: ${{ secrets.INFISICAL_TOKEN != '' }}
+        # `blacksmith-2vcpu-ubuntu-2204` is not a registered runner for this repo
+        # (GET /actions/runners -> 0), so the job queued until cancellation on every
+        # PR instead of running. This workflow needs nothing from a self-hosted
+        # machine: it installs the Infisical CLI from Cloudsmith and reads a repo
+        # secret, so a stock GitHub runner is sufficient.
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Install Infisical CLI
-        run: |
-          # This step used to run:
-          #
-          #   <fetch the Cloudsmith setup script> then hand it to sudo bash
-          #   sudo apt-get install -y infisical
-          #
-          # Two problems. The Cloudsmith endpoint now returns 404, so the pipe fed
-          # bash an empty script which exited 0, and apt then failed with "Unable
-          # to locate package infisical" - the install never worked, it was just
-          # never reached. And downloading a script and handing it to `sudo bash`
-          # executes unaudited remote code on the runner, which SonarCloud flags
-          # as a security hotspot on every PR.
-          #
-          # Rather than keep an untrustworthy install path, this fails with an
-          # actionable message. The job is gated on secrets.INFISICAL_TOKEN, which
-          # is unset in this repo, so it does not run today. Whoever wires the
-          # token up must first replace this step with the vendor's current,
-          # reviewed install method (or a pinned .deb / official action).
-          echo "::error::Infisical CLI installation is not wired up: the previous Cloudsmith installer returns 404 and must be replaced before this workflow can run."
-          exit 1
+            - name: Install Infisical CLI
+              run: |
+                  # This step used to run:
+                  #
+                  #   <fetch the Cloudsmith setup script> then hand it to sudo bash
+                  #   sudo apt-get install -y infisical
+                  #
+                  # Two problems. The Cloudsmith endpoint now returns 404, so the pipe fed
+                  # bash an empty script which exited 0, and apt then failed with "Unable
+                  # to locate package infisical" - the install never worked, it was just
+                  # never reached. And downloading a script and handing it to `sudo bash`
+                  # executes unaudited remote code on the runner, which SonarCloud flags
+                  # as a security hotspot on every PR.
+                  #
+                  # Rather than keep an untrustworthy install path, this fails with an
+                  # actionable message. The job is gated on secrets.INFISICAL_TOKEN, which
+                  # is unset in this repo, so it does not run today. Whoever wires the
+                  # token up must first replace this step with the vendor's current,
+                  # reviewed install method (or a pinned .deb / official action).
+                  echo "::error::Infisical CLI installation is not wired up: the previous Cloudsmith installer returns 404 and must be replaced before this workflow can run."
+                  exit 1
 
-      - name: Load secrets from Infisical
-        env:
-          INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
-          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID || '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
-          INFISICAL_ENV: ${{ vars.INFISICAL_ENV || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
-        run: |
-          # Validate required secrets are present
-          if [ -z "$INFISICAL_TOKEN" ]; then
-            echo "::warning::INFISICAL_TOKEN not configured; skipping the secret sync"
-            exit 0
-          fi
-          if [ -z "$INFISICAL_PROJECT_ID" ]; then
-            echo "::error::INFISICAL_PROJECT_ID var or secret not set"
-            exit 1
-          fi
+            - name: Load secrets from Infisical
+              env:
+                  INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
+                  INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID || secrets.INFISICAL_PROJECT_ID || '8efe392e-56a6-4c3c-89f9-8141183dd7e8' }}
+                  INFISICAL_ENV: ${{ vars.INFISICAL_ENV || github.ref == 'refs/heads/main' && 'prod' || github.ref == 'refs/heads/staging' && 'staging' || 'dev' }}
+              run: |
+                  # Validate required secrets are present
+                  if [ -z "$INFISICAL_TOKEN" ]; then
+                    echo "::warning::INFISICAL_TOKEN not configured; skipping the secret sync"
+                    exit 0
+                  fi
+                  if [ -z "$INFISICAL_PROJECT_ID" ]; then
+                    echo "::error::INFISICAL_PROJECT_ID var or secret not set"
+                    exit 1
+                  fi
 
-          # Load the secrets, then print a fixed message only.
-          #
-          # This step used to end with `env | grep -E "^[A-Z_]+=" | head -20`,
-          # which prints NAME=value pairs - so any variable outside its
-          # exclusion list published a secret value to the Actions log. That was
-          # dormant only because the job never ran (see the runs-on note above).
-          infisical run \
-            --projectId "$INFISICAL_PROJECT_ID" \
-            --env "$INFISICAL_ENV" \
-            --token "$INFISICAL_TOKEN" \
-            -- bash -c 'echo "Secrets loaded into env successfully"'
+                  # Load the secrets, then print a fixed message only.
+                  #
+                  # This step used to end with `env | grep -E "^[A-Z_]+=" | head -20`,
+                  # which prints NAME=value pairs - so any variable outside its
+                  # exclusion list published a secret value to the Actions log. That was
+                  # dormant only because the job never ran (see the runs-on note above).
+                  infisical run \
+                    --projectId "$INFISICAL_PROJECT_ID" \
+                    --env "$INFISICAL_ENV" \
+                    --token "$INFISICAL_TOKEN" \
+                    -- bash -c 'echo "Secrets loaded into env successfully"'

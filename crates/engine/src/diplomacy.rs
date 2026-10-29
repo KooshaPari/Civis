@@ -29,7 +29,39 @@ use std::collections::{BTreeMap, BTreeSet};
 //
 // Removed, with the reason each cannot be discharged here:
 // [unbound] FR-CIV-POLITY-004: The requirement is at docs/design/polities-markets.md:68-74: "FR-CIV-POLITY-004 -- Regime read-out from graph topology. A polity's *displayed* shape is a pure function of its internal edge structure", with a table mapping topological signatures (mean coordination, reciprocity, degree distribution, coercion asymmetry) to read-out labels Anarchic / Networked / Collective / Hierarchical / Dominant. The mandated behavior is a pure function: read the edge structure, classify the regime. `DeepDiplomacyState` is an 8-field passive aggregate (alliance_manager, active_negotiations, active_exchanges, faction_cultures, faction_resources, active_wars, war_start_ticks, war_casualties; diplomacy.rs:22-39) with a derived Default and no impl block at all -- it holds no edge structure, computes no topology, and has no classification function to call. It cannot do what is asked. `git grep -rni "Anarchic|Networked|Collective|Hierarchical|regime" -- crates/` returns the unrelated branching-regime classifier (crates/civ-emergence-metrics/src/branching.rs:180, classify_regime over sigma-bar) and the unrelated economy allocation regimes (crates/economy/src/allocation.rs:177); neither reads polity edge topology, and the allocation enum's own removal note concedes "no code path ever changes a locale's regime as coercion rises". There is no graph-topology classifier in the workspace, so the read-out has no implementing symbol and the container cannot stand in for one. Collateral observation: the only test file for this id, crates/engine/tests/fr_fr_civ_polity_004.rs, asserts that the struct's default is empty and that it is Clone. A test that checks emptiness and clonability is evidence about the container, not about regime read-out, and is a stub in spirit even though it compiles.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg(test)]
+mod tuple_key_serde_tests {
+    use super::*;
+
+    /// A tuple-keyed map cannot be a JSON object key, so serializing one
+    /// failed with "key must be a string" and every save that had an active
+    /// diplomacy relation could not be written. The keys are encoded as
+    /// "<a>:<b>" strings; this pins that the round trip preserves them.
+    #[test]
+    fn deep_diplomacy_state_round_trips_tuple_keyed_maps() {
+        let mut state = DeepDiplomacyState::default();
+        state.active_wars.insert((3, 7));
+        state.war_start_ticks.insert((3, 7), 42);
+        state.war_casualties.insert(3, 2);
+
+        let json = serde_json::to_string(&state).expect("serialize");
+        assert!(
+            !json.contains("key must be"),
+            "tuple-keyed state must serialize: {json}"
+        );
+        assert!(
+            json.contains("3:7"),
+            "the encoded pair key must be present: {json}"
+        );
+
+        let back: DeepDiplomacyState = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.active_wars, state.active_wars);
+        assert_eq!(back.war_start_ticks, state.war_start_ticks);
+        assert_eq!(back.war_casualties, state.war_casualties);
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct DeepDiplomacyState {
     /// Alliance formation manager.
     pub alliance_manager: AllianceManager,
@@ -80,7 +112,7 @@ pub struct FactionRelationRecord {
 //
 // Removed, with the reason each cannot be discharged here:
 // [unbound] FR-CIV-POLITY-001: The requirement is at docs/design/polities-markets.md:37-44: "FR-CIV-POLITY-001 -- Cohesion graph. A polity surface is computed as a weighted graph over clusters (nodes = ClusterId, edges = directed coordination weight)", with each edge weight a monotone blend of five named terms: coord(i->j) = w_colo*colocation + w_kin*kinship_overlap + w_cult*(1 - culture_distance) + w_econ*max(0, payoff_if_coordinated) + w_coer*coercion(i->j). The mandated artifact is a weighted GRAPH whose nodes are clusters and whose edges carry a computed five-term weight. `FactionRelations` is a single `rows: BTreeMap<(u32,u32), FactionRelationRecord>` where each record is just { score: f32, samples: u32 } (diplomacy.rs:61-63, 53-56). Its nodes are faction integer ids, not ClusterId; it has no edge weight; it has none of the five terms (no colocation, kinship overlap, culture distance, payoff, or coercion); and `apply_signal` (diplomacy.rs:83-101) computes only a single scalar relation score from trade_volume and combat_grievance. The struct's own doc comment calls it a "Stub faction-relation matrix" (diplomacy.rs:58) and engine.rs:802 calls it "a stub: an empty FactionRelations until DiplomacyMatrix schema is ...". A one-scalar relation score between factions is not a weighted cohesion graph over clusters. `git grep -rni "coordination_weight|CohesionGraph|colocation|culture_distance|kinship_overlap|reciprocity" -- crates/` returns only cluster_by_colocation (crates/agents/src/cluster.rs:71), which partitions positions into clusters and never computes an edge weight; no cohesion-graph builder exists, so the requirement has no implementing symbol. The id's own test file concedes the gap: crates/engine/tests/fr_fr_civ_polity_001.rs:5 says the FR "captures: Diplomacy relations matrix" rather than the cohesion graph, and its strongest assertion is that a default world has zero rows.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct FactionRelations {
     rows: BTreeMap<(u32, u32), FactionRelationRecord>,
 }
@@ -596,5 +628,157 @@ impl Simulation {
             faction_b: b,
             kind,
         });
+    }
+}
+
+// --- serde for tuple-keyed diplomacy state -------------------------------
+//
+// serde_json cannot use a tuple as a JSON object key: serializing one fails
+// with "key must be a string". Every save that had an active negotiation,
+// exchange or war therefore failed to write at all. The keys are encoded as
+// `"<a>:<b>"` strings instead, and decoded back on load, so nothing is lost.
+
+fn encode_pair(pair: (u32, u32)) -> String {
+    format!("{}:{}", pair.0, pair.1)
+}
+
+fn decode_pair(key: &str) -> Option<(u32, u32)> {
+    let (a, b) = key.split_once(':')?;
+    Some((a.parse().ok()?, b.parse().ok()?))
+}
+
+impl Serialize for DeepDiplomacyState {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(Some(7))?;
+        map.serialize_entry("alliance_manager", &self.alliance_manager)?;
+        map.serialize_entry(
+            "active_negotiations",
+            &self
+                .active_negotiations
+                .iter()
+                .map(|(k, v)| (encode_pair(*k), v))
+                .collect::<BTreeMap<_, _>>(),
+        )?;
+        map.serialize_entry(
+            "active_exchanges",
+            &self
+                .active_exchanges
+                .iter()
+                .map(|(k, v)| (encode_pair(*k), v))
+                .collect::<BTreeMap<_, _>>(),
+        )?;
+        map.serialize_entry("faction_cultures", &self.faction_cultures)?;
+        map.serialize_entry("faction_resources", &self.faction_resources)?;
+        map.serialize_entry(
+            "active_wars",
+            &self
+                .active_wars
+                .iter()
+                .map(|k| encode_pair(*k))
+                .collect::<BTreeSet<_>>(),
+        )?;
+        map.serialize_entry(
+            "war_start_ticks",
+            &self
+                .war_start_ticks
+                .iter()
+                .map(|(k, v)| (encode_pair(*k), v))
+                .collect::<BTreeMap<_, _>>(),
+        )?;
+        map.serialize_entry("war_casualties", &self.war_casualties)?;
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for DeepDiplomacyState {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Raw {
+            #[serde(default)]
+            alliance_manager: AllianceManager,
+            #[serde(default)]
+            active_negotiations: BTreeMap<String, PeaceNegotiation>,
+            #[serde(default)]
+            active_exchanges: BTreeMap<String, CulturalExchange>,
+            #[serde(default)]
+            faction_cultures: BTreeMap<u32, CulturalVectors>,
+            #[serde(default)]
+            faction_resources: BTreeMap<u32, i32>,
+            #[serde(default)]
+            active_wars: BTreeSet<String>,
+            #[serde(default)]
+            war_start_ticks: BTreeMap<String, u64>,
+            #[serde(default)]
+            war_casualties: BTreeMap<u32, u32>,
+        }
+        let raw = Raw::deserialize(deserializer)?;
+        let mut active_negotiations = BTreeMap::new();
+        for (k, v) in raw.active_negotiations {
+            if let Some(pair) = decode_pair(&k) {
+                active_negotiations.insert(pair, v);
+            }
+        }
+        let mut active_exchanges = BTreeMap::new();
+        for (k, v) in raw.active_exchanges {
+            if let Some(pair) = decode_pair(&k) {
+                active_exchanges.insert(pair, v);
+            }
+        }
+        let mut war_start_ticks = BTreeMap::new();
+        for (k, v) in raw.war_start_ticks {
+            if let Some(pair) = decode_pair(&k) {
+                war_start_ticks.insert(pair, v);
+            }
+        }
+        let active_wars = raw
+            .active_wars
+            .iter()
+            .filter_map(|k| decode_pair(k))
+            .collect();
+        Ok(Self {
+            alliance_manager: raw.alliance_manager,
+            active_negotiations,
+            active_exchanges,
+            faction_cultures: raw.faction_cultures,
+            faction_resources: raw.faction_resources,
+            active_wars,
+            war_start_ticks,
+            war_casualties: raw.war_casualties,
+        })
+    }
+}
+
+impl Serialize for FactionRelations {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(Some(1))?;
+        map.serialize_entry(
+            "rows",
+            &self
+                .rows
+                .iter()
+                .map(|(k, v)| (encode_pair(*k), v))
+                .collect::<BTreeMap<_, _>>(),
+        )?;
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for FactionRelations {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Raw {
+            #[serde(default)]
+            rows: BTreeMap<String, FactionRelationRecord>,
+        }
+        let raw = Raw::deserialize(deserializer)?;
+        let mut rows = BTreeMap::new();
+        for (k, v) in raw.rows {
+            if let Some(pair) = decode_pair(&k) {
+                rows.insert(pair, v);
+            }
+        }
+        Ok(Self { rows })
     }
 }

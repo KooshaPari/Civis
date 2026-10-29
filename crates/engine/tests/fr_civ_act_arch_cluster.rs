@@ -663,11 +663,9 @@ fn fr_civ_act_005_decision_boundary_is_strict_with_pull_floor() {
 /// the source: the event claims an agent moved from settlement 1 to settlement 1
 /// when it actually moved to settlement 2.
 ///
-/// EXPECTED: `target_settlement == 2` (where the housing and the pull are).
-/// ACTUAL  : `target_settlement == 1 == source_settlement`.
-///
-/// This pins the ACTUAL value so the defect stays visible and tracked; delete
-/// this guard and assert the EXPECTED value once the indices are reconciled.
+/// The indices are now reconciled - `migration_tick` maps the filtered-list
+/// index back to the real settlement index - so this guard asserts the
+/// EXPECTED value rather than pinning the defective one.
 #[test]
 fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
     let config = MigrationConfig {
@@ -693,13 +691,13 @@ fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
         "settlement 2 is the attractive candidate"
     );
     assert_eq!(
-        event.target_settlement, 1,
-        "ACTUAL (defective): filtered-list index, not the settlement index"
+        event.target_settlement, 2,
+        "the target is the real destination settlement, not a filtered-list index"
     );
     assert_eq!(
         settlement_net_migration(&events, 2),
-        0,
-        "ACTUAL (defective): the real destination is credited with no arrivals"
+        1,
+        "the real destination is credited with the arrival"
     );
 }
 

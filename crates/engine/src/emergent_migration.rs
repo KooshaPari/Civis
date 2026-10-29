@@ -214,12 +214,14 @@ pub fn migration_tick(
     let mut events = Vec::new();
 
     for agent in agents {
-        // Collect candidates (excluding agent's current settlement)
-        let candidates: Vec<SettlementSnapshot> = settlements
+        // Collect candidates (excluding agent's current settlement), keeping
+        // each candidate's index into `settlements` so the event can name the
+        // real destination rather than a position in the filtered list.
+        let candidates: Vec<(usize, SettlementSnapshot)> = settlements
             .iter()
             .enumerate()
             .filter(|(i, _)| *i != agent.settlement_index as usize)
-            .map(|(_, s)| s.clone())
+            .map(|(i, s)| (i, s.clone()))
             .collect();
 
         if candidates.is_empty() {
@@ -227,20 +229,40 @@ pub fn migration_tick(
         }
 
         // Sample random subset
-        let sampled: Vec<SettlementSnapshot> = if candidates.len() <= config.sample_size {
+        let sampled: Vec<(usize, SettlementSnapshot)> = if candidates.len() <= config.sample_size {
             candidates
         } else {
             // Deterministic sampling: take first N (in real sim, use seeded RNG)
             candidates.into_iter().take(config.sample_size).collect()
         };
+        let sampled_snapshots: Vec<SettlementSnapshot> =
+            sampled.iter().map(|(_, s)| s.clone()).collect();
 
-        if let Some(event) = evaluate_migration(
+        if let Some(mut event) = evaluate_migration(
             agent,
             &settlements[agent.settlement_index as usize],
-            &sampled,
+            &sampled_snapshots,
             config,
             tick,
         ) {
+            // `evaluate_migration` reports an index into the candidate slice;
+            // map it back to the settlement's index in the full list.
+            //
+            // The index is within bounds by construction today - it is handed
+            // `sampled_snapshots`, which has exactly one entry per `sampled` -
+            // but it is an unchecked index into a slice, so it is looked up
+            // defensively. A panic here would take down the whole simulation
+            // rather than skipping one migration event.
+            let Some((settlement_index, _)) =
+                sampled.get(event.target_settlement as usize).cloned()
+            else {
+                // The event named a candidate that is not in the sampled set.
+                // Dropping the event is safer than emitting a wrong
+                // destination: a wrong index would move the agent to the
+                // wrong settlement.
+                continue;
+            };
+            event.target_settlement = settlement_index as u32;
             events.push(event);
         }
     }

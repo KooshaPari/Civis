@@ -466,8 +466,18 @@ pub struct WorldState {
     /// Global unrest pressure used by emergence coupling.
     pub unrest: u64,
     /// Emergent trade routes that should be retained while active.
+    ///
+    /// The key is a tuple, which serde_json cannot use as a JSON object key -
+    /// serializing it fails with "key must be a string", which breaks every
+    /// save once a trade route exists. This is transient bookkeeping that the
+    /// settlement helpers rebuild, so it is not part of the persisted state.
+    #[serde(skip)]
     pub emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
     /// Idle-tick counters for emergent trade routes.
+    ///
+    /// Tuple key, so skipped for the same reason as
+    /// `emergent_trade_route_keys` above.
+    #[serde(skip)]
     pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
 

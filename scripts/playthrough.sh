@@ -163,6 +163,17 @@ rpc() {
     # the raw response payload on stdout. Stderr is captured for diagnostics.
     local id="$1" method="$2" params="${3:-null}"
     local payload
+    # Every call opens a fresh connection (see `websocat -n` below), and the
+    # connection role is only read from the FIRST request on that connection.
+    # Operator-only methods - sim.spawn_civilian, sim.command, diplomacy
+    # actions, god actions - are refused without it, so every request carries
+    # the role.
+    if [[ "${params}" == "null" ]]; then
+        params='{"role":"operator"}'
+    else
+        params="$(printf '%s' "${params}" | jq -c '. + {role: "operator"}' 2>/dev/null)" \
+            || params="${params}"
+    fi
     payload="$(printf '{"jsonrpc":"2.0","id":%s,"method":%s,"params":%s}' \
         "${id}" "$(json_quote "${method}")" "${params}")"
 
@@ -173,10 +184,32 @@ rpc() {
     # -1 = exit after one full duplex exchange, --protocol=... for the
     # Sec-WebSocket-Protocol header if a server requires it. We always use
     # the default protocol.
-    timeout "${RPC_TIMEOUT_SECONDS}" \
+    #
+    # The server also pushes binary tick broadcasts to a connected client, so
+    # websocat's stdout mixes binary frames with the JSON-RPC reply. Those
+    # binary frames carry null bytes, which bash command substitution strips,
+    # leaving the JSON body corrupted and unreadable by jq. Capture the raw
+    # stream and keep only the JSON-RPC reply line.
+    local raw
+    raw="$(timeout "${RPC_TIMEOUT_SECONDS}" \
         websocat -n --ping-interval 5 --ping-timeout 8 \
             "${url}" < <(printf '%s\n' "${payload}") 2>/dev/null \
-        || true
+        || true)"
+
+    # The reply is the single line that parses as a JSON-RPC object carrying
+    # this request's id. Binary frames are not valid JSON and are skipped.
+    local line id_str
+    while IFS= read -r line; do
+        [[ "${line}" == *\"id\"* ]] || continue
+        id_str="$(printf '%s' "${line}" | jq -r '.id // empty' 2>/dev/null || true)"
+        [[ "${id_str}" == "${id}" ]] || continue
+        printf '%s\n' "${line}"
+        return 0
+    done <<<"${raw}"
+
+    # No reply matched: fall back to the raw stream so the caller reports
+    # what actually arrived instead of an empty body.
+    printf '%s\n' "${raw}"
 }
 
 json_quote() {

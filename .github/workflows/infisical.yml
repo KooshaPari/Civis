@@ -36,20 +36,25 @@ jobs:
 
       - name: Install Infisical CLI
         run: |
-          # NOTE: the Cloudsmith endpoint this used to pipe into bash now returns
-          # 404, so `curl ... | sudo bash` executed an empty script, exited 0, and
-          # the following apt-get then failed with "Unable to locate package
-          # infisical". Fail loudly instead of pretending to install anything.
-          # Replace with the vendor's current install method when this job is
-          # actually needed; it is gated on INFISICAL_TOKEN which is unset today.
-          set -o pipefail
-          if ! curl -1sLf "https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh" -o /tmp/infisical-setup.sh; then
-            echo "::error::Infisical CLI installer is unreachable; see the note in this step"
-            exit 1
-          fi
-          sudo -E bash /tmp/infisical-setup.sh
-          sudo apt-get update
-          sudo apt-get install -y infisical
+          # This step used to run:
+          #
+          #   <fetch the Cloudsmith setup script> then hand it to sudo bash
+          #   sudo apt-get install -y infisical
+          #
+          # Two problems. The Cloudsmith endpoint now returns 404, so the pipe fed
+          # bash an empty script which exited 0, and apt then failed with "Unable
+          # to locate package infisical" - the install never worked, it was just
+          # never reached. And downloading a script and handing it to `sudo bash`
+          # executes unaudited remote code on the runner, which SonarCloud flags
+          # as a security hotspot on every PR.
+          #
+          # Rather than keep an untrustworthy install path, this fails with an
+          # actionable message. The job is gated on secrets.INFISICAL_TOKEN, which
+          # is unset in this repo, so it does not run today. Whoever wires the
+          # token up must first replace this step with the vendor's current,
+          # reviewed install method (or a pinned .deb / official action).
+          echo "::error::Infisical CLI installation is not wired up: the previous Cloudsmith installer returns 404 and must be replaced before this workflow can run."
+          exit 1
 
       - name: Load secrets from Infisical
         env:

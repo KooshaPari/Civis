@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import shlex
 import subprocess
@@ -106,6 +105,7 @@ def collect_provenance(root: Path, manifest: Path) -> dict[str, str]:
         raise EvidenceError("quality manifest gates must be an object")
     attestation = {
         "git_sha": manifest_sha,
+        "content_hash": body.get("content_hash", ""),
         "gates": sorted(
             [
                 {"key": key, "status": value.get("status", "")}
@@ -164,7 +164,6 @@ def run_command(root: Path, command: str, timeout: float | None) -> dict[str, An
         result = subprocess.run(
             argv,
             cwd=root,
-            env=os.environ.copy(),
             capture_output=True,
             text=True,
             check=False,

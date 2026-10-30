@@ -1,5 +1,6 @@
 import pathlib
 import subprocess
+import re
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -46,10 +47,21 @@ try_macos_capture() { exit 88; }
             'if [[ "${CAPTURE_FRAMES}" == 1 ]]; then\nstep "Verifying captures..."',
             SCRIPT,
         )
+        # Job bodies live under `jobs:` at exactly four spaces of indent, so
+        # extract each job's own block and stop at the NEXT job key (or EOF).
+        # Slicing only on the header would XOR-mask the guards: a leftover
+        # `if: ${{ false }}` in a later job would satisfy this job's assertion
+        # even after this job's own guard had been deleted.
         for block in ("visual-regression", "update-baselines"):
+            match = re.search(
+                rf"(?ms)^    {re.escape(block)}:\n(.*?)(?=^    [A-Za-z][A-Za-z0-9_-]*:|\Z)",
+                WORKFLOW,
+            )
+            self.assertIsNotNone(match, f"job {block} must exist in the workflow")
             self.assertRegex(
-                WORKFLOW.split("  " + block + ":", 1)[1],
+                match.group(1),
                 r"(?s)^.*?if: \$\{\{ false \}\}",
+                msg=f"{block} must carry its own disabled guard",
             )
         # The "Upload captures" step must be immediately followed by a
         # disabled guard. Match it structurally instead of by a hard-coded

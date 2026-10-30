@@ -40,7 +40,11 @@ class GameE2eContract(unittest.TestCase):
         match = re.search(
             rf"(?ms)^{pad}{re.escape(job)}:[ ]*\n"
             r"(?P<body>.*?)"
-            rf"(?=^{pad}[A-Za-z][A-Za-z0-9_-]*:[ ]*$|\Z)",
+            # GitHub permits job IDs starting with `_`, so the lookahead must
+            # treat `_foo:` as the start of the NEXT job. Without it, a
+            # `_`-prefixed job following this one is swallowed into the
+            # captured block, and its guard can mask a missing guard here.
+            rf"(?=^{pad}[A-Za-z_][A-Za-z0-9_-]*:[ ]*$|\Z)",
             body,
         )
         self.assertIsNotNone(match, f"job {job} must exist in the workflow")

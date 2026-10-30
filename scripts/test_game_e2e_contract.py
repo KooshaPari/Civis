@@ -18,6 +18,64 @@ class GameE2eContract(unittest.TestCase):
     def run_bash(self, code):
         return subprocess.run(["bash", "-c", code], text=True, capture_output=True)
 
+    def job_block(self, job):
+        """Return (indent of the job key, body of the job) for `job`.
+
+        The job's block ends at the next sibling job key -- same indent as
+        this job's key -- or at EOF.
+        """
+        jobs = re.search(r"(?ms)^(?P<indent>[ ]*)jobs:[ ]*\n(?P<body>.*)\Z", WORKFLOW)
+        self.assertIsNotNone(jobs, "workflow must declare a `jobs:` mapping")
+        jobs_indent = len(jobs.group("indent"))
+        body = jobs.group("body")
+        indents = [
+            len(line) - len(line.lstrip(" "))
+            for line in body.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        indents = [i for i in indents if i > jobs_indent]
+        self.assertTrue(indents, "`jobs:` must contain at least one job")
+        job_indent = min(indents)
+        pad = " " * job_indent
+        match = re.search(
+            rf"(?ms)^{pad}{re.escape(job)}:[ ]*\n"
+            r"(?P<body>.*?)"
+            rf"(?=^{pad}[A-Za-z][A-Za-z0-9_-]*:[ ]*$|\Z)",
+            body,
+        )
+        self.assertIsNotNone(match, f"job {job} must exist in the workflow")
+        return job_indent, match.group("body")
+
+    def job_level_if_values(self, job_indent, body):
+        """Return the values of the job's OWN `if:` keys.
+
+        A job's direct attributes all share one indent level, one step deeper
+        than the job key. Everything nested below them -- including the
+        `steps:` sequence and each step's `if:` -- is deeper and is skipped.
+
+        Commented-out lines are skipped as well, so a guard cannot be
+        "commented away" and still satisfy the contract.
+        """
+        indents = [
+            len(line) - len(line.lstrip(" "))
+            for line in body.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        deeper = [i for i in indents if i > job_indent]
+        self.assertTrue(deeper, "job body must contain at least one attribute")
+        attribute_indent = min(deeper)
+        values = []
+        for line in body.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if len(line) - len(line.lstrip(" ")) != attribute_indent:
+                continue
+            key, _, value = stripped.partition(":")
+            if key.strip() == "if":
+                values.append(value.split("#", 1)[0].strip())
+        return values
+
     @unittest.skipUnless(BASH_READY, "Bash unavailable on this host")
     def test_capture_disabled_before_any_hook(self):
         function = SCRIPT.split("capture_screenshot() {", 1)[1].split("# Main menu", 1)[
@@ -47,21 +105,20 @@ try_macos_capture() { exit 88; }
             'if [[ "${CAPTURE_FRAMES}" == 1 ]]; then\nstep "Verifying captures..."',
             SCRIPT,
         )
-        # Job bodies live under `jobs:` at exactly four spaces of indent, so
-        # extract each job's own block and stop at the NEXT job key (or EOF).
-        # Slicing only on the header would XOR-mask the guards: a leftover
-        # `if: ${{ false }}` in a later job would satisfy this job's assertion
-        # even after this job's own guard had been deleted.
+        # Both jobs must be disabled by a JOB-LEVEL `if:` key. A regex over the
+        # whole job body is not enough: it also matches a commented-out guard,
+        # or an `if:` that belongs to a step inside the job. So the block is
+        # parsed structurally -- job attributes sit one indent level below
+        # the job key, while steps (and their `if:`) sit deeper.
         for block in ("visual-regression", "update-baselines"):
-            match = re.search(
-                rf"(?ms)^    {re.escape(block)}:\n(.*?)(?=^    [A-Za-z][A-Za-z0-9_-]*:|\Z)",
-                WORKFLOW,
-            )
-            self.assertIsNotNone(match, f"job {block} must exist in the workflow")
-            self.assertRegex(
-                match.group(1),
-                r"(?s)^.*?if: \$\{\{ false \}\}",
-                msg=f"{block} must carry its own disabled guard",
+            job_indent, job_body = self.job_block(block)
+            job_ifs = self.job_level_if_values(job_indent, job_body)
+            self.assertTrue(
+                any(re.fullmatch(r"\$\{\{\s*false\s*\}\}", value) for value in job_ifs),
+                msg=(
+                    f"{block} must be disabled by a job-level `if: ${{{{ false }}}}`; "
+                    f"job-level if values were {job_ifs!r}"
+                ),
             )
         # The "Upload captures" step must be immediately followed by a
         # disabled guard. Match it structurally instead of by a hard-coded

@@ -691,6 +691,10 @@ fn fr_civ_act_005_target_index_conflates_candidate_and_settlement_order_todo() {
         "settlement 2 is the attractive candidate"
     );
     assert_eq!(
+        event.target_pull, 1.0,
+        "settlement 2 is the attractive candidate"
+    );
+    assert_eq!(
         event.target_settlement, 2,
         "the target is the real destination settlement, not a filtered-list index"
     );

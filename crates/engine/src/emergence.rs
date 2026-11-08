@@ -1405,9 +1405,10 @@ mod tests {
             "unseeded entropy call in emergence.rs"
         );
         assert!(
-            !code.contains(needle_c.as_str()),
-            "unseeded OS entropy source in emergence.rs"
+            !code.contains("rand::random"),
+            "unseeded rand::random in emergence.rs"
         );
+        assert!(!code.contains("OsRng"), "unseeded OsRng in emergence.rs");
         // Every ChaCha8Rng construction in the module seeds from the world
         // seed or a deterministic XOR extension of it.
         // Needles are built at runtime so this loop does not match itself.

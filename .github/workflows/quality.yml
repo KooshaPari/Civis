@@ -25,7 +25,6 @@ jobs:
                   fetch-depth: 0
             - name: Verify local quality manifest
               run: bash scripts/quality/verify-quality-manifest.sh
-              continue-on-error: true
 
     # Optional heavy sweep (manual / release only — not required for PR merge).
     quality-full:

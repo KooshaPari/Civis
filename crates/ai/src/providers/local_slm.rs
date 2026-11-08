@@ -150,11 +150,7 @@ mod tests {
             .expect("GGUF load failed");
         assert!(provider.capabilities().generate);
         let out = provider
-            .generate(&GenRequest {
-                prompt: "Say hello in exactly 3 words.".into(),
-                temperature: 0.0,
-                max_tokens: 32,
-            })
+            .generate(&GenRequest::from_prompt("Say hello in exactly 3 words."))
             .await
             .expect("generate failed");
         assert!(!out.text.is_empty(), "local SLM must return non-empty text");

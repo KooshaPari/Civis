@@ -31,10 +31,20 @@ function Invoke-Gate {
     Write-Host "  pass $Name"
 }
 
-# Ensure Rust toolchain is on PATH (cargo may not be visible when invoked via pwsh hook).
-$cargoBin = Join-Path $env:USERPROFILE ".cargo\bin"
-if (Test-Path $cargoBin) {
-    $env:PATH = "$cargoBin$([IO.Path]::PathSeparator)$env:PATH"
+# Ensure the Rust toolchain is on PATH (cargo may not be visible when invoked
+# through the pwsh hook).
+#
+# $env:USERPROFILE only exists on Windows. On macOS/Linux it is $null, and
+# Join-Path throws "Cannot bind argument to parameter 'Path' because it is
+# null" - which aborted the whole emitter inside the lefthook pre-push hook.
+# Resolve the home directory portably, and join the two segments separately so
+# the separator is the platform's rather than a hard-coded backslash.
+$homeDir = if ($env:USERPROFILE) { $env:USERPROFILE } elseif ($env:HOME) { $env:HOME } else { $null }
+if ($homeDir) {
+    $cargoBin = Join-Path (Join-Path $homeDir ".cargo") "bin"
+    if (Test-Path $cargoBin) {
+        $env:PATH = "$cargoBin$([IO.Path]::PathSeparator)$env:PATH"
+    }
 }
 
 Write-Host "==> civis quality manifest (local gates)"

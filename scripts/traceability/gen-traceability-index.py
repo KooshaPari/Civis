@@ -199,7 +199,11 @@ def main() -> int:
             )
         L.append("")
 
-    INDEX.write_text("\n".join(L) + "\n", encoding="utf-8")
+    # newline="\n" so the bytes written are the repo's canonical LF form on
+    # every platform. Without it, `write_text` uses the platform default and
+    # emits CRLF on Windows, which no committed blob can match (.gitattributes
+    # pins `*.md text eol=lf`).
+    INDEX.write_text("\n".join(L) + "\n", encoding="utf-8", newline="\n")
     print(
         f"wrote {INDEX.relative_to(ROOT)}: {total} dirs, {len(by_epic)} epics, "
         f"{with_arts} populated, {missing_matrix} absent from the matrix"

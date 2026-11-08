@@ -89,7 +89,10 @@ pub fn run_verify(options: VerifyOptions) -> Result<VerifyResult, VerifyError> {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "civis-verify".to_string(),
-                    resolution: (options.width as f32, options.height as f32).into(),
+                    // `WindowResolution` implements `From<(u32, u32)>` (bevy
+                    // 0.18), not `From<(f32, f32)>`. `options.width` and
+                    // `options.height` are already u32.
+                    resolution: (options.width, options.height).into(),
                     ..default()
                 }),
                 ..default()

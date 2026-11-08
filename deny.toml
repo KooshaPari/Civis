@@ -30,6 +30,27 @@ ignore = [
   { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; upstream fork in progress" },
   # num-bigint 0.4.7 was yanked; superseded by 0.4.8 in lockfile.
   { id = "RUSTSEC-2025-0060", reason = "num-bigint yanked; transitive, will resolve on next cargo update" },
+  # zstd / zstd-safe advisories reached only through wasmtime-internal-cache.
+  #
+  # The workspace itself is on the patched zstd 0.14.3 (crates/engine and
+  # crates/protocol-3d), and it uses only zstd::stream::{encode_all, decode_all}
+  # - not the affected zstd::stream::raw::{Encoder,Decoder}::with_context.
+  # The remaining zstd 0.13.3 / zstd-safe 7.2.4 exist in the graph solely
+  # because wasmtime-internal-cache 50.0.0 requires zstd ^0.13.0, and
+  # wasmtime 50.0.0 is the newest release.
+  #
+  # Reachability: the workspace never enables the wasmtime cache (it uses
+  # Engine/Module/Instance only, no Cache and no cache_config), so the
+  # vulnerable code path is never entered. Even if it were, wasmtime's cache
+  # decompresses with zstd::decode_all, which the advisories state is NOT
+  # affected (RUSTSEC-2026-0403 explicitly excludes decode_all and the bulk
+  # API; RUSTSEC-2026-0391 is scoped to the with_context constructors).
+  #
+  # Revisit when wasmtime ships a release that allows zstd >= 0.14.3, or
+  # when the workspace starts using the wasmtime cache.
+  { id = "RUSTSEC-2026-0391", reason = "zstd with_context - reached only via wasmtime's unused cache; workspace is on patched zstd 0.14.3" },
+  { id = "RUSTSEC-2026-0398", reason = "zstd-safe Seekable::decompress - reached only via wasmtime's unused cache" },
+  { id = "RUSTSEC-2026-0403", reason = "zstd-safe legacy-frame streaming - reached only via wasmtime's unused cache; decode_all is unaffected" },
 ]
 
 [bans]

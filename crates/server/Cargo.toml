@@ -38,6 +38,7 @@ opentelemetry_sdk = { version = "0.32", features = ["rt-tokio"] }
 prometheus = "0.14"
 thiserror = "1"
 uuid = { version = "1", features = ["v4"] }
+png = "0.17"
 
 [lib]
 path = "src/lib.rs"

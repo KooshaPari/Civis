@@ -37,6 +37,7 @@ async fn spawn_test_bridge(sim: Arc<tokio::sync::Mutex<Simulation>>) -> SocketAd
             tick_broadcast_format: TickBroadcastFormat::Text,
             saves_dir: std::env::temp_dir().join("civ-server-mp-test"),
             replays_dir: std::env::temp_dir().join("civ-server-mp-test-replays"),
+            ..Default::default()
         },
     )
     .await

@@ -126,6 +126,10 @@ pub enum JsonRpcMethod {
     /// mood events, audio events into a single payload so the client
     /// can render them without polling many methods per frame.
     SimSimEvents,
+    /// Capture the current frame to a PNG file on disk (`sim.capture_frame`,
+    /// issue #1599). Used by `scripts/playthrough.sh` to archive
+    /// screenshots from CI.
+    SimCaptureFrame,
 }
 
 impl JsonRpcMethod {
@@ -174,6 +178,7 @@ impl JsonRpcMethod {
             Self::EmergenceDashboard => "emergence.dashboard",
             Self::SimReligionState => "sim.religion_state",
             Self::SimSimEvents => "sim.events",
+            Self::SimCaptureFrame => "sim.capture_frame",
         }
     }
 
@@ -222,6 +227,7 @@ impl JsonRpcMethod {
             "emergence.dashboard" => Some(Self::EmergenceDashboard),
             "sim.religion_state" => Some(Self::SimReligionState),
             "sim.events" => Some(Self::SimSimEvents),
+            "sim.capture_frame" => Some(Self::SimCaptureFrame),
             _ => None,
         }
     }
@@ -984,6 +990,8 @@ pub struct DispatchContext {
     pub connection_role: Option<String>,
     /// Bridge save directory for `save.*` handlers.
     pub saves_dir: Option<PathBuf>,
+    /// Bridge capture directory for `sim.capture_frame` (issue #1599).
+    pub captures_dir: Option<PathBuf>,
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
@@ -1435,6 +1443,360 @@ pub fn parse_set_speed_params(params: Option<&Value>) -> Result<u32, JsonRpcErro
     }
 
     Ok(multiplier)
+}
+
+/// Default frame width/height for `sim.capture_frame` when the caller omits
+/// `width`/`height` (mirrors `scripts/playthrough.sh`'s 1280x720 request).
+pub const CAPTURE_FRAME_DEFAULT_WIDTH: u32 = 1280;
+/// See [`CAPTURE_FRAME_DEFAULT_WIDTH`].
+pub const CAPTURE_FRAME_DEFAULT_HEIGHT: u32 = 720;
+/// Largest `width`/`height` `sim.capture_frame` will accept. Bounds the PNG
+/// encode buffer so a hostile/misbehaving client cannot force a multi-GB
+/// allocation (8K video is the practical ceiling for any current client).
+const CAPTURE_FRAME_MAX_DIMENSION: u32 = 7680;
+/// Longest `label` `sim.capture_frame` accepts, in ASCII bytes.
+const CAPTURE_FRAME_LABEL_MAX_LEN: usize = 64;
+
+/// Parsed `sim.capture_frame` params (issue #1599).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CaptureFrameParams {
+    /// Caller-supplied label; becomes the output filename stem. Restricted to
+    /// `[A-Za-z0-9_-]` so it is always a single safe path component — no
+    /// directory separator or `..` can smuggle a path-traversal escape out
+    /// of the capture directory.
+    pub label: String,
+    /// Requested frame width in pixels (default [`CAPTURE_FRAME_DEFAULT_WIDTH`]).
+    pub width: u32,
+    /// Requested frame height in pixels (default [`CAPTURE_FRAME_DEFAULT_HEIGHT`]).
+    pub height: u32,
+}
+
+/// Parse and validate `sim.capture_frame` params:
+/// `{ "label": String, "width"?: u32, "height"?: u32 }`.
+pub fn parse_capture_frame_params(
+    params: Option<&Value>,
+) -> Result<CaptureFrameParams, JsonRpcError> {
+    let invalid_label = || JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: format!(
+            "Invalid params: \"label\" must be 1-{CAPTURE_FRAME_LABEL_MAX_LEN} ASCII \
+             alphanumeric/underscore/hyphen characters"
+        ),
+        data: None,
+    };
+    let label = params
+        .and_then(|p| p.get("label"))
+        .and_then(|v| v.as_str())
+        .ok_or_else(invalid_label)?;
+    if label.is_empty()
+        || label.len() > CAPTURE_FRAME_LABEL_MAX_LEN
+        || !label
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err(invalid_label());
+    }
+
+    let parse_dimension = |key: &str, default: u32| -> Result<u32, JsonRpcError> {
+        match params.and_then(|p| p.get(key)) {
+            None => Ok(default),
+            Some(v) => {
+                let n = v.as_u64().ok_or_else(|| JsonRpcError {
+                    code: error_code::INVALID_PARAMS,
+                    message: format!("Invalid params: expected unsigned integer \"{key}\""),
+                    data: None,
+                })?;
+                if n == 0 || n > u64::from(CAPTURE_FRAME_MAX_DIMENSION) {
+                    return Err(JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: format!(
+                            "Invalid params: \"{key}\" must be in 1..={CAPTURE_FRAME_MAX_DIMENSION}"
+                        ),
+                        data: None,
+                    });
+                }
+                Ok(n as u32)
+            }
+        }
+    };
+    let width = parse_dimension("width", CAPTURE_FRAME_DEFAULT_WIDTH)?;
+    let height = parse_dimension("height", CAPTURE_FRAME_DEFAULT_HEIGHT)?;
+
+    Ok(CaptureFrameParams {
+        label: label.to_owned(),
+        width,
+        height,
+    })
+}
+
+// ---------------------------------------------------------------------
+// `sim.capture_frame` world-state rasterizer (issue #1599).
+//
+// `civ-server` is the headless simulation surface (NFR-CIV-PORT-003): the
+// production build carries no GPU/renderer dependency, so there is no live
+// Bevy viewport to grab a frame from in-process. A survey of the
+// codebase's pixel-producing code turned up exactly two renderers, and
+// neither is reusable from here:
+//   - `clients/bevy-ref` is a real GPU-backed Bevy renderer, gated behind
+//     its own `bevy` feature, and needs a display/GPU this headless
+//     service deliberately does not depend on.
+//   - `web/dashboard` renders to an HTML canvas in TypeScript; it cannot
+//     run inside a Rust process.
+// There is no third in-process Rust renderer to call as a black box.
+//
+// What *is* reusable is the live world-state data those renderers already
+// consume: `Simulation::spectator_view()` (civilian pins, faction
+// capitals/territory, building pins — the exact feed `civ-watch` and the
+// web dashboard use for their own real-time maps) plus the deterministic
+// planet `Climate`/`weather_grid` (day/night phase, per-region
+// temperature/precipitation/storm, both of which evolve every tick). The
+// functions below are a small CPU rasterizer over that same live data:
+// every pixel is derived from the simulation's actual tick-mutable state
+// via `snapshot_fields_from_sim`, so the frame changes as the simulation
+// changes rather than emitting a constant placeholder. See
+// `sim_capture_frame_pixels_differ_between_distinct_simulation_states` and
+// `render_world_frame_changes_with_tick_population_and_pins` for proof.
+// ---------------------------------------------------------------------
+
+/// Render the live simulation state captured in `snapshot` into an RGB8
+/// pixel buffer (row-major, 3 bytes/pixel) at `width` x `height`.
+///
+/// Layers, back to front:
+/// 1. A per-region background strip colored from `weather_grid` (real
+///    temperature/precipitation/storm, see [`weather_cell_rgb`]), dimmed by
+///    [`day_night_brightness`] (real `climate.day_phase`).
+/// 2. Faction capitals, buildings, and civilian pins from `spectator`
+///    (real ECS positions/job/building data), each a small colored square.
+/// 3. A population bar along the bottom edge, filled proportional to
+///    `snapshot.population`.
+pub fn render_world_frame(snapshot: &SnapshotFields, width: u32, height: u32) -> Vec<u8> {
+    let width = width.max(1) as usize;
+    let height = height.max(1) as usize;
+    let mut pixels = vec![0u8; width * height * 3];
+
+    let brightness = day_night_brightness(snapshot.climate.day_phase);
+    let region_count = snapshot.weather_grid.len();
+    for y in 0..height {
+        for x in 0..width {
+            let base = if region_count == 0 {
+                // No climate sample yet (fresh host, pre-first-tick) — a
+                // neutral ground tone rather than inventing weather.
+                [48u8, 64, 56]
+            } else {
+                let region_idx = (x * region_count / width).min(region_count - 1);
+                weather_cell_rgb(&snapshot.weather_grid[region_idx])
+            };
+            let idx = (y * width + x) * 3;
+            for c in 0..3 {
+                pixels[idx + c] = (f32::from(base[c]) * brightness).clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+
+    if let Some(spectator) = snapshot.spectator.as_ref() {
+        for faction in &spectator.factions {
+            draw_marker(
+                &mut pixels,
+                width,
+                height,
+                faction.capital[0],
+                faction.capital[1],
+                faction.color,
+                4,
+            );
+        }
+        for building in &spectator.buildings {
+            draw_marker(
+                &mut pixels,
+                width,
+                height,
+                building.x,
+                building.y,
+                building_rgb(building.kind),
+                2,
+            );
+        }
+        for pin in &spectator.civ_pins {
+            draw_marker(
+                &mut pixels,
+                width,
+                height,
+                pin.x,
+                pin.y,
+                job_rgb(pin.job),
+                1,
+            );
+        }
+    }
+
+    draw_population_bar(&mut pixels, width, height, snapshot.population);
+
+    pixels
+}
+
+/// Continuous day/night brightness multiplier from the real
+/// `Climate::day_phase` (`[0, 1)`, advances every tick). Peaks at 1.0 at
+/// noon (`phase == 0.5`), troughs at 0.25 at midnight (`phase == 0.0/1.0`),
+/// so the frame visibly changes tick-over-tick even with nothing else
+/// moving.
+fn day_night_brightness(day_phase: f32) -> f32 {
+    let phase = day_phase.rem_euclid(1.0);
+    let triangle = 1.0 - (phase - 0.5).abs() * 2.0;
+    0.25 + 0.75 * triangle
+}
+
+/// Map one real `WeatherCell` (fixed-point scale 1000, matching its field
+/// docs) to an RGB background tone: cold-to-hot gradient from
+/// `temp_c_fp`, pulled toward damp green/blue by `precip_mm_fp`, and
+/// darkened by `storm_intensity_fp`.
+fn weather_cell_rgb(cell: &civ_planet::WeatherCell) -> [u8; 3] {
+    const FP_SCALE: f32 = 1000.0;
+    let temp_c = cell.temp_c_fp as f32 / FP_SCALE;
+    let precip_mm = (cell.precip_mm_fp as f32 / FP_SCALE).max(0.0);
+    let storm = (cell.storm_intensity_fp as f32 / FP_SCALE).clamp(0.0, 1.0);
+
+    let t = ((temp_c + 20.0) / 60.0).clamp(0.0, 1.0);
+    let cold = [40.0_f32, 80.0, 170.0];
+    let hot = [210.0_f32, 110.0, 40.0];
+    let mut rgb = [
+        cold[0] + (hot[0] - cold[0]) * t,
+        cold[1] + (hot[1] - cold[1]) * t,
+        cold[2] + (hot[2] - cold[2]) * t,
+    ];
+
+    let wet = (precip_mm / 20.0).clamp(0.0, 1.0);
+    rgb[0] *= 1.0 - wet * 0.3;
+    rgb[1] = rgb[1] * (1.0 - wet * 0.1) + 40.0 * wet;
+    rgb[2] = rgb[2] * (1.0 - wet * 0.2) + 60.0 * wet;
+
+    let darken = 1.0 - storm * 0.5;
+    [
+        (rgb[0] * darken).clamp(0.0, 255.0) as u8,
+        (rgb[1] * darken).clamp(0.0, 255.0) as u8,
+        (rgb[2] * darken).clamp(0.0, 255.0) as u8,
+    ]
+}
+
+/// Marker color for one civilian pin, by real `JobLabel` (from the
+/// citizen's ECS `Citizen::job`).
+fn job_rgb(job: Option<civ_engine::spectator::JobLabel>) -> [u8; 3] {
+    use civ_engine::spectator::JobLabel;
+    match job {
+        Some(JobLabel::Farmer) => [196, 164, 60],
+        Some(JobLabel::Warrior) => [200, 50, 50],
+        Some(JobLabel::Scholar) => [80, 140, 220],
+        Some(JobLabel::Trader) => [220, 180, 60],
+        Some(JobLabel::Priest) => [235, 235, 235],
+        Some(JobLabel::Admin) => [160, 90, 200],
+        Some(JobLabel::Unemployed) | None => [120, 120, 120],
+    }
+}
+
+/// Marker color for one building pin, by real `BuildingKind` (derived from
+/// the ECS `Building::building_type`).
+fn building_rgb(kind: civ_engine::spectator::BuildingKind) -> [u8; 3] {
+    use civ_engine::spectator::BuildingKind;
+    match kind {
+        BuildingKind::Residential => [120, 180, 120],
+        BuildingKind::Commercial => [220, 190, 80],
+        BuildingKind::Industrial => [150, 100, 70],
+        BuildingKind::Civic => [230, 230, 230],
+    }
+}
+
+/// Plot a filled `(2 * half_size + 1)`-square marker centered at normalized
+/// `(nx, ny)` (`[0, 1]` plane coordinates, matching `SpectatorView`'s
+/// convention), clipped to the image bounds.
+fn draw_marker(
+    pixels: &mut [u8],
+    width: usize,
+    height: usize,
+    nx: f32,
+    ny: f32,
+    color: [u8; 3],
+    half_size: i32,
+) {
+    if width == 0 || height == 0 || !nx.is_finite() || !ny.is_finite() {
+        return;
+    }
+    let cx = (nx.clamp(0.0, 1.0) * (width - 1) as f32).round() as i32;
+    let cy = (ny.clamp(0.0, 1.0) * (height - 1) as f32).round() as i32;
+    for dy in -half_size..=half_size {
+        for dx in -half_size..=half_size {
+            let (px, py) = (cx + dx, cy + dy);
+            if px < 0 || py < 0 {
+                continue;
+            }
+            let (px, py) = (px as usize, py as usize);
+            if px >= width || py >= height {
+                continue;
+            }
+            let idx = (py * width + px) * 3;
+            pixels[idx] = color[0];
+            pixels[idx + 1] = color[1];
+            pixels[idx + 2] = color[2];
+        }
+    }
+}
+
+/// Fill a thin strip along the bottom edge proportional to
+/// `population` (soft-capped at 200 for a legible bar without needing
+/// thousands of citizens to move the needle). Exists purely so population
+/// growth/decline is always visible in the frame even when no pins are in
+/// view.
+fn draw_population_bar(pixels: &mut [u8], width: usize, height: usize, population: u64) {
+    if width == 0 || height == 0 {
+        return;
+    }
+    let bar_height = (height / 20).max(1);
+    let filled_fraction = (population as f32 / 200.0).clamp(0.0, 1.0);
+    let filled_px = (filled_fraction * width as f32).round() as usize;
+    for y in height.saturating_sub(bar_height)..height {
+        for x in 0..width {
+            let idx = (y * width + x) * 3;
+            let color = if x < filled_px {
+                [230u8, 220, 90]
+            } else {
+                [20, 20, 20]
+            };
+            pixels[idx] = color[0];
+            pixels[idx + 1] = color[1];
+            pixels[idx + 2] = color[2];
+        }
+    }
+}
+
+/// Encode `pixels` (RGB8, `width * height * 3` bytes, as produced by
+/// [`render_world_frame`]) as a PNG under `dir`, returning its absolute
+/// path.
+fn write_capture_frame_png(
+    dir: &std::path::Path,
+    label: &str,
+    width: u32,
+    height: u32,
+    pixels: &[u8],
+) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(dir)
+        .map_err(|err| format!("create capture directory {dir:?}: {err}"))?;
+    let file_path = dir.join(format!("{label}.png"));
+    let file = std::fs::File::create(&file_path)
+        .map_err(|err| format!("create capture file {file_path:?}: {err}"))?;
+
+    let mut encoder = png::Encoder::new(file, width, height);
+    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder
+        .write_header()
+        .map_err(|err| format!("write PNG header for {file_path:?}: {err}"))?;
+    writer
+        .write_image_data(pixels)
+        .map_err(|err| format!("write PNG data for {file_path:?}: {err}"))?;
+    writer
+        .finish()
+        .map_err(|err| format!("finish PNG for {file_path:?}: {err}"))?;
+
+    std::fs::canonicalize(&file_path)
+        .map_err(|err| format!("canonicalize capture path {file_path:?}: {err}"))
 }
 
 /// Parse `sim.save_replay` / `sim.load_replay` `path` param.
@@ -2472,6 +2834,71 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimCaptureFrame => match parse_capture_frame_params(req.params.as_ref()) {
+            Ok(params) => match (ctx.captures_dir.as_deref(), ctx.snapshot.as_ref()) {
+                (Some(dir), Some(snapshot)) => {
+                    let pixels = render_world_frame(snapshot, params.width, params.height);
+                    match write_capture_frame_png(
+                        dir,
+                        &params.label,
+                        params.width,
+                        params.height,
+                        &pixels,
+                    ) {
+                        Ok(path) => DispatchPlan {
+                            response: JsonRpcResponse::success(
+                                req.id,
+                                serde_json::json!({
+                                    "path": path.to_string_lossy(),
+                                    "label": params.label,
+                                    "width": params.width,
+                                    "height": params.height,
+                                    "tick": snapshot.tick,
+                                }),
+                            ),
+                            effect: DispatchEffect::None,
+                        },
+                        Err(err) => DispatchPlan {
+                            response: JsonRpcResponse::failure(
+                                req.id,
+                                JsonRpcError {
+                                    code: error_code::INTERNAL_ERROR,
+                                    message: format!("sim.capture_frame failed: {err}"),
+                                    data: None,
+                                },
+                            ),
+                            effect: DispatchEffect::None,
+                        },
+                    }
+                }
+                (None, _) => DispatchPlan {
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INTERNAL_ERROR,
+                            message: "Capture directory unavailable".to_owned(),
+                            data: None,
+                        },
+                    ),
+                    effect: DispatchEffect::None,
+                },
+                (_, None) => DispatchPlan {
+                    response: JsonRpcResponse::failure(
+                        req.id,
+                        JsonRpcError {
+                            code: error_code::INTERNAL_ERROR,
+                            message: "Simulation snapshot unavailable".to_owned(),
+                            data: None,
+                        },
+                    ),
+                    effect: DispatchEffect::None,
+                },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
     }
 }
 
@@ -2744,6 +3171,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            captures_dir: None,
             emergence: None,
             legends: None,
             researched: vec![],
@@ -2792,6 +3220,7 @@ mod tests {
             speed_multiplier: 4,
             connection_role: None,
             saves_dir: None,
+            captures_dir: None,
             emergence: None,
             legends: None,
             researched: vec![],
@@ -2891,6 +3320,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -2932,6 +3362,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            captures_dir: None,
             emergence: None,
             legends: None,
             researched: vec![],
@@ -2991,6 +3422,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3035,6 +3467,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3071,6 +3504,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3105,6 +3539,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3140,6 +3575,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3175,6 +3611,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3206,6 +3643,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3321,6 +3759,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3354,6 +3793,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3415,6 +3855,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: Some(sample),
                 legends: None,
                 researched: vec![],
@@ -3496,6 +3937,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: Some(sample),
                 legends: None,
                 researched: vec![],
@@ -3547,6 +3989,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3588,6 +4031,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: Some(payload),
                 researched: vec![],
@@ -3649,6 +4093,7 @@ mod tests {
                     speed_multiplier: 1,
                     connection_role: None,
                     saves_dir: None,
+                    captures_dir: None,
                     emergence: None,
                     legends: None,
                     researched: vec![],
@@ -3835,6 +4280,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3880,6 +4326,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -3936,6 +4383,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4053,6 +4501,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4158,6 +4607,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4259,6 +4709,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4319,6 +4770,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4362,6 +4814,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4403,6 +4856,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4437,6 +4891,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4513,6 +4968,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4587,6 +5043,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4622,6 +5079,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4662,6 +5120,7 @@ mod tests {
                 speed_multiplier: 4,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4703,6 +5162,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -4742,6 +5202,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5169,6 +5630,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5208,6 +5670,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5243,6 +5706,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                captures_dir: None,
                 emergence: None,
                 legends: None,
                 researched: vec![],
@@ -5334,6 +5798,355 @@ mod tests {
         assert!(
             best < std::time::Duration::from_millis(1),
             "NFR-P-07: best snapshot_result_json run took {best:?}, budget is 1 ms"
+        );
+    }
+
+    /// Build a `DispatchContext` for `sim.capture_frame` tests with every
+    /// other field at its inert default, varying only `captures_dir` /
+    /// `snapshot`.
+    fn capture_frame_test_ctx(
+        captures_dir: Option<PathBuf>,
+        snapshot: Option<SnapshotFields>,
+    ) -> DispatchContext {
+        DispatchContext {
+            tick: 0,
+            population: None,
+            snapshot,
+            tile_probe: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            captures_dir,
+            emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche_snapshot: None,
+            sentience_events: None,
+            religion_state: None,
+        }
+    }
+
+    /// Minimal-but-real `SnapshotFields` for `sim.capture_frame` tests:
+    /// shares the exact shape `snapshot_fields_from_sim` produces for live
+    /// hosts, with only `tick`/`population`/`climate.day_phase`/`spectator`
+    /// parameterized per test.
+    fn capture_frame_test_snapshot(
+        tick: u64,
+        population: u64,
+        day_phase: f32,
+        spectator: Option<civ_engine::SpectatorView>,
+    ) -> SnapshotFields {
+        SnapshotFields {
+            weather_grid: vec![],
+            tick,
+            population,
+            building_count: 0,
+            energy_budget: None,
+            market_prices: BTreeMap::new(),
+            hash_chain_root: None,
+            speed_multiplier: 1,
+            spectator,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate {
+                tick,
+                day_phase,
+                year_phase: 0.0,
+                moon_phase: 0.0,
+                tide_offset: 0.0,
+            },
+            music_cues: BTreeMap::new(),
+            audio_events: vec![],
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_progress: Default::default(),
+        }
+    }
+
+    // Issue #1599 — `sim.capture_frame` must be a registered method that
+    // writes a real, non-empty PNG under the configured capture directory
+    // and reports its absolute path back to the caller. This is what
+    // `scripts/playthrough.sh`'s `capture_frame()` helper relies on.
+    #[test]
+    fn sim_capture_frame_is_registered_writes_png_and_returns_path() {
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.capture_frame"),
+            Some(JsonRpcMethod::SimCaptureFrame),
+            "sim.capture_frame must be a recognized method name"
+        );
+        assert_eq!(JsonRpcMethod::SimCaptureFrame.as_str(), "sim.capture_frame");
+
+        let capture_dir = tempfile::tempdir().expect("tempdir");
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":60,"method":"sim.capture_frame","params":{"label":"step1","width":64,"height":32}}"#,
+        )
+        .expect("parse");
+        let snapshot = capture_frame_test_snapshot(7, 12, 0.1, None);
+        let ctx = capture_frame_test_ctx(
+            Some(capture_dir.path().to_path_buf()),
+            Some(snapshot.clone()),
+        );
+
+        let plan = dispatch_request(req, ctx);
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan
+            .response
+            .result
+            .expect("sim.capture_frame must return a result");
+        assert_eq!(
+            result.get("tick").and_then(serde_json::Value::as_u64),
+            Some(7)
+        );
+        let path_str = result
+            .get("path")
+            .and_then(|v| v.as_str())
+            .expect("result must carry a string \"path\"");
+        let path = std::path::Path::new(path_str);
+        assert!(
+            path.is_absolute(),
+            "returned path must be absolute: {path_str}"
+        );
+
+        let bytes = std::fs::read(path).expect("capture_frame must write a readable file");
+        assert!(!bytes.is_empty(), "captured PNG must be non-empty");
+        assert_eq!(
+            &bytes[0..8],
+            &[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1A, b'\n'],
+            "captured file must start with the PNG magic number"
+        );
+
+        // The on-disk bytes must match rendering the same snapshot directly
+        // — proving the dispatch path encodes `render_world_frame`'s real
+        // output, not some other (e.g. placeholder) buffer.
+        let expected_pixels = render_world_frame(&snapshot, 64, 32);
+        let mut expected_png = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut expected_png, 64, 32);
+            encoder.set_color(png::ColorType::Rgb);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder.write_header().expect("png header");
+            writer.write_image_data(&expected_pixels).expect("png data");
+            writer.finish().expect("png finish");
+        }
+        assert_eq!(
+            bytes, expected_png,
+            "capture_frame must write exactly render_world_frame's encoding of the live snapshot"
+        );
+    }
+
+    #[test]
+    fn sim_capture_frame_rejects_unsafe_label() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":61,"method":"sim.capture_frame","params":{"label":"../escape"}}"#,
+        )
+        .expect("parse");
+        let ctx = capture_frame_test_ctx(Some(PathBuf::from("captures")), None);
+
+        let plan = dispatch_request(req, ctx);
+        assert!(
+            plan.response.error.is_some(),
+            "a path-traversal label must be rejected"
+        );
+        assert_eq!(
+            plan.response.error.as_ref().unwrap().code,
+            error_code::INVALID_PARAMS
+        );
+    }
+
+    #[test]
+    fn sim_capture_frame_errors_when_snapshot_unavailable() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":62,"method":"sim.capture_frame","params":{"label":"nosim"}}"#,
+        )
+        .expect("parse");
+        // captures_dir present, snapshot absent (host not initialized yet).
+        let ctx = capture_frame_test_ctx(Some(PathBuf::from("captures")), None);
+
+        let plan = dispatch_request(req, ctx);
+        let error = plan
+            .response
+            .error
+            .expect("missing snapshot must be a hard error, not a fabricated frame");
+        assert_eq!(error.code, error_code::INTERNAL_ERROR);
+    }
+
+    // Issue #1599 (review follow-up) — the renderer must be driven by real,
+    // tick-mutable simulation fields, not emit a constant image. Each
+    // assertion toggles exactly one field that the live engine actually
+    // mutates every tick (`climate.day_phase`), on population change
+    // (civilian birth/death), or on movement (civilian pin position), and
+    // proves the rendered pixel buffer changes in response.
+    #[test]
+    fn render_world_frame_changes_with_tick_population_and_pins() {
+        let midnight = capture_frame_test_snapshot(0, 10, 0.0, None);
+        let noon = capture_frame_test_snapshot(6_000, 10, 0.5, None);
+        assert_ne!(
+            render_world_frame(&midnight, 64, 48),
+            render_world_frame(&noon, 64, 48),
+            "day/night brightness (real Climate::day_phase) must affect pixels"
+        );
+
+        let empty_city = capture_frame_test_snapshot(0, 0, 0.5, None);
+        let populous_city = capture_frame_test_snapshot(0, 150, 0.5, None);
+        assert_ne!(
+            render_world_frame(&empty_city, 64, 48),
+            render_world_frame(&populous_city, 64, 48),
+            "population must affect pixels (the population bar)"
+        );
+
+        let civ_near_origin = civ_engine::spectator::CivPin {
+            idx: 1,
+            x: 0.1,
+            y: 0.1,
+            dx: 0.0,
+            dy: 0.0,
+            job: None,
+        };
+        let civ_far_corner = civ_engine::spectator::CivPin {
+            x: 0.9,
+            y: 0.9,
+            ..civ_near_origin
+        };
+        let spectator_a = civ_engine::SpectatorView {
+            civ_pins: vec![civ_near_origin],
+            factions: vec![],
+            buildings: vec![],
+            is_day: true,
+        };
+        let spectator_b = civ_engine::SpectatorView {
+            civ_pins: vec![civ_far_corner],
+            factions: vec![],
+            buildings: vec![],
+            is_day: true,
+        };
+        let pin_here = capture_frame_test_snapshot(0, 1, 0.5, Some(spectator_a));
+        let pin_there = capture_frame_test_snapshot(0, 1, 0.5, Some(spectator_b));
+        assert_ne!(
+            render_world_frame(&pin_here, 64, 48),
+            render_world_frame(&pin_there, 64, 48),
+            "a moved civilian pin (real ECS Position3d) must affect pixels"
+        );
+
+        // Replay-safety: rendering is a pure function of the snapshot —
+        // identical input must produce byte-identical output every time.
+        assert_eq!(
+            render_world_frame(&midnight, 64, 48),
+            render_world_frame(&midnight, 64, 48),
+            "render_world_frame must be deterministic for a fixed snapshot"
+        );
+    }
+
+    // Issue #1599 (review follow-up) — end-to-end proof using a *real*
+    // `civ_engine::Simulation`: capture before and after a real state
+    // change (spawning a civilian — the same ECS mutation `sim.spawn_civilian`
+    // performs — plus real tick advancement), and show the two PNGs
+    // written to disk via the full `sim.capture_frame` dispatch path are
+    // different, non-placeholder images.
+    #[test]
+    fn sim_capture_frame_pixels_differ_between_distinct_real_simulation_states() {
+        use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment};
+
+        let mut sim = civ_engine::Simulation::with_seed(123);
+        let snapshot_before = snapshot_fields_from_sim(&sim, 1);
+
+        // Real, user-reachable state mutations: spawn a civilian (the same
+        // ECS write `sim.spawn_civilian`'s effect performs) and advance a
+        // few real ticks (the same effect `sim.command` tick performs).
+        let mut rng = sim.rng_mut().clone();
+        let _ = spawn_civilian_at(
+            &mut sim.world,
+            999_001,
+            Alignment::None,
+            0.12,
+            0.85,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+        *sim.rng_mut() = rng;
+        // `spawn_civilian_at` only inserts the ECS entity; the population
+        // counter is maintained separately on `WorldState` (the same field
+        // `sim.spawn_civilian`'s effect updates), so bump it the same way.
+        sim.state.population += 1;
+        for _ in 0..5 {
+            sim.tick();
+        }
+        let snapshot_after = snapshot_fields_from_sim(&sim, 1);
+
+        assert_ne!(
+            snapshot_before, snapshot_after,
+            "the real simulation must have actually changed state between captures"
+        );
+        assert_ne!(
+            snapshot_before.population, snapshot_after.population,
+            "the spawned civilian must be reflected in population"
+        );
+
+        let pixels_before = render_world_frame(&snapshot_before, 96, 64);
+        let pixels_after = render_world_frame(&snapshot_after, 96, 64);
+        assert_ne!(
+            pixels_before, pixels_after,
+            "sim.capture_frame output must change as the real simulation changes"
+        );
+
+        // Full dispatch path: both captures land as distinct, non-empty
+        // PNGs on disk.
+        let capture_dir = tempfile::tempdir().expect("tempdir");
+        let req_before = parse_request(
+            r#"{"jsonrpc":"2.0","id":70,"method":"sim.capture_frame","params":{"label":"before","width":96,"height":64}}"#,
+        )
+        .expect("parse");
+        let req_after = parse_request(
+            r#"{"jsonrpc":"2.0","id":71,"method":"sim.capture_frame","params":{"label":"after","width":96,"height":64}}"#,
+        )
+        .expect("parse");
+
+        let plan_before = dispatch_request(
+            req_before,
+            capture_frame_test_ctx(
+                Some(capture_dir.path().to_path_buf()),
+                Some(snapshot_before),
+            ),
+        );
+        let plan_after = dispatch_request(
+            req_after,
+            capture_frame_test_ctx(Some(capture_dir.path().to_path_buf()), Some(snapshot_after)),
+        );
+
+        let path_before = plan_before
+            .response
+            .result
+            .as_ref()
+            .and_then(|r| r.get("path"))
+            .and_then(|v| v.as_str())
+            .expect("before capture must return a path")
+            .to_owned();
+        let path_after = plan_after
+            .response
+            .result
+            .as_ref()
+            .and_then(|r| r.get("path"))
+            .and_then(|v| v.as_str())
+            .expect("after capture must return a path")
+            .to_owned();
+
+        let bytes_before = std::fs::read(&path_before).expect("read before.png");
+        let bytes_after = std::fs::read(&path_after).expect("read after.png");
+        assert!(!bytes_before.is_empty() && !bytes_after.is_empty());
+        assert_ne!(
+            bytes_before, bytes_after,
+            "two real, distinct simulation states must capture to two distinct PNGs"
         );
     }
 }

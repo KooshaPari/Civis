@@ -80,6 +80,14 @@ class GameE2eContract(unittest.TestCase):
                 values.append(value.split("#", 1)[0].strip())
         return values
 
+    def test_game_flow_capture_env_cannot_be_overridden(self):
+        indent, body = self.job_block("game-flow")
+        pad = " " * (indent + 4)
+        env = re.search(rf"(?ms)^{pad}env:[ ]*\n(.*?)(?=^{pad}\S|\Z)", body)
+        self.assertIsNotNone(env, "game-flow must define a job-level environment")
+        self.assertRegex(env.group(1), r'(?m)^\s+CIVIS_CAPTURE_FRAMES:[ ]*"0"[ ]*$')
+        self.assertEqual(len(re.findall(r"(?<![A-Za-z0-9_])[\"']?CIVIS_CAPTURE_FRAMES[\"']?[ ]*:", WORKFLOW)), 1)
+
     @unittest.skipUnless(BASH_READY, "Bash unavailable on this host")
     def test_capture_disabled_before_any_hook(self):
         function = SCRIPT.split("capture_screenshot() {", 1)[1].split("# Main menu", 1)[

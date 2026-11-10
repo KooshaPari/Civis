@@ -268,39 +268,9 @@ fn decode_png_to_rgb(bytes: &[u8]) -> Result<DecodedRgb, String> {
 pub fn census_sim_status(
     config: &CensusConfig,
 ) -> Result<civis_cli::census::SimStatusResult, String> {
-    let url = config.ws_url();
     let frame = build_sim_status_request(civis_cli::census::wire::RequestId::Number(1));
-
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .map_err(|err| format!("build census runtime: {err}"))?;
-
-    runtime.block_on(async move {
-        let connect = tokio_tungstenite::connect_async(&url)
-            .await
-            .map_err(|err| format!("WS connect {url}: {err}"))?;
-        let (mut ws, _response) = connect;
-        use futures_util::{SinkExt, StreamExt};
-        ws.send(tokio_tungstenite::tungstenite::Message::Text(frame))
-            .await
-            .map_err(|err| format!("WS send sim.status: {err}"))?;
-        let response = tokio::time::timeout(config.timeout(), ws.next())
-            .await
-            .map_err(|_| format!("timed out waiting for {url}"))?
-            .ok_or_else(|| "server closed the connection".to_string())?
-            .map_err(|err| format!("WS read: {err}"))?;
-        let text = match response {
-            tokio_tungstenite::tungstenite::Message::Text(t) => t,
-            tokio_tungstenite::tungstenite::Message::Binary(b) => {
-                String::from_utf8(b).map_err(|err| format!("binary frame utf-8: {err}"))?
-            }
-            other => return Err(format!("unexpected frame {other:?}")),
-        };
-        let parsed = decode_response(&text).map_err(|err| format!("decode: {err:?}"))?;
-        validate_sim_status(&parsed).map_err(|err| format!("validate: {err}"))
-    })
+    let response = request_response(config, "sim.status", frame)?;
+    validate_sim_status(&response).map_err(|err| format!("validate: {err}"))
 }
 
 /// Resolve the [`CensusConfig`] from environment, plus the URL string the
@@ -351,46 +321,70 @@ pub fn dispatch_rpc_method(
     method: &str,
     params: Value,
 ) -> Result<Value, String> {
-    let url = config.ws_url();
-    let frame = build_rpc_request(method, params);
+    let response = request_response(config, method, build_rpc_request(method, params))?;
+    if let Some(err) = &response.error {
+        return Err(format!(
+            "RPC {method} failed (code {}): {}",
+            err.code, err.message
+        ));
+    }
+    response
+        .result
+        .ok_or_else(|| format!("RPC {method} returned neither result nor error"))
+}
 
+fn request_response(
+    config: &CensusConfig,
+    method: &str,
+    frame: String,
+) -> Result<civis_cli::census::wire::JsonRpcResponse, String> {
+    let url = config.ws_url();
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .enable_time()
         .build()
         .map_err(|err| format!("build rpc runtime: {err}"))?;
-
     runtime.block_on(async move {
-        let connect = tokio_tungstenite::connect_async(&url)
-            .await
-            .map_err(|err| format!("WS connect {url}: {err}"))?;
-        let (mut ws, _response) = connect;
         use futures_util::{SinkExt, StreamExt};
-        ws.send(tokio_tungstenite::tungstenite::Message::Text(frame))
-            .await
-            .map_err(|err| format!("WS send {method}: {err}"))?;
-        let response = tokio::time::timeout(config.timeout(), ws.next())
-            .await
-            .map_err(|_| format!("timed out waiting for {url}"))?
-            .ok_or_else(|| "server closed the connection".to_string())?
-            .map_err(|err| format!("WS read: {err}"))?;
-        let text = match response {
-            tokio_tungstenite::tungstenite::Message::Text(t) => t,
-            tokio_tungstenite::tungstenite::Message::Binary(b) => {
-                String::from_utf8(b).map_err(|err| format!("binary frame utf-8: {err}"))?
+        use tokio_tungstenite::tungstenite::Message;
+        tokio::time::timeout(config.timeout(), async {
+            let (mut ws, _) = tokio_tungstenite::connect_async(&url)
+                .await
+                .map_err(|err| format!("WS connect {url}: {err}"))?;
+            ws.send(Message::Text(frame))
+                .await
+                .map_err(|err| format!("WS send {method}: {err}"))?;
+            loop {
+                let message = ws
+                    .next()
+                    .await
+                    .ok_or_else(|| "server closed the connection".to_string())?
+                    .map_err(|err| format!("WS read: {err}"))?;
+                let text = match message {
+                    Message::Text(text) => text,
+                    Message::Binary(bytes) => match String::from_utf8(bytes) {
+                        Ok(text) if text.trim_start().starts_with('{') => text,
+                        _ => continue,
+                    },
+                    Message::Close(_) => return Err("server closed the connection".to_string()),
+                    _ => continue,
+                };
+                let value: Value =
+                    serde_json::from_str(&text).map_err(|err| format!("decode: {err}"))?;
+                if value.get("id") != Some(&json!(1)) {
+                    continue;
+                }
+                if value.get("jsonrpc") != Some(&json!("2.0")) {
+                    return Err("invalid JSON-RPC version".to_string());
+                }
+                if value.get("result").is_some() == value.get("error").is_some() {
+                    return Err("invalid JSON-RPC response envelope".to_string());
+                }
+                return decode_response(&text).map_err(|err| format!("decode: {err:?}"));
             }
-            other => return Err(format!("unexpected frame {other:?}")),
-        };
-        let parsed = decode_response(&text).map_err(|err| format!("decode: {err:?}"))?;
-        if let Some(err) = &parsed.error {
-            return Err(format!(
-                "RPC {method} failed (code {}): {}",
-                err.code, err.message
-            ));
-        }
-        parsed
-            .result
-            .ok_or_else(|| format!("RPC {method} returned neither result nor error"))
+        })
+        .await
+        .map_err(|_| format!("timed out waiting for {url}"))?
     })
 }
 

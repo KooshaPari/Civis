@@ -1,0 +1,5 @@
+# Save RNG stream v6
+
+The v6 bundle records the ChaCha8 generator seed, stream number, and 68-bit word position in `rng.json`. The integrity manifest covers the sidecar. A v6 reader rejects a missing sidecar, malformed position, out-of-range position, unknown algorithm, mismatched metadata and manifest, or changed component bytes. Readers limited to v5 should reject the newer format. Saves from v1 through v5 retain the historical replay-derived RNG fallback; they cannot be assumed to recover an unsaved stream position.
+
+This change preserves the next RNG draws for the explicitly recorded generator only. It does not serialize ECS entities or prove that a loaded world will evolve identically. In particular, the cross-client civilian persistence regression remains failing. The current save writer is not atomic, and an integrity manifest is not authenticated provenance: a fully stripped bundle relabeled as an older format cannot be distinguished from a genuine legacy bundle without external evidence. Historical save artifacts, other platforms, older clients, and end-to-end gameplay need separate validation.

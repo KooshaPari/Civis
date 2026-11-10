@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::engine::Citizen;
 
-mod unique_json {
+pub(crate) mod unique_json {
     use std::fmt;
 
     use serde::de::{Error, MapAccess, SeqAccess, Visitor};
@@ -82,12 +82,12 @@ mod unique_json {
     }
 }
 
-const MAX_ENTITIES: usize = 100_000;
-const MAX_ENTITY_INDEX: u32 = 1_000_000;
-const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
+pub(crate) const MAX_ENTITIES: usize = 100_000;
+pub(crate) const MAX_ENTITY_INDEX: u32 = 1_000_000;
+pub(crate) const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
 const MAX_DNA_BYTES: usize = 65_536;
 
-struct BoundedJson(Vec<u8>);
+pub(crate) struct BoundedJson(pub(crate) Vec<u8>);
 
 impl Write for BoundedJson {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
@@ -154,6 +154,36 @@ fn supported(id: TypeId) -> bool {
     .contains(&id)
 }
 
+pub(crate) fn capture_civilian(entity: hecs::EntityRef<'_>) -> Result<CivilianRecord, String> {
+    if entity.component_types().any(|id| !supported(id)) {
+        return Err("unsupported ECS component".into());
+    }
+    let civilian = (*entity.get::<&Civilian>().ok_or("missing civilian")?).clone();
+    let position = *entity.get::<&Position3d>().ok_or("missing position")?;
+    let velocity = *entity.get::<&Velocity>().ok_or("missing velocity")?;
+    if entity
+        .get::<&Dna>()
+        .is_some_and(|dna| dna.0.len() > MAX_DNA_BYTES)
+    {
+        return Err("DNA exceeds size limit".into());
+    }
+    Ok(CivilianRecord {
+        entity_bits: entity.entity().to_bits().get(),
+        civilian,
+        position,
+        velocity,
+        wardrobe: entity.get::<&Wardrobe>().map(|x| *x),
+        tools: entity.get::<&Tools>().map(|x| *x),
+        needs: entity.get::<&Needs>().map(|x| *x),
+        lod: entity.get::<&LodTier>().map(|x| *x),
+        dna: entity.get::<&Dna>().map(|x| (*x).clone()),
+        life_needs: entity.get::<&LifeNeeds>().map(|x| *x),
+        health: entity.get::<&Health>().map(|x| *x),
+        visual: entity.get::<&ActorVisual>().map(|x| *x),
+        citizen: entity.get::<&Citizen>().map(|x| *x),
+    })
+}
+
 impl CivilianSnapshot {
     pub fn to_json(&self) -> Result<Vec<u8>, String> {
         self.validate()?;
@@ -175,7 +205,7 @@ impl CivilianSnapshot {
             version: wire.version,
             entities: wire.entities,
         };
-        if serde_json::to_value(&snapshot).map_err(|e| e.to_string())? != value {
+        if snapshot.to_json()? != bytes {
             return Err("snapshot contains unknown or noncanonical fields".into());
         }
         snapshot.validate()?;
@@ -189,33 +219,7 @@ impl CivilianSnapshot {
         let mut entities = Vec::new();
         let mut budget = BoundedJson(Vec::new());
         for entity in world.iter() {
-            if entity.component_types().any(|id| !supported(id)) {
-                return Err("unsupported ECS component".into());
-            }
-            let civilian = (*entity.get::<&Civilian>().ok_or("missing civilian")?).clone();
-            let position = *entity.get::<&Position3d>().ok_or("missing position")?;
-            let velocity = *entity.get::<&Velocity>().ok_or("missing velocity")?;
-            if entity
-                .get::<&Dna>()
-                .is_some_and(|dna| dna.0.len() > MAX_DNA_BYTES)
-            {
-                return Err("DNA exceeds size limit".into());
-            }
-            let record = CivilianRecord {
-                entity_bits: entity.entity().to_bits().get(),
-                civilian,
-                position,
-                velocity,
-                wardrobe: entity.get::<&Wardrobe>().map(|x| *x),
-                tools: entity.get::<&Tools>().map(|x| *x),
-                needs: entity.get::<&Needs>().map(|x| *x),
-                lod: entity.get::<&LodTier>().map(|x| *x),
-                dna: entity.get::<&Dna>().map(|x| (*x).clone()),
-                life_needs: entity.get::<&LifeNeeds>().map(|x| *x),
-                health: entity.get::<&Health>().map(|x| *x),
-                visual: entity.get::<&ActorVisual>().map(|x| *x),
-                citizen: entity.get::<&Citizen>().map(|x| *x),
-            };
+            let record = capture_civilian(entity)?;
             serde_json::to_writer(&mut budget, &record).map_err(|e| e.to_string())?;
             entities.push(record);
         }
@@ -228,7 +232,7 @@ impl CivilianSnapshot {
         Ok(snapshot)
     }
 
-    fn validate(&self) -> Result<(), String> {
+    pub(crate) fn validate(&self) -> Result<(), String> {
         if self.version != 1 || self.entities.len() > MAX_ENTITIES {
             return Err("unsupported snapshot version or size".into());
         }

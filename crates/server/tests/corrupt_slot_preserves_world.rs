@@ -94,4 +94,3 @@ async fn corrupt_slot_load_rejects_and_keeps_live_world() {
         );
     }
 }
-

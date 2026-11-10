@@ -5,6 +5,7 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 use tar::{Archive, Builder};
 use thiserror::Error;
@@ -17,9 +18,9 @@ use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
 ///
-/// v5 adds the FR-SAVE-006 `integrity.json` BLAKE3 manifest. v4 and earlier
-/// predate it and still load, without a whole-bundle digest.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 5;
+/// v6 requires an RNG stream sidecar; v5 adds the integrity manifest.
+/// Earlier versions still load without an exact saved RNG position.
+pub const CIVSAVE_FORMAT_VERSION: u32 = 6;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
 /// FR-SAVE-006 — integrity manifest written last, covering every other
@@ -30,6 +31,16 @@ const CLUSTER_STOCKS_FILE: &str = "cluster_stocks.json";
 /// Required in v4; older replay-only saves may omit the environment.
 const ENVIRONMENT_FILE: &str = "environment.json";
 const INSTITUTIONS_FILE: &str = "institutions.json";
+const RNG_FILE: &str = "rng.json";
+const RNG_ALGORITHM: &str = "rand_chacha-0.3-chacha8";
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SavedRng {
+    algorithm: String,
+    seed: [u8; 32],
+    stream: u64,
+    word_pos: String,
+}
 
 /// FR-SAVE-006 — a BLAKE3 digest of one serialized component.
 ///
@@ -677,6 +688,15 @@ impl CivSaveBundle {
         )
         .map_err(|e| io_err(&world_state_path, e))?;
 
+        let rng_path = dir.join(RNG_FILE);
+        let rng = SavedRng {
+            algorithm: RNG_ALGORITHM.to_owned(),
+            seed: sim.rng.get_seed(),
+            stream: sim.rng.get_stream(),
+            word_pos: sim.rng.get_word_pos().to_string(),
+        };
+        fs::write(&rng_path, serde_json::to_string(&rng)?).map_err(|e| io_err(&rng_path, e))?;
+
         let environment_path = dir.join(ENVIRONMENT_FILE);
         let environment = SavedEnvironment {
             planet: *sim.planet(),
@@ -734,7 +754,7 @@ impl CivSaveBundle {
 
         // Check format version via metadata before loading components.
         let metadata_path = dir.join("metadata.json");
-        let file_version = if metadata_path.is_file() {
+        let (file_version, file_tick) = if metadata_path.is_file() {
             let json = fs::read_to_string(&metadata_path).map_err(|e| io_err(&metadata_path, e))?;
             if json.trim().is_empty() {
                 return Err(SaveBundleError::SaveCorruption {
@@ -743,10 +763,15 @@ impl CivSaveBundle {
             }
             let meta: CivSaveMetadata =
                 serde_json::from_str(&json).map_err(SaveBundleError::Json)?;
-            meta.format_version
+            if meta.format_version >= 6 && meta.spec_id != CIVSAVE_SPEC_ID {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: "metadata.json declares an unexpected spec_id".to_owned(),
+                });
+            }
+            (meta.format_version, Some(meta.tick))
         } else {
             // No metadata implies a legacy v1 save.
-            1
+            (1, None)
         };
         if file_version > CIVSAVE_FORMAT_VERSION {
             return Err(SaveBundleError::UnsupportedFormatVersion {
@@ -760,27 +785,30 @@ impl CivSaveBundle {
         // and `load_replay_from_file` so a tampered payload is never handed to
         // serde. A v5+ writer always emits the manifest; older saves have none
         // and rely on their own per-component checks instead.
-        if file_version >= 5 {
+        {
             let integrity_path = dir.join(INTEGRITY_FILE);
-            if !integrity_path.is_file() {
+            if !integrity_path.is_file() && file_version >= 5 {
                 return Err(SaveBundleError::MissingComponent {
                     dir: dir.to_path_buf(),
                     component: INTEGRITY_FILE,
                 });
             }
-            let raw =
-                fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
-            let manifest: SaveIntegrityManifest =
-                serde_json::from_str(&raw).map_err(SaveBundleError::Json)?;
-            if manifest.spec_id != CIVSAVE_SPEC_ID {
-                return Err(SaveBundleError::SaveCorruption {
-                    detail: format!(
-                        "integrity.json declares spec_id {:?}, expected {:?}",
-                        manifest.spec_id, CIVSAVE_SPEC_ID
-                    ),
-                });
+            if integrity_path.is_file() {
+                let raw =
+                    fs::read_to_string(&integrity_path).map_err(|e| io_err(&integrity_path, e))?;
+                let manifest: SaveIntegrityManifest =
+                    serde_json::from_str(&raw).map_err(SaveBundleError::Json)?;
+                if manifest.spec_id != CIVSAVE_SPEC_ID
+                    || manifest.format_version != file_version
+                    || file_tick != Some(manifest.tick)
+                {
+                    return Err(SaveBundleError::SaveCorruption {
+                        detail: "integrity.json spec, version, or tick differs from metadata"
+                            .to_owned(),
+                    });
+                }
+                verify_integrity_manifest(dir, &manifest)?;
             }
-            verify_integrity_manifest(dir, &manifest)?;
         }
 
         // A v4 writer promises these snapshots. A missing file is corruption,
@@ -795,6 +823,37 @@ impl CivSaveBundle {
                 }
             }
         }
+
+        let saved_rng =
+            if file_version >= 6 {
+                let path = dir.join(RNG_FILE);
+                if !path.is_file() {
+                    return Err(SaveBundleError::MissingComponent {
+                        dir: dir.to_path_buf(),
+                        component: RNG_FILE,
+                    });
+                }
+                let json = fs::read_to_string(&path).map_err(|e| io_err(&path, e))?;
+                let saved: SavedRng = serde_json::from_str(&json)?;
+                if saved.algorithm != RNG_ALGORITHM {
+                    return Err(SaveBundleError::SaveCorruption {
+                        detail: "rng.json declares an unsupported algorithm".to_owned(),
+                    });
+                }
+                let pos = saved.word_pos.parse::<u128>().map_err(|_| {
+                    SaveBundleError::SaveCorruption {
+                        detail: "rng.json contains an invalid word position".to_owned(),
+                    }
+                })?;
+                if pos >= (1_u128 << 68) {
+                    return Err(SaveBundleError::SaveCorruption {
+                        detail: "rng.json word position exceeds ChaCha8's 68-bit range".to_owned(),
+                    });
+                }
+                Some((saved, pos))
+            } else {
+                None
+            };
 
         // Migrate world_state.json if needed.
         let migrated_ws = migrate_world_state_file(dir, file_version)?;
@@ -924,6 +983,13 @@ impl CivSaveBundle {
         // Loading legacy bundles must not promote their metadata to v4: their
         // optional sidecars may still be absent. An explicit save writes all
         // components and is the point at which a bundle becomes v4.
+
+        if let Some((saved, pos)) = saved_rng {
+            let mut rng = crate::engine::SimRng::from_seed(saved.seed);
+            rng.set_stream(saved.stream);
+            rng.set_word_pos(pos);
+            sim.rng = rng;
+        }
 
         Ok(sim)
     }
@@ -1161,6 +1227,104 @@ fn read_metadata_from_tar(bytes: &[u8]) -> Result<CivSaveMetadata, SaveBundleErr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn reseal_rng_fixture(path: &Path, version: u32) {
+        let metadata_path = path.join("metadata.json");
+        let mut metadata: CivSaveMetadata =
+            serde_json::from_slice(&fs::read(&metadata_path).unwrap()).unwrap();
+        metadata.format_version = version;
+        fs::write(&metadata_path, serde_json::to_vec(&metadata).unwrap()).unwrap();
+        let manifest = compute_integrity_manifest(path, version, metadata.tick).unwrap();
+        fs::write(
+            path.join(INTEGRITY_FILE),
+            serde_json::to_vec(&manifest).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn rng_sidecar_rejects_resealed_invalid_state() {
+        for invalid in [
+            "{}",
+            r#"{"algorithm":"rand_chacha-0.3-chacha8","seed":[1],"stream":0,"word_pos":"0"}"#,
+            r#"{"algorithm":"rand_chacha-0.3-chacha8","seed":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"stream":0,"word_pos":"295147905179352825856"}"#,
+        ] {
+            let tmp = tempfile::tempdir().unwrap();
+            let path = tmp.path().join("fixture.civsave");
+            CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+            fs::write(path.join(RNG_FILE), invalid).unwrap();
+            reseal_rng_fixture(&path, 6);
+            assert!(CivSaveBundle::load_dir(&path).is_err());
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::remove_file(path.join(RNG_FILE)).unwrap();
+        reseal_rng_fixture(&path, 6);
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::MissingComponent {
+                component: RNG_FILE,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn legacy_v5_without_rng_sidecar_still_loads() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::remove_file(path.join(RNG_FILE)).unwrap();
+        reseal_rng_fixture(&path, 5);
+        assert!(CivSaveBundle::load_dir(&path).is_ok());
+    }
+
+    #[test]
+    fn rng_sidecar_accepts_highest_valid_word_position() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        let rng_path = path.join(RNG_FILE);
+        let mut saved: SavedRng = serde_json::from_slice(&fs::read(&rng_path).unwrap()).unwrap();
+        let max_pos = (1_u128 << 68) - 1;
+        saved.word_pos = max_pos.to_string();
+        fs::write(rng_path, serde_json::to_vec(&saved).unwrap()).unwrap();
+        reseal_rng_fixture(&path, 6);
+        assert_eq!(
+            CivSaveBundle::load_dir(&path).unwrap().rng.get_word_pos(),
+            max_pos
+        );
+    }
+
+    #[test]
+    fn rng_sidecar_rejects_non_decimal_positions() {
+        for value in [serde_json::json!(4), serde_json::json!("not-a-number")] {
+            let tmp = tempfile::tempdir().unwrap();
+            let path = tmp.path().join("fixture.civsave");
+            CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+            let rng_path = path.join(RNG_FILE);
+            let mut saved: serde_json::Value =
+                serde_json::from_slice(&fs::read(&rng_path).unwrap()).unwrap();
+            saved["word_pos"] = value;
+            fs::write(rng_path, serde_json::to_vec(&saved).unwrap()).unwrap();
+            reseal_rng_fixture(&path, 6);
+            assert!(CivSaveBundle::load_dir(&path).is_err());
+        }
+    }
+
+    #[test]
+    fn rng_sidecar_rejects_unknown_algorithm() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        let rng_path = path.join(RNG_FILE);
+        let mut saved: SavedRng = serde_json::from_slice(&fs::read(&rng_path).unwrap()).unwrap();
+        saved.algorithm = "unknown".to_owned();
+        fs::write(rng_path, serde_json::to_vec(&saved).unwrap()).unwrap();
+        reseal_rng_fixture(&path, 6);
+        assert!(CivSaveBundle::load_dir(&path).is_err());
+    }
     use tempfile::tempdir;
 
     #[test]

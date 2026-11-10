@@ -132,7 +132,10 @@ fn authored_civilian_bundle_survives_snapshot() {
         &mut rng,
     );
     let snapshot = CivilianSnapshot::capture(&world).unwrap();
-    let restored = snapshot.restore().unwrap();
+    let restored = CivilianSnapshot::from_json(&snapshot.to_json().unwrap())
+        .unwrap()
+        .restore()
+        .unwrap();
     assert!(restored.get::<&Civilian>(entity).is_ok());
     assert_eq!(
         serde_json::to_value(&snapshot).unwrap(),
@@ -154,6 +157,9 @@ fn nested_unknown_and_large_payload_are_rejected() {
     let duplicated = text.replace("\"id\":42", "\"id\":42,\"id\":42");
     assert_ne!(text, duplicated);
     assert!(CivilianSnapshot::from_json(duplicated.as_bytes()).is_err());
+    let precision = text.replace("\"dx\":0.25", "\"dx\":0.25000000000000001");
+    assert_ne!(text, precision);
+    assert!(CivilianSnapshot::from_json(precision.as_bytes()).is_err());
 }
 
 fn snapshot_json_for_duplicate() -> Vec<u8> {

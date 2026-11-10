@@ -76,6 +76,7 @@ pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
 pub mod strict_civilian_snapshot;
+pub mod strict_seed_world_snapshot;
 pub mod scenario;
 pub mod settlement_helpers;
 pub mod social_types;

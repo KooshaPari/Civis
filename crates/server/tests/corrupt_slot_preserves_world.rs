@@ -62,10 +62,17 @@ async fn corrupt_slot_load_rejects_and_keeps_live_world() {
     );
     let saved = rpc(&mut socket, 2, "save.slot", json!({"slot_name":"slot-1"})).await;
     assert_eq!(saved.pointer("/result/saved"), Some(&json!(true)));
+    let saved_tick = saved
+        .pointer("/result/tick")
+        .and_then(Value::as_u64)
+        .unwrap();
+    let advanced = rpc(&mut socket, 6, "sim.command", json!({"action":"tick"})).await;
+    assert_eq!(advanced.pointer("/result/accepted"), Some(&json!(true)));
+    let before = rpc(&mut socket, 3, "sim.snapshot", json!({})).await;
+    assert_eq!(before.pointer("/result/tick"), Some(&json!(saved_tick + 1)));
     let path = saves.path().join("slot-1.civsave.zst");
     assert!(path.is_file());
     std::fs::write(&path, b"not a valid save archive").unwrap();
-    let before = rpc(&mut socket, 3, "sim.snapshot", json!({})).await;
     assert_eq!(before.pointer("/result/speed_multiplier"), Some(&json!(0)));
     assert!(before
         .pointer("/result/tick")
@@ -87,7 +94,7 @@ async fn corrupt_slot_load_rejects_and_keeps_live_world() {
     assert_eq!(rejected.pointer("/error/code"), Some(&json!(-32603)));
     assert!(rejected.get("result").is_none());
     let after = rpc(&mut socket, 5, "sim.snapshot", json!({})).await;
-    for field in ["tick", "population", "civ_pins"] {
+    for field in ["tick", "population", "civ_pins", "speed_multiplier"] {
         assert_eq!(
             before["result"][field], after["result"][field],
             "{field} changed after rejected load"

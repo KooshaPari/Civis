@@ -409,7 +409,7 @@ done
 
 if [[ "${CAPTURE_COUNT}" -eq 0 ]]; then
     dim "No screenshots captured (expected in CI without Xvfb/ImageMagick)"
-    dim "Game E2E flow verified: client launched, server connected, simulation ran"
+    dim "No capture files found; gameplay remains unverified"
 else
     ok "Captured ${CAPTURE_COUNT} screenshots"
 
@@ -481,7 +481,7 @@ fi
 
 # ── Summary ──────────────────────────────────────────────────────────
 echo ""
-ok "=== Game E2E: PASSED ==="
+ok "=== Process survival checks passed; gameplay unverified ==="
 echo "  Screenshots: ${CAPTURE_COUNT}"
 echo "  Logs:        ${LOGS}/"
 echo "  Captures:    ${CAPTURES}/"

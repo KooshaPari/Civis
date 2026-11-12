@@ -25,3 +25,10 @@ docs/audits/fr-matrix.json
 docs/audits/_id_inventory_v3.json
 docs/audits/.fr-snapshot.json
 docs/audits/fr-coverage-audit-*.md
+
+# Preserve upstream hecs package metadata and documentation
+research/hecs-allocator-prototype/.cargo_vcs_info.json
+research/hecs-allocator-prototype/.github/dependabot.yml
+research/hecs-allocator-prototype/.github/workflows/rust.yml
+research/hecs-allocator-prototype/CHANGELOG.md
+research/hecs-allocator-prototype/README.md

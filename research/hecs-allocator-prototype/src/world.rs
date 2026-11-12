@@ -28,6 +28,38 @@ use crate::{
     NoSuchEntity, Query, QueryBorrow, QueryMut, QueryOne, TakenEntity, View, ViewBorrow,
 };
 
+#[cfg(all(test, feature = "allocator-image"))]
+mod allocator_image_world_tests {
+    use super::World;
+
+    #[test]
+    fn world_preserves_reserved_and_next_identity() {
+        let mut original = World::new();
+        let first = original.spawn((1u32,));
+        let second = original.spawn((2u32,));
+        original.despawn(second).unwrap();
+        let reserved = original.reserve_entity();
+        let fresh = original.reserve_entity();
+        let image = original.allocator_image().unwrap();
+        let mut rebuilt = World::new();
+        rebuilt.spawn_at(first, (1u32,));
+        rebuilt.restore_allocator_image(&image).unwrap();
+        assert_eq!(original.reserve_entity(), rebuilt.reserve_entity());
+        original.flush();
+        rebuilt.flush();
+        assert!(rebuilt.contains(reserved) && rebuilt.contains(fresh));
+        assert_eq!(original.spawn((3u32,)), rebuilt.spawn((3u32,)));
+        assert_eq!(*rebuilt.get::<&u32>(first).unwrap(), 1);
+    }
+
+    #[test]
+    fn world_rejects_over_limit_reservation_image() {
+        let mut world = World::new();
+        let _ = world.reserve_entities(1_000_001).count();
+        assert!(world.allocator_image().is_err());
+    }
+}
+
 /// An unordered collection of entities, each having any number of distinctly typed components
 ///
 /// Similar to `HashMap<Entity, Vec<Box<dyn Any>>>` where each `Vec` never contains two of the same
@@ -61,6 +93,18 @@ pub struct World {
 }
 
 impl World {
+    /// Capture experimental allocator state. Requires exclusive access to exclude reservations.
+    #[cfg(feature = "allocator-image")]
+    pub fn allocator_image(&mut self) -> Result<crate::AllocatorImage, &'static str> {
+        self.entities.allocator_image()
+    }
+
+    /// Restore experimental allocator state after live components have been reconstructed.
+    /// Rejects mismatches before mutating allocator state.
+    #[cfg(feature = "allocator-image")]
+    pub fn restore_allocator_image(&mut self, image: &crate::AllocatorImage) -> Result<(), &'static str> {
+        self.entities.restore_allocator_image(image)
+    }
     /// Create an empty world
     pub fn new() -> Self {
         // AtomicU64 is unsupported on 32-bit MIPS and PPC architectures

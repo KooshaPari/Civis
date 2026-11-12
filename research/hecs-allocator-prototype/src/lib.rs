@@ -93,6 +93,8 @@ pub use bundle::{
 pub use change_tracker::{ChangeTracker, Changes};
 pub use command_buffer::CommandBuffer;
 pub use entities::{Entity, NoSuchEntity};
+#[cfg(feature = "allocator-image")]
+pub use entities::AllocatorImage;
 pub use entity_builder::{BuiltEntity, BuiltEntityClone, EntityBuilder, EntityBuilderClone};
 pub use entity_ref::{ComponentRef, ComponentRefShared, EntityRef, Ref, RefMut};
 pub use query::{

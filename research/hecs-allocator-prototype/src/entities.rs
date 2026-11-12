@@ -191,6 +191,70 @@ pub(crate) struct Entities {
     len: u32,
 }
 
+/// Experimental allocator image, versioned independently of hecs.
+#[cfg(feature = "allocator-image")]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AllocatorImage {
+    version: u32,
+    generations: Vec<u32>,
+    pending: Vec<u32>,
+    cursor: isize,
+    len: u32,
+}
+
+#[cfg(feature = "allocator-image")]
+impl Entities {
+    pub(crate) fn allocator_image(&self) -> Result<AllocatorImage, &'static str> {
+        let cursor = self.free_cursor.load(Ordering::Relaxed);
+        if self.meta.len() > 1_000_000 || cursor.checked_neg().is_none()
+            || (cursor < 0 && self.meta.len().checked_add((-cursor) as usize).filter(|&n| n <= 1_000_000).is_none()) {
+            return Err("allocator exceeds image limit");
+        }
+        Ok(AllocatorImage {
+            version: 1,
+            generations: self.meta.iter().map(|m| m.generation.get()).collect(),
+            pending: self.pending.clone(),
+            cursor,
+            len: self.len,
+        })
+    }
+
+    pub(crate) fn restore_allocator_image(&mut self, image: &AllocatorImage) -> Result<(), &'static str> {
+        let n = image.generations.len();
+        if image.version != 1 || n > 1_000_000 || image.generations.contains(&0)
+            || image.cursor > image.pending.len() as isize || image.cursor.checked_neg().is_none()
+            || (image.cursor < 0 && n.checked_add((-image.cursor) as usize).filter(|&x| x <= 1_000_000).is_none())
+            || self.needs_flush() { return Err("invalid image bounds or target reservations"); }
+        let mut vacant = crate::alloc::vec![false; n];
+        for &id in &image.pending {
+            let slot = vacant.get_mut(id as usize).ok_or("invalid pending id")?;
+            if *slot { return Err("duplicate pending id"); }
+            *slot = true;
+        }
+        if n.checked_sub(image.pending.len()) != Some(image.len as usize) || self.len != image.len {
+            return Err("live entity count mismatch");
+        }
+        for (id, m) in self.meta.iter().enumerate() {
+            if m.location.index != u32::MAX && (id >= n || vacant[id] || m.generation.get() != image.generations[id]) {
+                return Err("live entity identity mismatch");
+            }
+        }
+        for (id, &is_vacant) in vacant.iter().enumerate() {
+            if !is_vacant && self.meta.get(id).map_or(true, |m| m.location.index == u32::MAX) {
+                return Err("missing live entity");
+            }
+        }
+        self.meta.resize(n, EntityMeta::EMPTY);
+        for (id, m) in self.meta.iter_mut().enumerate() {
+            if vacant[id] { *m = EntityMeta { generation: NonZeroU32::new(image.generations[id]).unwrap(), location: EntityMeta::EMPTY.location }; }
+        }
+        self.pending.clone_from(&image.pending);
+        *self.free_cursor.get_mut() = image.cursor;
+        Ok(())
+    }
+}
+
 impl Entities {
     /// Reserve entity IDs concurrently
     ///

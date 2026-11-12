@@ -18,9 +18,9 @@ use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
 ///
-/// v8 requires market and research state; v7 requires the civilian allocator counter.
+/// v9 requires lifecycle counters; v8 requires market and research state.
 /// Earlier versions still load without an exact saved RNG position.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 8;
+pub const CIVSAVE_FORMAT_VERSION: u32 = 9;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
 /// FR-SAVE-006 — integrity manifest written last, covering every other
@@ -34,7 +34,27 @@ const INSTITUTIONS_FILE: &str = "institutions.json";
 const RNG_FILE: &str = "rng.json";
 const CIVILIAN_ALLOCATOR_FILE: &str = "civilian_allocator.json";
 const ECONOMY_RESEARCH_FILE: &str = "economy_research.json";
+const LIFECYCLE_FILE: &str = "lifecycle.json";
+const LIFECYCLE_MAX_BYTES: u64 = 1024;
 const RNG_ALGORITHM: &str = "rand_chacha-0.3-chacha8";
+
+fn is_lifecycle_case_alias(name: &str) -> bool {
+    name != LIFECYCLE_FILE && name.eq_ignore_ascii_case(LIFECYCLE_FILE)
+}
+
+fn is_lifecycle_regular_file(metadata: &fs::Metadata) -> bool {
+    if !metadata.file_type().is_file() {
+        return false;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if metadata.file_attributes() & 0x400 != 0 {
+            return false;
+        }
+    }
+    true
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -62,6 +82,25 @@ fn deserialize_research_progress<'de, D: serde::Deserializer<'de>>(
 #[derive(Debug, Serialize, Deserialize)]
 struct SavedCivilianAllocator {
     next_civilian_id: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SavedLifecycle {
+    children: u32,
+    adults: u32,
+    elders: u32,
+    dead: u32,
+}
+
+impl SavedLifecycle {
+    fn is_valid(&self) -> bool {
+        self.children
+            .checked_add(self.adults)
+            .and_then(|n| n.checked_add(self.elders))
+            .and_then(|n| n.checked_add(self.dead))
+            .is_some()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -286,15 +325,20 @@ fn compute_integrity_manifest(
     format_version: u32,
     tick: u64,
 ) -> Result<SaveIntegrityManifest, SaveBundleError> {
-    let mut names: Vec<String> = fs::read_dir(dir)
-        .map_err(|e| io_err(dir, e))?
-        .filter_map(|entry| entry.ok())
-        .filter_map(|entry| {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            entry.file_type().ok().filter(|t| t.is_file()).map(|_| name)
-        })
-        .filter(|name| name != INTEGRITY_FILE && name != "metadata.json")
-        .collect();
+    let mut names = Vec::new();
+    for entry in fs::read_dir(dir).map_err(|e| io_err(dir, e))? {
+        let entry = entry.map_err(|e| io_err(dir, e))?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if entry
+            .file_type()
+            .map_err(|e| io_err(&entry.path(), e))?
+            .is_file()
+            && name != INTEGRITY_FILE
+            && name != "metadata.json"
+        {
+            names.push(name);
+        }
+    }
     names.sort();
 
     let mut components = Vec::with_capacity(names.len());
@@ -359,6 +403,11 @@ fn verify_integrity_manifest(
     let mut listed: BTreeSet<&str> = BTreeSet::new();
 
     for expected in &manifest.components {
+        if is_lifecycle_case_alias(&expected.component) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: "noncanonical lifecycle component name".to_owned(),
+            });
+        }
         if !is_plain_component_name(&expected.component) {
             return Err(SaveBundleError::SaveCorruption {
                 detail: format!(
@@ -378,9 +427,29 @@ fn verify_integrity_manifest(
         }
 
         let path = dir.join(&expected.component);
-        let bytes = fs::read(&path).map_err(|e| io_err(&path, e))?;
-        let actual = hex_digest(&bytes);
-        if actual != expected.blake3 || bytes.len() as u64 != expected.len {
+        let mut file = File::open(&path).map_err(|e| io_err(&path, e))?;
+        let mut hasher = blake3::Hasher::new();
+        let mut length = 0_u64;
+        let mut buffer = [0_u8; 8192];
+        loop {
+            let count = file.read(&mut buffer).map_err(|e| io_err(&path, e))?;
+            if count == 0 {
+                break;
+            }
+            length = length.checked_add(count as u64).ok_or_else(|| {
+                SaveBundleError::SaveCorruption {
+                    detail: "component length overflow".to_owned(),
+                }
+            })?;
+            if expected.component == LIFECYCLE_FILE && length > LIFECYCLE_MAX_BYTES {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: "lifecycle state exceeds size limit".to_owned(),
+                });
+            }
+            hasher.update(&buffer[..count]);
+        }
+        let actual = hasher.finalize().to_hex().to_string();
+        if actual != expected.blake3 || length != expected.len {
             return Err(SaveBundleError::HashMismatch {
                 component: expected.component.clone(),
                 save_root: dir.to_path_buf(),
@@ -432,11 +501,19 @@ fn verify_integrity_manifest(
 /// A missing directory holds nothing to reject, so this returns `Ok(())` and
 /// lets the caller create it.
 fn ensure_dir_is_manifestable(dir: &Path) -> Result<(), SaveBundleError> {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return Ok(());
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(io_err(dir, error)),
     };
-    for entry in entries.filter_map(|entry| entry.ok()) {
+    for entry in entries {
+        let entry = entry.map_err(|error| io_err(dir, error))?;
         let name = entry.file_name().to_string_lossy().into_owned();
+        if is_lifecycle_case_alias(&name) {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: "noncanonical lifecycle component name".to_owned(),
+            });
+        }
         if !is_plain_component_name(&name) {
             return Err(SaveBundleError::SaveCorruption {
                 detail: format!(
@@ -445,6 +522,15 @@ fn ensure_dir_is_manifestable(dir: &Path) -> Result<(), SaveBundleError> {
                     name
                 ),
             });
+        }
+        if name == LIFECYCLE_FILE {
+            let path = entry.path();
+            let metadata = fs::symlink_metadata(&path).map_err(|error| io_err(&path, error))?;
+            if !is_lifecycle_regular_file(&metadata) {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: "lifecycle component is not a regular file".to_owned(),
+                });
+            }
         }
     }
     Ok(())
@@ -681,6 +767,18 @@ impl CivSaveBundle {
     /// Write an uncompressed save folder at `dir` (typically `*.civsave/`).
     pub fn save_dir(dir: impl AsRef<Path>, sim: &Simulation) -> Result<(), SaveBundleError> {
         let dir = dir.as_ref();
+        let lifecycle = sim.last_tick_lifecycle_metrics;
+        let saved_lifecycle = SavedLifecycle {
+            children: lifecycle.children,
+            adults: lifecycle.adults,
+            elders: lifecycle.elders,
+            dead: lifecycle.dead,
+        };
+        if !saved_lifecycle.is_valid() {
+            return Err(SaveBundleError::SaveCorruption {
+                detail: "lifecycle counts overflow".to_owned(),
+            });
+        }
         // Refuse a directory that already holds a name the verifier would
         // reject *before* writing anything. The same check also runs inside
         // `compute_integrity_manifest`, but that happens after every component
@@ -728,6 +826,10 @@ impl CivSaveBundle {
             word_pos: sim.rng.get_word_pos().to_string(),
         };
         fs::write(&rng_path, serde_json::to_string(&rng)?).map_err(|e| io_err(&rng_path, e))?;
+
+        let lifecycle_path = dir.join(LIFECYCLE_FILE);
+        fs::write(&lifecycle_path, serde_json::to_string(&saved_lifecycle)?)
+            .map_err(|e| io_err(&lifecycle_path, e))?;
 
         let allocator_path = dir.join(CIVILIAN_ALLOCATOR_FILE);
         fs::write(
@@ -880,6 +982,36 @@ impl CivSaveBundle {
                 }
             }
         }
+
+        let saved_lifecycle = if file_version >= 9 {
+            let path = dir.join(LIFECYCLE_FILE);
+            if !path.is_file() {
+                return Err(SaveBundleError::MissingComponent {
+                    dir: dir.to_path_buf(),
+                    component: LIFECYCLE_FILE,
+                });
+            }
+            let mut json = String::new();
+            File::open(&path)
+                .map_err(|e| io_err(&path, e))?
+                .take(LIFECYCLE_MAX_BYTES + 1)
+                .read_to_string(&mut json)
+                .map_err(|e| io_err(&path, e))?;
+            if json.len() as u64 > LIFECYCLE_MAX_BYTES {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: "lifecycle state exceeds size limit".to_owned(),
+                });
+            }
+            let saved: SavedLifecycle = serde_json::from_str(&json)?;
+            if !saved.is_valid() {
+                return Err(SaveBundleError::SaveCorruption {
+                    detail: "lifecycle counts overflow".to_owned(),
+                });
+            }
+            Some(saved)
+        } else {
+            None
+        };
 
         let saved_economy_research = if file_version >= 8 {
             let path = dir.join(ECONOMY_RESEARCH_FILE);
@@ -1088,6 +1220,13 @@ impl CivSaveBundle {
 
         if let Some(saved) = saved_allocator {
             sim.next_civilian_id = saved.next_civilian_id;
+        }
+
+        if let Some(saved) = saved_lifecycle {
+            sim.last_tick_lifecycle_metrics.children = saved.children;
+            sim.last_tick_lifecycle_metrics.adults = saved.adults;
+            sim.last_tick_lifecycle_metrics.elders = saved.elders;
+            sim.last_tick_lifecycle_metrics.dead = saved.dead;
         }
 
         Ok(sim)
@@ -1325,6 +1464,209 @@ fn read_metadata_from_tar(bytes: &[u8]) -> Result<CivSaveMetadata, SaveBundleErr
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn lifecycle_counters_continue_economy_after_reload() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        let mut source = Simulation::with_seed(42);
+        source.last_tick_lifecycle_metrics.children = 3;
+        source.last_tick_lifecycle_metrics.adults = 5;
+        source.last_tick_lifecycle_metrics.elders = 2;
+        source.last_tick_lifecycle_metrics.dead = 1;
+        source.state.energy_budget_joules = crate::Fixed::from_num(50_000);
+        CivSaveBundle::save_dir(&path, &source).unwrap();
+        let mut restored = CivSaveBundle::load_dir(&path).unwrap();
+        let mut negative = CivSaveBundle::load_dir(&path).unwrap();
+        assert_eq!(
+            source.last_tick_lifecycle_metrics,
+            restored.last_tick_lifecycle_metrics
+        );
+        negative.last_tick_lifecycle_metrics = Default::default();
+        for sim in [&mut source, &mut restored, &mut negative] {
+            sim.economy_policy.base_consumption_joules = 1_000.0;
+            sim.economy_policy.scarcity_multiplier = 1.0;
+            sim.phase_economy();
+        }
+        assert_eq!(
+            source.state.energy_budget_joules,
+            restored.state.energy_budget_joules
+        );
+        assert_ne!(
+            source.state.energy_budget_joules,
+            negative.state.energy_budget_joules
+        );
+    }
+
+    #[test]
+    fn lifecycle_v9_rejects_missing_malformed_and_unsealed_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        let sidecar = path.join(LIFECYCLE_FILE);
+        fs::write(&sidecar, b"{}").unwrap();
+        assert!(
+            matches!(CivSaveBundle::load_dir(&path), Err(SaveBundleError::HashMismatch { component, .. }) if component == LIFECYCLE_FILE)
+        );
+        for invalid in [
+            r#"{}"#,
+            r#"{"children":0,"adults":0,"elders":0,"dead":0,"extra":1}"#,
+            r#"{"children":-1,"adults":0,"elders":0,"dead":0}"#,
+            r#"{"children":4294967295,"adults":1,"elders":0,"dead":0}"#,
+            r#"{"children":0,"children":0,"adults":0,"elders":0,"dead":0}"#,
+        ] {
+            fs::write(&sidecar, invalid).unwrap();
+            reseal_rng_fixture(&path, 9);
+            assert!(CivSaveBundle::load_dir(&path).is_err());
+        }
+        fs::write(&sidecar, vec![b' '; 1025]).unwrap();
+        reseal_rng_fixture(&path, 9);
+        assert!(
+            matches!(CivSaveBundle::load_dir(&path), Err(SaveBundleError::SaveCorruption { detail }) if detail == "lifecycle state exceeds size limit")
+        );
+        fs::remove_file(&sidecar).unwrap();
+        reseal_rng_fixture(&path, 9);
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::MissingComponent {
+                component: LIFECYCLE_FILE,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn lifecycle_manifest_rejects_case_alias_before_read() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        let mut manifest: SaveIntegrityManifest =
+            serde_json::from_slice(&fs::read(path.join(INTEGRITY_FILE)).unwrap()).unwrap();
+        let component = manifest
+            .components
+            .iter_mut()
+            .find(|c| c.component == LIFECYCLE_FILE)
+            .unwrap();
+        component.component = "LIFECYCLE.JSON".into();
+        assert!(
+            matches!(verify_integrity_manifest(&path, &manifest), Err(SaveBundleError::SaveCorruption { detail }) if detail == "noncanonical lifecycle component name")
+        );
+    }
+
+    #[test]
+    fn lifecycle_save_rejects_case_alias_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let alias = dir.path().join("LIFECYCLE.JSON");
+        fs::write(&alias, b"preserve").unwrap();
+        assert!(
+            matches!(CivSaveBundle::save_dir(dir.path(), &Simulation::with_seed(42)), Err(SaveBundleError::SaveCorruption { detail }) if detail == "noncanonical lifecycle component name")
+        );
+        assert_eq!(fs::read(&alias).unwrap(), b"preserve");
+        assert!(!dir.path().join("metadata.json").exists());
+    }
+
+    #[test]
+    fn lifecycle_save_rejects_nonfile_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join(LIFECYCLE_FILE)).unwrap();
+        assert!(
+            matches!(CivSaveBundle::save_dir(dir.path(), &Simulation::with_seed(42)), Err(SaveBundleError::SaveCorruption { detail }) if detail == "lifecycle component is not a regular file")
+        );
+        assert!(!dir.path().join("metadata.json").exists());
+    }
+
+    #[test]
+    fn lifecycle_preflight_propagates_read_dir_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-a-directory");
+        fs::write(&path, b"preserve").unwrap();
+        assert!(matches!(
+            ensure_dir_is_manifestable(&path),
+            Err(SaveBundleError::Io { .. })
+        ));
+        assert_eq!(fs::read(path).unwrap(), b"preserve");
+    }
+
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn lifecycle_save_rejects_symlink_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("target");
+        let save = dir.path().join("save");
+        fs::write(&target, b"preserve").unwrap();
+        fs::create_dir(&save).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&target, save.join(LIFECYCLE_FILE)).unwrap();
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&target, save.join(LIFECYCLE_FILE)).unwrap();
+        assert!(
+            matches!(CivSaveBundle::save_dir(&save, &Simulation::with_seed(42)), Err(SaveBundleError::SaveCorruption { detail }) if detail == "lifecycle component is not a regular file")
+        );
+        assert_eq!(fs::read(&target).unwrap(), b"preserve");
+        assert!(!save.join("metadata.json").exists());
+    }
+
+    #[test]
+    fn lifecycle_manifest_streaming_hash_detects_late_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        let component = path.join("stream-fixture.bin");
+        let mut bytes = vec![7_u8; 20_000];
+        fs::write(&component, &bytes).unwrap();
+        reseal_rng_fixture(&path, 9);
+        CivSaveBundle::load_dir(&path).unwrap();
+        bytes[19_999] ^= 1;
+        fs::write(&component, &bytes).unwrap();
+        assert!(
+            matches!(CivSaveBundle::load_dir(&path), Err(SaveBundleError::HashMismatch { component, .. }) if component == "stream-fixture.bin")
+        );
+    }
+
+    #[test]
+    fn lifecycle_legacy_v8_without_sidecar_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::remove_file(path.join(LIFECYCLE_FILE)).unwrap();
+        reseal_rng_fixture(&path, 8);
+        let metadata = fs::read(path.join("metadata.json")).unwrap();
+        CivSaveBundle::load_dir(&path).unwrap();
+        assert_eq!(metadata, fs::read(path.join("metadata.json")).unwrap());
+    }
+
+    #[test]
+    fn lifecycle_legacy_v7_without_new_sidecars_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::remove_file(path.join(LIFECYCLE_FILE)).unwrap();
+        fs::remove_file(path.join(ECONOMY_RESEARCH_FILE)).unwrap();
+        reseal_rng_fixture(&path, 7);
+        CivSaveBundle::load_dir(&path).unwrap();
+        assert!(!path.join(LIFECYCLE_FILE).exists());
+    }
+
+    #[test]
+    fn lifecycle_archive_roundtrip_and_invalid_write_refusal() {
+        let dir = tempfile::tempdir().unwrap();
+        let archive = dir.path().join("save.civsave.zst");
+        let mut source = Simulation::with_seed(42);
+        source.last_tick_lifecycle_metrics.adults = 42;
+        CivSaveBundle::save_archive(&archive, &source).unwrap();
+        assert_eq!(
+            CivSaveBundle::load_archive(&archive)
+                .unwrap()
+                .last_tick_lifecycle_metrics,
+            source.last_tick_lifecycle_metrics
+        );
+        source.last_tick_lifecycle_metrics.children = u32::MAX;
+        let path = dir.path().join("existing");
+        fs::create_dir(&path).unwrap();
+        fs::write(path.join("sentinel"), b"preserve").unwrap();
+        assert!(CivSaveBundle::save_dir(&path, &source).is_err());
+        assert_eq!(fs::read(path.join("sentinel")).unwrap(), b"preserve");
+        assert!(!path.join("metadata.json").exists());
+    }
     #[test]
     fn save_load_preserves_next_civilian_id() {
         let dir = tempfile::tempdir().unwrap();
@@ -2022,8 +2364,14 @@ mod tests {
             let before_manifest = fs::read(save.join(INTEGRITY_FILE)).unwrap();
             let err = CivSaveBundle::load_dir(&save)
                 .expect_err("a traversing component name must be refused");
-            assert_eq!(fs::read(save.join("world_state.json")).unwrap(), before_world);
-            assert_eq!(fs::read(save.join(INTEGRITY_FILE)).unwrap(), before_manifest);
+            assert_eq!(
+                fs::read(save.join("world_state.json")).unwrap(),
+                before_world
+            );
+            assert_eq!(
+                fs::read(save.join(INTEGRITY_FILE)).unwrap(),
+                before_manifest
+            );
             match err {
                 SaveBundleError::SaveCorruption { detail } => assert!(
                     detail.contains("not a plain file name"),
@@ -2219,11 +2567,9 @@ mod tests {
             loaded.set_settlement_population(71, 150);
             loaded.phase_institutions();
             assert!(loaded.last_tick_institution_events().is_empty());
-            assert!(
-                loaded.institutions()[&71]
-                    .iter()
-                    .all(|inst| inst.level == 2)
-            );
+            assert!(loaded.institutions()[&71]
+                .iter()
+                .all(|inst| inst.level == 2));
         }
     }
 

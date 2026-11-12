@@ -10,7 +10,27 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "${ROOT}"
 MANIFEST="${ROOT}/.ci/quality-manifest.json"
-mkdir -p "${ROOT}/.ci"
+
+assert_quality_tree() {
+    local actual untracked
+    actual="$(git rev-parse HEAD)" || return 1
+    [[ -z "${1-}" || "$actual" == "$1" ]] || { echo 'quality gate HEAD changed' >&2; return 1; }
+    git diff --quiet -- . ':(exclude).ci/quality-manifest.json' || { echo 'working tree is dirty' >&2; return 1; }
+    git diff --cached --quiet HEAD -- . ':(exclude).ci/quality-manifest.json' || { echo 'index is dirty' >&2; return 1; }
+    untracked="$(git ls-files --others --exclude-standard -- . ':(exclude).ci/quality-manifest.json')" || return 1
+    [[ -z "$untracked" ]] || { echo 'quality gate tree has untracked files' >&2; return 1; }
+}
+
+if [[ ${SKIP_CIVIS_3D_VERIFY:-0} == 1 || ${SKIP_BEVY_EGUI_CHECK:-0} == 1 || ${SKIP_QUALITY_MANIFEST:-0} == 1 || ${SKIP_QUALITY:-0} == 1 ]]; then
+    echo 'required quality gates cannot be skipped' >&2
+    exit 1
+fi
+if ! command -v just >/dev/null 2>&1; then
+    echo 'just is required for civis_3d_verify and bevy_egui_check' >&2
+    exit 1
+fi
+quality_head="$(git rev-parse HEAD)"
+assert_quality_tree "$quality_head"
 
 if ! command -v python3 >/dev/null 2>&1; then
     echo "ERROR: python3 is required to emit the quality manifest" >&2
@@ -28,7 +48,7 @@ record() {
     if [[ ${status} == "pass" ]]; then
         return 0
     fi
-    if [[ ${status} == "skip" && (${name} == unreal_* || ${name} == extra_*) ]]; then
+    if [[ (${status} == "skip" || ${status} == "fail") && (${name} == unreal_* || ${name} == extra_*) ]]; then
         return 0
     fi
     FAIL=1
@@ -178,6 +198,11 @@ for row in os.environ.get("QUALITY_GATE_RESULTS", "").splitlines():
 print(json.dumps(gates))
 PY
 )"
+if [[ ${FAIL} -ne 0 ]]; then
+    exit 1
+fi
+assert_quality_tree "$quality_head"
+mkdir -p "${ROOT}/.ci"
 export QUALITY_GATES_JSON="${GATES_JSON}"
 python3 "${ROOT}/scripts/quality/write-quality-manifest.py"
 

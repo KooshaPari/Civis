@@ -28,3 +28,17 @@ function Invoke-Gate {
     $results[$Name] = @{ status = "pass"; detail = "" }
     Write-Host "  pass $Name"
 }
+
+function Assert-QualityTree {
+    param([string]$ExpectedHead)
+    $head = (& git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $head) { throw 'cannot identify quality gate HEAD' }
+    if ($ExpectedHead -and $head -ne $ExpectedHead) { throw 'quality gate HEAD changed' }
+    & git diff --quiet -- . ':(exclude).ci/quality-manifest.json'
+    if ($LASTEXITCODE -ne 0) { throw 'working tree is dirty or unavailable' }
+    & git diff --cached --quiet HEAD -- . ':(exclude).ci/quality-manifest.json'
+    if ($LASTEXITCODE -ne 0) { throw 'index is dirty or unavailable' }
+    $untracked = @(git ls-files --others --exclude-standard -- . ':(exclude).ci/quality-manifest.json')
+    if ($LASTEXITCODE -ne 0 -or $untracked.Count -ne 0) { throw 'quality gate tree has untracked files or is unavailable' }
+    return $head
+}

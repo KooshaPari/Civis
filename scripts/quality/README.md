@@ -2,6 +2,11 @@
 
 Cloud CI (`quality.yml` + `pr-governance-gate`) only runs `verify-quality-manifest.sh` on `ubuntu-latest` — no Rust, Node, or Unreal on the runner. Developers attest gates locally via lefthook `pre-push` → `emit-quality-manifest.ps1` / `.sh`.
 
+The emitters require `just`, Python, and the tools used by the required gates.
+The shell emitter works without PowerShell. Required gates cannot be skipped.
+The tracked and untracked tree must be clean apart from the manifest, and HEAD
+must be unchanged at the checks before and after the gates.
+
 **Do not hand-edit** `.ci/quality-manifest.json`. Refresh with:
 
 ```powershell

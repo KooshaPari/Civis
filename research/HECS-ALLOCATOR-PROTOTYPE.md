@@ -13,7 +13,9 @@ new-ID reservations and several malformed inputs.
 
 The experiment operates on private hecs `Entities` internals. It does not restore
 component storage, public `World` state, or a Civis game; does not prove
-continuity; and does not include resource limits, a wire format, schema
+continuity. A one-million-slot experiment cap limits allocations after the
+image has already been constructed; it is not a safe deserialization limit.
+The experiment does not include a wire format, schema
 versioning, fuzzing, concurrency tests, or an upstream maintenance strategy.
 All of those are prerequisites for any production integration. A production
 implementation would also need to audit entity mutation entry points and save

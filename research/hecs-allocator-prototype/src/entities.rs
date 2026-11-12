@@ -618,10 +618,10 @@ mod tests {
 
     fn restore(e: &mut Entities, image: &AllocatorImage) -> Result<(), ()> {
         let n = image.generations.len();
-        if n > u32::MAX as usize || image.generations.contains(&0)
+        if n > 1_000_000 || image.generations.contains(&0)
             || image.cursor > image.pending.len() as isize
             || image.cursor.checked_neg().is_none()
-            || (image.cursor < 0 && n.checked_add((-image.cursor) as usize).filter(|&x| x <= u32::MAX as usize).is_none())
+            || (image.cursor < 0 && n.checked_add((-image.cursor) as usize).filter(|&x| x <= 1_000_000).is_none())
             || e.needs_flush()
         { return Err(()); }
         let mut vacant = vec![false; n];
@@ -690,6 +690,42 @@ mod tests {
         for image in images { assert!(restore(&mut target, &image).is_err()); }
         let after = capture(&mut target);
         assert_eq!((before.generations, before.pending, before.cursor, before.len), (after.generations, after.pending, after.cursor, after.len));
+    }
+
+    #[test]
+    fn allocator_image_preserves_live_location_and_rejects_generation_mismatch() {
+        let mut source = Entities::default();
+        let live = source.alloc();
+        source.meta[live.id as usize].location = Location { archetype: 7, index: 42 };
+        let retired = source.alloc();
+        source.meta[retired.id as usize].location.index = 1;
+        source.free(retired).unwrap();
+        let image = capture(&mut source);
+        let mut target = Entities::default();
+        target.alloc_at(live);
+        target.meta[live.id as usize].location = Location { archetype: 19, index: 23 };
+        let mut invalid = image.clone();
+        invalid.generations[live.id as usize] += 1;
+        assert!(restore(&mut target, &invalid).is_err());
+        assert_eq!((target.meta[0].location.archetype, target.meta[0].location.index), (19, 23));
+        restore(&mut target, &image).unwrap();
+        assert_eq!((target.meta[0].location.archetype, target.meta[0].location.index), (19, 23));
+        assert_eq!(source.alloc(), target.alloc());
+    }
+
+    #[test]
+    fn allocator_image_preserves_wrapped_generation() {
+        let mut source = Entities::default();
+        let mut id = source.alloc();
+        source.meta[0].generation = NonZeroU32::new(u32::MAX).unwrap();
+        source.meta[0].location.index = 0;
+        id.generation = NonZeroU32::new(u32::MAX).unwrap();
+        source.free(id).unwrap();
+        let image = capture(&mut source);
+        let mut target = Entities::default();
+        restore(&mut target, &image).unwrap();
+        assert_eq!(source.alloc(), target.alloc());
+        assert_eq!(target.meta[0].generation.get(), 1);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! CIV-1000 save layouts: uncompressed `.civsave/` folder (debug) and `.civsave.zst` archive (default).
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -18,9 +18,9 @@ use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
 ///
-/// v7 requires the civilian allocator counter; v6 requires the RNG stream.
+/// v8 requires market and research state; v7 requires the civilian allocator counter.
 /// Earlier versions still load without an exact saved RNG position.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 7;
+pub const CIVSAVE_FORMAT_VERSION: u32 = 8;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
 /// FR-SAVE-006 — integrity manifest written last, covering every other
@@ -33,7 +33,31 @@ const ENVIRONMENT_FILE: &str = "environment.json";
 const INSTITUTIONS_FILE: &str = "institutions.json";
 const RNG_FILE: &str = "rng.json";
 const CIVILIAN_ALLOCATOR_FILE: &str = "civilian_allocator.json";
+const ECONOMY_RESEARCH_FILE: &str = "economy_research.json";
 const RNG_ALGORITHM: &str = "rand_chacha-0.3-chacha8";
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SavedEconomyResearch {
+    market: civ_economy::MarketState,
+    research: SavedResearch,
+    research_audio_watermark: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SavedResearch {
+    researched: Vec<String>,
+    queued: VecDeque<String>,
+    #[serde(deserialize_with = "deserialize_research_progress")]
+    in_progress: Option<(String, u64)>,
+}
+
+fn deserialize_research_progress<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<(String, u64)>, D::Error> {
+    Option::deserialize(deserializer)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SavedCivilianAllocator {
@@ -714,6 +738,22 @@ impl CivSaveBundle {
         )
         .map_err(|e| io_err(&allocator_path, e))?;
 
+        let economy_research_path = dir.join(ECONOMY_RESEARCH_FILE);
+        let economy_research = SavedEconomyResearch {
+            market: sim.market_state.clone(),
+            research: SavedResearch {
+                researched: sim.research_cache().researched.clone(),
+                queued: sim.research_cache().queued.clone(),
+                in_progress: sim.research_cache().in_progress.clone(),
+            },
+            research_audio_watermark: sim.last_audio_researched_len,
+        };
+        fs::write(
+            &economy_research_path,
+            serde_json::to_string(&economy_research)?,
+        )
+        .map_err(|e| io_err(&economy_research_path, e))?;
+
         let environment_path = dir.join(ENVIRONMENT_FILE);
         let environment = SavedEnvironment {
             planet: *sim.planet(),
@@ -840,6 +880,20 @@ impl CivSaveBundle {
                 }
             }
         }
+
+        let saved_economy_research = if file_version >= 8 {
+            let path = dir.join(ECONOMY_RESEARCH_FILE);
+            if !path.is_file() {
+                return Err(SaveBundleError::MissingComponent {
+                    dir: dir.to_path_buf(),
+                    component: ECONOMY_RESEARCH_FILE,
+                });
+            }
+            let json = fs::read_to_string(&path).map_err(|e| io_err(&path, e))?;
+            Some(serde_json::from_str::<SavedEconomyResearch>(&json)?)
+        } else {
+            None
+        };
 
         let saved_allocator = if file_version >= 7 {
             let path = dir.join(CIVILIAN_ALLOCATOR_FILE);
@@ -1020,6 +1074,16 @@ impl CivSaveBundle {
             rng.set_stream(saved.stream);
             rng.set_word_pos(pos);
             sim.rng = rng;
+        }
+
+        if let Some(saved) = saved_economy_research {
+            sim.market_state = saved.market;
+            *sim.research_cache_mut() = crate::engine::ResearchCache {
+                researched: saved.research.researched,
+                queued: saved.research.queued,
+                in_progress: saved.research.in_progress,
+            };
+            sim.last_audio_researched_len = saved.research_audio_watermark;
         }
 
         if let Some(saved) = saved_allocator {
@@ -1269,6 +1333,88 @@ mod tests {
         super::CivSaveBundle::save_dir(dir.path(), &sim).unwrap();
         let restored = super::CivSaveBundle::load_dir(dir.path()).unwrap();
         assert_eq!(restored.next_civilian_id, sim.next_civilian_id);
+    }
+
+    #[test]
+    fn economy_research_sidecar_rejects_missing_and_malformed_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::write(path.join(ECONOMY_RESEARCH_FILE), b"{}").unwrap();
+        reseal_rng_fixture(&path, 8);
+        assert!(CivSaveBundle::load_dir(&path).is_err());
+        fs::remove_file(path.join(ECONOMY_RESEARCH_FILE)).unwrap();
+        reseal_rng_fixture(&path, 8);
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::MissingComponent {
+                component: ECONOMY_RESEARCH_FILE,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn economy_research_sidecar_requires_nested_fields() {
+        for field in ["queued", "in_progress"] {
+            let tmp = tempfile::tempdir().unwrap();
+            let path = tmp.path().join("fixture.civsave");
+            CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+            let sidecar = path.join(ECONOMY_RESEARCH_FILE);
+            let mut value: serde_json::Value =
+                serde_json::from_slice(&fs::read(&sidecar).unwrap()).unwrap();
+            value["research"].as_object_mut().unwrap().remove(field);
+            fs::write(sidecar, serde_json::to_vec(&value).unwrap()).unwrap();
+            reseal_rng_fixture(&path, 8);
+            assert!(CivSaveBundle::load_dir(&path).is_err(), "missing {field}");
+        }
+    }
+
+    #[test]
+    fn economy_research_sidecar_rejects_unsealed_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::write(path.join(ECONOMY_RESEARCH_FILE), b"{}").unwrap();
+        assert!(
+            matches!(CivSaveBundle::load_dir(&path), Err(SaveBundleError::HashMismatch { component, .. }) if component == ECONOMY_RESEARCH_FILE)
+        );
+    }
+
+    #[test]
+    fn legacy_v7_without_economy_research_still_loads() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::remove_file(path.join(ECONOMY_RESEARCH_FILE)).unwrap();
+        reseal_rng_fixture(&path, 7);
+        CivSaveBundle::load_dir(&path).unwrap();
+    }
+
+    #[test]
+    fn economy_research_watermark_roundtrips() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("fixture.civsave.zst");
+        let mut sim = Simulation::with_seed(42);
+        sim.research_cache_mut().researched = vec!["pottery".into(), "writing".into()];
+        sim.last_audio_researched_len = 1;
+        CivSaveBundle::save_archive(&path, &sim).unwrap();
+        let mut loaded = CivSaveBundle::load(&path).unwrap();
+        assert_eq!(loaded.last_audio_researched_len, 1);
+        sim.phase_audio();
+        loaded.phase_audio();
+        assert_eq!(
+            loaded.last_tick_audio_events(),
+            sim.last_tick_audio_events()
+        );
+        assert_eq!(
+            loaded
+                .last_tick_audio_events()
+                .iter()
+                .filter(|event| matches!(event, civ_audio::triggers::SfxTrigger::Tech))
+                .count(),
+            1
+        );
     }
 
     #[test]
@@ -1741,6 +1887,7 @@ mod tests {
     // something other than a plain file directly under the save root must be
     // refused before it is ever joined onto a path and read, otherwise the
     // integrity check becomes an arbitrary-file-read primitive.
+    #[cfg(unix)]
     #[test]
     fn fr_save_006_refusal_leaves_the_prior_save_untouched() {
         // The refusal above must not be destructive. `save_dir` writes every
@@ -1834,6 +1981,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn fr_save_006_rejects_manifest_components_that_escape_the_save_root() {
         for hostile in [
             "../escape.json",
@@ -1870,8 +2018,12 @@ mod tests {
             )
             .expect("write manifest");
 
+            let before_world = fs::read(save.join("world_state.json")).unwrap();
+            let before_manifest = fs::read(save.join(INTEGRITY_FILE)).unwrap();
             let err = CivSaveBundle::load_dir(&save)
                 .expect_err("a traversing component name must be refused");
+            assert_eq!(fs::read(save.join("world_state.json")).unwrap(), before_world);
+            assert_eq!(fs::read(save.join(INTEGRITY_FILE)).unwrap(), before_manifest);
             match err {
                 SaveBundleError::SaveCorruption { detail } => assert!(
                     detail.contains("not a plain file name"),

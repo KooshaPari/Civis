@@ -805,7 +805,7 @@ pub struct Simulation {
     /// `ResearchCache::researched` is append-only in normal operation. Keeping
     /// the watermark outside the serialized cache prevents existing research
     /// from replaying as fresh audio after construction or replay load.
-    last_audio_researched_len: usize,
+    pub(crate) last_audio_researched_len: usize,
     /// Per-faction emergent era/tech progression (FR-ERA).
     pub era_progression: crate::era::EraProgressionState,
     /// Per-faction relation matrix (FR-CIV-DIPLOMACY).

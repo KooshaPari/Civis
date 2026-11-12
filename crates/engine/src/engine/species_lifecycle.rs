@@ -3,8 +3,8 @@
 //! decomposition pass 2 (Civis Engine Decomposition).
 
 use civ_agents::{
-    spawn_child_near, spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian,
-    Needs, Position3d,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, Needs, Position3d, spawn_child_near,
+    spawn_civilian_at,
 };
 use civ_voxel::FIXED_SCALE;
 use hecs::{Entity, World};
@@ -435,11 +435,14 @@ impl Simulation {
                     continue;
                 }
 
+                let Some(next_id) = self.next_civilian_id.checked_add(1) else {
+                    continue;
+                };
                 paired_adults.insert(left.1);
                 paired_adults.insert(right.1);
 
                 let child_id = self.next_civilian_id;
-                self.next_civilian_id += 1;
+                self.next_civilian_id = next_id;
                 let x = ((left.2.x + right.2.x) * 0.5).clamp(0.01, 0.99);
                 let y = ((left.2.y + right.2.y) * 0.5).clamp(0.01, 0.99);
                 births.push((child_id, x, y, left.2.alignment, left.1, right.1));
@@ -681,8 +684,11 @@ impl Simulation {
                     &lifecycle_params,
                 );
                 if self.rng.gen_bool(should_birth.clamp(0.0, 1.0) as f64) {
+                    let Some(next_id) = self.next_civilian_id.checked_add(1) else {
+                        continue;
+                    };
                     let child_id = self.next_civilian_id;
-                    self.next_civilian_id += 1;
+                    self.next_civilian_id = next_id;
                     let x = pos.coord.x as f32 / FIXED_SCALE as f32;
                     let y = pos.coord.z as f32 / FIXED_SCALE as f32;
                     births.push((child_id, x, y));
@@ -877,6 +883,81 @@ mod daily_food_capacity_tests {
             ));
         }
         sim
+    }
+
+    fn birth_ready() -> Simulation {
+        let mut sim = cohort(Fixed::from_num(100_000), 2);
+        sim.state.tick = 200;
+        for (_, needs) in sim.world.query_mut::<&mut Needs>() {
+            needs.food = 1.0;
+            needs.shelter = 1.0;
+            needs.safety = 1.0;
+            needs.belonging = 1.0;
+            needs.rest = 1.0;
+            needs.health = 1.0;
+        }
+        sim
+    }
+
+    #[test]
+    fn allocator_continues_after_birth_and_reload() {
+        let mut sim = birth_ready();
+        sim.next_civilian_id = 1_000_123;
+        sim.phase_life();
+        assert_eq!(sim.last_births().len(), 1);
+        assert_eq!(sim.last_births()[0].entity_id, 1_000_123);
+        let dir = tempfile::tempdir().unwrap();
+        crate::save_bundle::CivSaveBundle::save_dir(dir.path(), &sim).unwrap();
+        let mut restored = crate::save_bundle::CivSaveBundle::load_dir(dir.path()).unwrap();
+        // Civilian ECS restoration is separate; recreate the adults for this allocator test.
+        restored.world = birth_ready().world;
+        restored.phase_life();
+        assert_eq!(restored.last_births().len(), 1);
+        assert_eq!(restored.last_births()[0].entity_id, 1_000_124);
+    }
+
+    #[test]
+    fn exhausted_allocator_skips_birth_without_wrapping() {
+        let mut sim = birth_ready();
+        sim.next_civilian_id = u64::MAX - 1;
+        sim.phase_life();
+        assert_eq!(sim.last_births().len(), 1);
+        assert_eq!(sim.last_births()[0].entity_id, u64::MAX - 1);
+        assert_eq!(sim.next_civilian_id, u64::MAX);
+        sim.phase_life();
+        assert!(sim.last_births().is_empty());
+        assert_eq!(sim.next_civilian_id, u64::MAX);
+    }
+
+    #[test]
+    fn citizen_lifecycle_exhaustion_skips_a_birth_without_wrapping() {
+        let mut control = birth_ready();
+        let mut exhausted = birth_ready();
+        exhausted.next_civilian_id = u64::MAX;
+        let mut observed_birth = false;
+        for window in 1..=1024 {
+            for sim in [&mut control, &mut exhausted] {
+                sim.state.tick = window * 200;
+                sim.state.resources.food = Fixed::from_num(100_000);
+                for (_, (civilian, needs)) in
+                    sim.world.query_mut::<(&mut AgentCivilian, &mut Needs)>()
+                {
+                    civilian.age = 25;
+                    needs.food = 1.0;
+                    needs.shelter = 1.0;
+                    needs.safety = 1.0;
+                    needs.belonging = 1.0;
+                }
+                sim.phase_citizen_lifecycle();
+            }
+            assert!(exhausted.last_births().is_empty());
+            assert_eq!(exhausted.next_civilian_id, u64::MAX);
+            if !control.last_births().is_empty() {
+                observed_birth = true;
+                break;
+            }
+        }
+        assert!(observed_birth, "control must reach a birth decision");
     }
 
     fn food_needs(sim: &Simulation) -> BTreeMap<u64, f32> {

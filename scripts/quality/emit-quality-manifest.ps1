@@ -17,19 +17,7 @@ if ($env:FORCE_QUALITY_MANIFEST -ne "1" -and (Test-Path -LiteralPath $manifestPa
 
 $results = @{}
 $Failed = $false
-
-function Invoke-Gate {
-    param([string]$Name, [scriptblock]$Block)
-    & $Block
-    if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
-        $results[$Name] = @{ status = "fail"; detail = "exit $LASTEXITCODE" }
-        Write-Host "  fail $Name"
-        $script:Failed = $true
-        return
-    }
-    $results[$Name] = @{ status = "pass"; detail = "" }
-    Write-Host "  pass $Name"
-}
+. (Join-Path $PSScriptRoot 'Invoke-CheckedNative.ps1')
 
 # Ensure the Rust toolchain is on PATH (cargo may not be visible when invoked
 # through the pwsh hook).
@@ -56,33 +44,35 @@ if (Get-Command just -ErrorAction SilentlyContinue) {
         $results["civis_3d_verify"] = @{ status = "skip"; detail = "SKIP_CIVIS_3D_VERIFY/SKIP_QUALITY_MANIFEST set" }
         Write-Host "  skip civis_3d_verify"
     } else {
-        Invoke-Gate "civis_3d_verify" { just civis-3d-verify }
+        Invoke-Gate "civis_3d_verify" { Invoke-CheckedNative just @('civis-3d-verify') }
     }
     if ($skipBevyEguiCheck) {
         $results["bevy_egui_check"] = @{ status = "skip"; detail = "SKIP_BEVY_EGUI_CHECK/SKIP_QUALITY_MANIFEST set" }
         Write-Host "  skip bevy_egui_check"
     } else {
-        Invoke-Gate "bevy_egui_check" { just bevy-egui-check }
+        Invoke-Gate "bevy_egui_check" { Invoke-CheckedNative just @('bevy-egui-check') }
     }
 } else {
-    Invoke-Gate "rust_fmt" { cargo fmt --check }
-    Invoke-Gate "rust_clippy" { cargo clippy --workspace --all-targets -- -D warnings }
-    Invoke-Gate "rust_test" { cargo test --workspace }
-    Invoke-Gate "godot_test" { Push-Location clients/godot-ref/rust; cargo test; Pop-Location }
+    Invoke-Gate "rust_fmt" { Invoke-CheckedNative cargo @('fmt', '--check') }
+    Invoke-Gate "rust_clippy" { Invoke-CheckedNative cargo @('clippy', '--workspace', '--all-targets', '--', '-D', 'warnings') }
+    Invoke-Gate "rust_test" { Invoke-CheckedNative cargo @('test', '--workspace') }
+    Invoke-Gate "godot_test" { Push-Location clients/godot-ref/rust; try { Invoke-CheckedNative cargo @('test') } finally { Pop-Location } }
 }
 
-Invoke-Gate "web_test" { Push-Location web; npm test; Pop-Location }
+Invoke-Gate "web_test" { Push-Location web; try { Invoke-CheckedNative npm @('test') } finally { Pop-Location } }
 Invoke-Gate "dashboard_typecheck" {
     Push-Location web/dashboard
-    bun install --frozen-lockfile
-    bun run typecheck
-    Pop-Location
+    try {
+        Invoke-CheckedNative bun @('install', '--frozen-lockfile')
+        Invoke-CheckedNative bun @('run', 'typecheck')
+    } finally { Pop-Location }
 }
 Invoke-Gate "dashboard_build" {
     Push-Location web/dashboard
-    bun install --frozen-lockfile
-    bun run build
-    Pop-Location
+    try {
+        Invoke-CheckedNative bun @('install', '--frozen-lockfile')
+        Invoke-CheckedNative bun @('run', 'build')
+    } finally { Pop-Location }
 }
 
 $repoRoot = (git rev-parse --show-toplevel).Trim()
@@ -133,6 +123,10 @@ foreach ($entry in $results.GetEnumerator()) {
 $env:QUALITY_GATES_JSON = ($gatesJson | ConvertTo-Json -Compress -Depth 5)
 $env:MANIFEST_PATH = ".ci/quality-manifest.json"
 New-Item -ItemType Directory -Force -Path .ci | Out-Null
-python (Join-Path $PSScriptRoot "write-quality-manifest.py")
-$writeExit = $LASTEXITCODE
-if ($Failed -or $writeExit -ne 0) { exit 1 }
+try {
+    Invoke-CheckedNative python @((Join-Path $PSScriptRoot 'write-quality-manifest.py'))
+} catch {
+    Write-Error $_
+    exit 1
+}
+if ($Failed) { exit 1 }

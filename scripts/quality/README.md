@@ -20,17 +20,17 @@ The manifest records a `git_sha`, a blake2b `content_hash` over tracked non-mani
 
 ## Gate tiers
 
-| Tier | Gates | Required for merge? |
-|------|-------|---------------------|
-| **Core** | `civis_3d_verify`, `bevy_egui_check`, `web_test`, `dashboard_typecheck`, `dashboard_build` (or `rust_*` / `godot_test` fallback) | Yes — `status` must be `pass` |
-| **Optional (Unreal)** | `unreal_preflight`, `unreal_build` | No — `skip` is OK; omit entirely on machines without UE |
+| Tier                  | Gates                                                                                                                            | Required for merge?                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **Core**              | `civis_3d_verify`, `bevy_egui_check`, `web_test`, `dashboard_typecheck`, `dashboard_build` (or `rust_*` / `godot_test` fallback) | Yes — `status` must be `pass`                           |
+| **Optional (Unreal)** | `unreal_preflight`, `unreal_build`                                                                                               | No — `skip` is OK; omit entirely on machines without UE |
 
 Unreal scripts (optional tier):
 
-| Script | Gate key | When recorded |
-|--------|----------|---------------|
-| `clients/unreal-show/scripts/verify-unreal-ready.ps1` | `unreal_preflight` | `CIVIS_QUALITY_UNREAL=1` or UE+UBT detected at emit time |
-| `clients/unreal-show/scripts/build.ps1` (full, no `-SkipUe`) | `unreal_build` | Same; only runs when `UE_ROOT` or Epic `UE_*` + UBT/`Build.bat` exists |
+| Script                                                       | Gate key           | When recorded                                                          |
+| ------------------------------------------------------------ | ------------------ | ---------------------------------------------------------------------- |
+| `clients/unreal-show/scripts/verify-unreal-ready.ps1`        | `unreal_preflight` | `CIVIS_QUALITY_UNREAL=1` or UE+UBT detected at emit time               |
+| `clients/unreal-show/scripts/build.ps1` (full, no `-SkipUe`) | `unreal_build`     | Same; only runs when `UE_ROOT` or Epic `UE_*` + UBT/`Build.bat` exists |
 
 Agent smoke (fast default): `scripts/agent-smoke.ps1` — Rust tests + offline Unreal preflight.
 

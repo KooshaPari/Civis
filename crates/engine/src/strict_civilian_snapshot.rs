@@ -7,14 +7,15 @@ use std::{
 };
 
 use civ_agents::{
-    ActorVisual, Alignment, Civilian, LodTier, Needs, Position3d, Tools, Velocity, Wardrobe,
+    ActorVisual, Alignment, Civilian, ClusterMember, LodTier, Needs, Position3d, Psyche,
+    SocialGraph, Tools, Velocity, Wardrobe,
 };
 use civ_genetics::Dna;
 use civ_needs::{Health, Needs as LifeNeeds};
 use hecs::{Entity, EntityBuilder, World};
 use serde::{Deserialize, Serialize};
 
-use crate::engine::Citizen;
+use crate::engine::{Citizen, PsycheDrivenBehavior};
 
 pub(crate) mod unique_json {
     use std::fmt;
@@ -134,6 +135,14 @@ pub struct CivilianRecord {
     pub health: Option<Health>,
     pub visual: Option<ActorVisual>,
     pub citizen: Option<Citizen>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cluster: Option<ClusterMember>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub psyche: Option<Psyche>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub social: Option<SocialGraph>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub behavior: Option<PsycheDrivenBehavior>,
 }
 
 fn supported(id: TypeId) -> bool {
@@ -150,6 +159,10 @@ fn supported(id: TypeId) -> bool {
         TypeId::of::<Health>(),
         TypeId::of::<ActorVisual>(),
         TypeId::of::<Citizen>(),
+        TypeId::of::<ClusterMember>(),
+        TypeId::of::<Psyche>(),
+        TypeId::of::<SocialGraph>(),
+        TypeId::of::<PsycheDrivenBehavior>(),
     ]
     .contains(&id)
 }
@@ -167,6 +180,12 @@ pub(crate) fn capture_civilian(entity: hecs::EntityRef<'_>) -> Result<CivilianRe
     {
         return Err("DNA exceeds size limit".into());
     }
+    if entity
+        .get::<&SocialGraph>()
+        .is_some_and(|graph| graph.ties.len() > civ_agents::social::MAX_TIES)
+    {
+        return Err("social graph exceeds tie limit".into());
+    }
     Ok(CivilianRecord {
         entity_bits: entity.entity().to_bits().get(),
         civilian,
@@ -181,6 +200,10 @@ pub(crate) fn capture_civilian(entity: hecs::EntityRef<'_>) -> Result<CivilianRe
         health: entity.get::<&Health>().map(|x| *x),
         visual: entity.get::<&ActorVisual>().map(|x| *x),
         citizen: entity.get::<&Citizen>().map(|x| *x),
+        cluster: entity.get::<&ClusterMember>().map(|x| *x),
+        psyche: entity.get::<&Psyche>().map(|x| (*x).clone()),
+        social: entity.get::<&SocialGraph>().map(|x| (*x).clone()),
+        behavior: entity.get::<&PsycheDrivenBehavior>().map(|x| *x),
     })
 }
 
@@ -256,6 +279,45 @@ impl CivilianSnapshot {
             {
                 return Err("DNA exceeds size limit".into());
             }
+            if let Some(graph) = &entry.social {
+                if graph.ties.len() > civ_agents::social::MAX_TIES
+                    || graph
+                        .ties
+                        .windows(2)
+                        .any(|pair| pair[0].other >= pair[1].other)
+                    || graph.ties.iter().any(|tie| {
+                        [tie.kinship, tie.familiarity, tie.affinity, tie.trust]
+                            .iter()
+                            .any(|v| !v.is_finite())
+                    })
+                {
+                    return Err("invalid social graph".into());
+                }
+            }
+            if let Some(psyche) = &entry.psyche {
+                let t = psyche.temperament;
+                let m = psyche.mood;
+                if psyche
+                    .drives
+                    .iter()
+                    .chain(psyche.beliefs.iter())
+                    .chain(
+                        [
+                            t.reactivity,
+                            t.sociability,
+                            t.risk_tol,
+                            t.impulsivity,
+                            m.valence,
+                            m.arousal,
+                            psyche.maturity,
+                        ]
+                        .iter(),
+                    )
+                    .any(|v| !v.is_finite())
+                {
+                    return Err("non-finite psyche".into());
+                }
+            }
             if !entry.velocity.dx.is_finite() || !entry.velocity.dy.is_finite() {
                 return Err("non-finite velocity".into());
             }
@@ -318,6 +380,18 @@ impl CivilianSnapshot {
                 builder.add(x);
             }
             if let Some(x) = entry.citizen {
+                builder.add(x);
+            }
+            if let Some(x) = entry.cluster {
+                builder.add(x);
+            }
+            if let Some(x) = &entry.psyche {
+                builder.add(x.clone());
+            }
+            if let Some(x) = &entry.social {
+                builder.add(x.clone());
+            }
+            if let Some(x) = entry.behavior {
                 builder.add(x);
             }
             world.spawn_at(

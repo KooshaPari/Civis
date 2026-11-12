@@ -64,3 +64,39 @@ fn nested_unknown_and_duplicate_json_keys_fail() {
     )
     .is_err());
 }
+
+#[test]
+fn evolved_seed_world_preserves_observed_components() {
+    let mut sim = Simulation::with_seed(42);
+    sim.tick();
+    sim.tick();
+    assert!(
+        sim.world
+            .query::<&civ_agents::ClusterMember>()
+            .iter()
+            .count()
+            > 0
+    );
+    assert!(sim.world.query::<&civ_agents::Psyche>().iter().count() > 0);
+    assert!(sim.world.query::<&civ_agents::SocialGraph>().iter().count() > 0);
+    assert!(
+        sim.world
+            .query::<&civ_engine::engine::PsycheDrivenBehavior>()
+            .iter()
+            .count()
+            > 0
+    );
+    let snapshot = SeedWorldSnapshot::capture(&sim.world).unwrap();
+    let bytes = snapshot.to_json().unwrap();
+    let restored = SeedWorldSnapshot::from_json(&bytes)
+        .unwrap()
+        .restore()
+        .unwrap();
+    assert_eq!(
+        SeedWorldSnapshot::capture(&restored)
+            .unwrap()
+            .to_json()
+            .unwrap(),
+        bytes
+    );
+}

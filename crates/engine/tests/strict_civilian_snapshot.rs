@@ -254,3 +254,78 @@ fn mixed_supported_archetypes_roundtrip() {
         vec![1, 2, 3]
     );
 }
+
+#[test]
+fn invalid_evolved_social_graph_is_rejected() {
+    let mut world = World::new();
+    let entity = world.spawn(civilian());
+    let mut graph = civ_agents::SocialGraph::default();
+    graph.ties = (0..=civ_agents::social::MAX_TIES)
+        .map(|i| civ_agents::social::Tie::new(i as u64, 0))
+        .collect();
+    world.insert_one(entity, graph).unwrap();
+    assert!(CivilianSnapshot::capture(&world).is_err());
+    world
+        .get::<&mut civ_agents::SocialGraph>(entity)
+        .unwrap()
+        .ties
+        .truncate(1);
+    world
+        .get::<&mut civ_agents::SocialGraph>(entity)
+        .unwrap()
+        .ties[0]
+        .trust = f32::NAN;
+    assert!(CivilianSnapshot::capture(&world).is_err());
+}
+
+#[test]
+fn social_graph_requires_unique_sorted_ties_and_preserves_references() {
+    let mut world = World::new();
+    let first = world.spawn(civilian());
+    let mut other = civilian();
+    other.0.id = 43;
+    let second = world.spawn(other);
+    let graph = civ_agents::SocialGraph {
+        ties: vec![civ_agents::social::Tie::new(43, 1)],
+    };
+    world.insert_one(first, graph.clone()).unwrap();
+    let restored = CivilianSnapshot::capture(&world)
+        .unwrap()
+        .restore()
+        .unwrap();
+    assert_eq!(
+        *restored.get::<&civ_agents::SocialGraph>(first).unwrap(),
+        graph
+    );
+    assert_eq!(
+        restored.get::<&Civilian>(second).unwrap().id,
+        graph.ties[0].other
+    );
+    world
+        .get::<&mut civ_agents::SocialGraph>(first)
+        .unwrap()
+        .ties
+        .push(civ_agents::social::Tie::new(43, 2));
+    assert!(CivilianSnapshot::capture(&world).is_err());
+    world
+        .get::<&mut civ_agents::SocialGraph>(first)
+        .unwrap()
+        .ties[1]
+        .other = 1;
+    assert!(CivilianSnapshot::capture(&world).is_err());
+    world
+        .get::<&mut civ_agents::SocialGraph>(first)
+        .unwrap()
+        .ties[1]
+        .other = 44;
+    let json = String::from_utf8(
+        CivilianSnapshot::capture(&world)
+            .unwrap()
+            .to_json()
+            .unwrap(),
+    )
+    .unwrap();
+    let invalid = json.replacen("\"other\":44", "\"other\":42", 1);
+    assert_ne!(invalid, json);
+    assert!(CivilianSnapshot::from_json(invalid.as_bytes()).is_err());
+}

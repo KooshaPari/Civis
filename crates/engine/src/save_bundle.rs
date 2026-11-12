@@ -18,9 +18,9 @@ use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
 pub const CIVSAVE_SPEC_ID: &str = "CIV-1000";
 /// Folder format version for `metadata.json`.
 ///
-/// v6 requires an RNG stream sidecar; v5 adds the integrity manifest.
+/// v7 requires the civilian allocator counter; v6 requires the RNG stream.
 /// Earlier versions still load without an exact saved RNG position.
-pub const CIVSAVE_FORMAT_VERSION: u32 = 6;
+pub const CIVSAVE_FORMAT_VERSION: u32 = 7;
 /// Default on-disk save extension (zstd-compressed tar).
 pub const CIVSAVE_ARCHIVE_EXTENSION: &str = "civsave.zst";
 /// FR-SAVE-006 — integrity manifest written last, covering every other
@@ -32,7 +32,13 @@ const CLUSTER_STOCKS_FILE: &str = "cluster_stocks.json";
 const ENVIRONMENT_FILE: &str = "environment.json";
 const INSTITUTIONS_FILE: &str = "institutions.json";
 const RNG_FILE: &str = "rng.json";
+const CIVILIAN_ALLOCATOR_FILE: &str = "civilian_allocator.json";
 const RNG_ALGORITHM: &str = "rand_chacha-0.3-chacha8";
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SavedCivilianAllocator {
+    next_civilian_id: u64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SavedRng {
@@ -194,7 +200,9 @@ pub enum SaveBundleError {
     ///
     /// Raised *before* the affected component is deserialized, so a tampered
     /// payload never reaches `serde_json::from_str`.
-    #[error("integrity check failed for {component} in {save_root}: expected blake3 {expected}, found {actual}")]
+    #[error(
+        "integrity check failed for {component} in {save_root}: expected blake3 {expected}, found {actual}"
+    )]
     HashMismatch {
         /// Component whose digest disagreed.
         component: String,
@@ -697,6 +705,15 @@ impl CivSaveBundle {
         };
         fs::write(&rng_path, serde_json::to_string(&rng)?).map_err(|e| io_err(&rng_path, e))?;
 
+        let allocator_path = dir.join(CIVILIAN_ALLOCATOR_FILE);
+        fs::write(
+            &allocator_path,
+            serde_json::to_string(&SavedCivilianAllocator {
+                next_civilian_id: sim.next_civilian_id,
+            })?,
+        )
+        .map_err(|e| io_err(&allocator_path, e))?;
+
         let environment_path = dir.join(ENVIRONMENT_FILE);
         let environment = SavedEnvironment {
             planet: *sim.planet(),
@@ -823,6 +840,20 @@ impl CivSaveBundle {
                 }
             }
         }
+
+        let saved_allocator = if file_version >= 7 {
+            let path = dir.join(CIVILIAN_ALLOCATOR_FILE);
+            if !path.is_file() {
+                return Err(SaveBundleError::MissingComponent {
+                    dir: dir.to_path_buf(),
+                    component: CIVILIAN_ALLOCATOR_FILE,
+                });
+            }
+            let json = fs::read_to_string(&path).map_err(|e| io_err(&path, e))?;
+            Some(serde_json::from_str::<SavedCivilianAllocator>(&json)?)
+        } else {
+            None
+        };
 
         let saved_rng =
             if file_version >= 6 {
@@ -989,6 +1020,10 @@ impl CivSaveBundle {
             rng.set_stream(saved.stream);
             rng.set_word_pos(pos);
             sim.rng = rng;
+        }
+
+        if let Some(saved) = saved_allocator {
+            sim.next_civilian_id = saved.next_civilian_id;
         }
 
         Ok(sim)
@@ -1226,6 +1261,77 @@ fn read_metadata_from_tar(bytes: &[u8]) -> Result<CivSaveMetadata, SaveBundleErr
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn save_load_preserves_next_civilian_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut sim = crate::engine::Simulation::with_seed(42);
+        sim.next_civilian_id = 1_000_123;
+        super::CivSaveBundle::save_dir(dir.path(), &sim).unwrap();
+        let restored = super::CivSaveBundle::load_dir(dir.path()).unwrap();
+        assert_eq!(restored.next_civilian_id, sim.next_civilian_id);
+    }
+
+    #[test]
+    fn allocator_counter_archive_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("world.civsave.zst");
+        let mut sim = Simulation::with_seed(42);
+        sim.next_civilian_id = 1_000_123;
+        CivSaveBundle::save_archive(&path, &sim).unwrap();
+        assert_eq!(
+            CivSaveBundle::load_archive(path).unwrap().next_civilian_id,
+            1_000_123
+        );
+    }
+
+    #[test]
+    fn allocator_counter_rejects_missing_or_malformed_v7() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        let allocator = path.join(CIVILIAN_ALLOCATOR_FILE);
+        fs::write(&allocator, r#"{"next_civilian_id":"invalid"}"#).unwrap();
+        reseal_rng_fixture(&path, 7);
+        assert!(CivSaveBundle::load_dir(&path).is_err());
+        fs::remove_file(&allocator).unwrap();
+        reseal_rng_fixture(&path, 7);
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::MissingComponent {
+                component: CIVILIAN_ALLOCATOR_FILE,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn allocator_counter_rejects_unsealed_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::write(
+            path.join(CIVILIAN_ALLOCATOR_FILE),
+            r#"{"next_civilian_id":1000123}"#,
+        )
+        .unwrap();
+        assert!(matches!(
+            CivSaveBundle::load_dir(&path),
+            Err(SaveBundleError::HashMismatch { component, .. }) if component == CIVILIAN_ALLOCATOR_FILE
+        ));
+    }
+
+    #[test]
+    fn allocator_counter_v6_uses_legacy_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("save");
+        CivSaveBundle::save_dir(&path, &Simulation::with_seed(42)).unwrap();
+        fs::remove_file(path.join(CIVILIAN_ALLOCATOR_FILE)).unwrap();
+        reseal_rng_fixture(&path, 6);
+        assert_eq!(
+            CivSaveBundle::load_dir(&path).unwrap().next_civilian_id,
+            1_000_000
+        );
+    }
     use super::*;
 
     fn reseal_rng_fixture(path: &Path, version: u32) {
@@ -1961,9 +2067,11 @@ mod tests {
             loaded.set_settlement_population(71, 150);
             loaded.phase_institutions();
             assert!(loaded.last_tick_institution_events().is_empty());
-            assert!(loaded.institutions()[&71]
-                .iter()
-                .all(|inst| inst.level == 2));
+            assert!(
+                loaded.institutions()[&71]
+                    .iter()
+                    .all(|inst| inst.level == 2)
+            );
         }
     }
 

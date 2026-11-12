@@ -6,29 +6,22 @@ if ($env:CI -in @("true", "1") -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:S
     Write-Host "quality-manifest: skipped (CI or SKIP_QUALITY*)"
     exit 0
 }
-$manifestPath = Join-Path (Get-Location) ".ci\quality-manifest.json"
-if ($env:FORCE_QUALITY_MANIFEST -ne "1" -and (Test-Path -LiteralPath $manifestPath)) {
-    $age = (Get-Date) - (Get-Item -LiteralPath $manifestPath).LastWriteTime
-    if ($age.TotalSeconds -lt 3600) {
-        Write-Host "quality-manifest: skipped (recent manifest < 1h old)"
-        exit 0
-    }
-}
-
 $results = @{}
 $Failed = $false
-
-function Invoke-Gate {
-    param([string]$Name, [scriptblock]$Block)
-    & $Block
-    if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
-        $results[$Name] = @{ status = "fail"; detail = "exit $LASTEXITCODE" }
-        Write-Host "  fail $Name"
-        $script:Failed = $true
-        return
-    }
-    $results[$Name] = @{ status = "pass"; detail = "" }
-    Write-Host "  pass $Name"
+. (Join-Path $PSScriptRoot 'Invoke-CheckedNative.ps1')
+if ($env:SKIP_CIVIS_3D_VERIFY -eq '1' -or $env:SKIP_BEVY_EGUI_CHECK -eq '1') {
+    Write-Error 'required quality gates cannot be skipped'
+    exit 1
+}
+if (-not (Get-Command just -ErrorAction SilentlyContinue)) {
+    Write-Error 'just is required for civis_3d_verify and bevy_egui_check'
+    exit 1
+}
+try {
+    $qualityHead = Assert-QualityTree
+} catch {
+    Write-Error $_
+    exit 1
 }
 
 # Ensure the Rust toolchain is on PATH (cargo may not be visible when invoked
@@ -48,41 +41,23 @@ if ($homeDir) {
 }
 
 Write-Host "==> civis quality manifest (local gates)"
-$skipCivisVerify = $env:SKIP_CIVIS_3D_VERIFY -eq "1" -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:SKIP_QUALITY -eq "1"
-$skipBevyEguiCheck = $env:SKIP_BEVY_EGUI_CHECK -eq "1" -or $env:SKIP_QUALITY_MANIFEST -eq "1" -or $env:SKIP_QUALITY -eq "1"
+Invoke-Gate "civis_3d_verify" { Invoke-CheckedNative just @('civis-3d-verify') }
+Invoke-Gate "bevy_egui_check" { Invoke-CheckedNative just @('bevy-egui-check') }
 
-if (Get-Command just -ErrorAction SilentlyContinue) {
-    if ($skipCivisVerify) {
-        $results["civis_3d_verify"] = @{ status = "skip"; detail = "SKIP_CIVIS_3D_VERIFY/SKIP_QUALITY_MANIFEST set" }
-        Write-Host "  skip civis_3d_verify"
-    } else {
-        Invoke-Gate "civis_3d_verify" { just civis-3d-verify }
-    }
-    if ($skipBevyEguiCheck) {
-        $results["bevy_egui_check"] = @{ status = "skip"; detail = "SKIP_BEVY_EGUI_CHECK/SKIP_QUALITY_MANIFEST set" }
-        Write-Host "  skip bevy_egui_check"
-    } else {
-        Invoke-Gate "bevy_egui_check" { just bevy-egui-check }
-    }
-} else {
-    Invoke-Gate "rust_fmt" { cargo fmt --check }
-    Invoke-Gate "rust_clippy" { cargo clippy --workspace --all-targets -- -D warnings }
-    Invoke-Gate "rust_test" { cargo test --workspace }
-    Invoke-Gate "godot_test" { Push-Location clients/godot-ref/rust; cargo test; Pop-Location }
-}
-
-Invoke-Gate "web_test" { Push-Location web; npm test; Pop-Location }
+Invoke-Gate "web_test" { Push-Location web; try { Invoke-CheckedNative npm @('test') } finally { Pop-Location } }
 Invoke-Gate "dashboard_typecheck" {
     Push-Location web/dashboard
-    bun install --frozen-lockfile
-    bun run typecheck
-    Pop-Location
+    try {
+        Invoke-CheckedNative bun @('install', '--frozen-lockfile')
+        Invoke-CheckedNative bun @('run', 'typecheck')
+    } finally { Pop-Location }
 }
 Invoke-Gate "dashboard_build" {
     Push-Location web/dashboard
-    bun install --frozen-lockfile
-    bun run build
-    Pop-Location
+    try {
+        Invoke-CheckedNative bun @('install', '--frozen-lockfile')
+        Invoke-CheckedNative bun @('run', 'build')
+    } finally { Pop-Location }
 }
 
 $repoRoot = (git rev-parse --show-toplevel).Trim()
@@ -101,6 +76,7 @@ foreach ($entry in $optionalUnreal.GetEnumerator()) {
 # the bash emitter: default is `skip` so we don't add minutes to the default
 # lefthook pre-push.
 $extrasOptIn = $env:CIVIS_QUALITY_EXTRAS -eq "1"
+$coreFailed = $Failed
 $extras = @(
     @{ key = "extra_cargo_audit";   cmd = { cargo audit --quiet };                          tool = "cargo-audit" },
     @{ key = "extra_cargo_deny";     cmd = { cargo deny check };                             tool = "cargo-deny" },
@@ -124,8 +100,16 @@ foreach ($e in $extras) {
         continue
     }
     Invoke-Gate $e.key $e.cmd
+    $Failed = $coreFailed
 }
 
+if ($Failed) { exit 1 }
+try {
+    $null = Assert-QualityTree $qualityHead
+} catch {
+    Write-Error $_
+    exit 1
+}
 $gatesJson = @{}
 foreach ($entry in $results.GetEnumerator()) {
     $gatesJson[$entry.Key] = $entry.Value
@@ -133,6 +117,11 @@ foreach ($entry in $results.GetEnumerator()) {
 $env:QUALITY_GATES_JSON = ($gatesJson | ConvertTo-Json -Compress -Depth 5)
 $env:MANIFEST_PATH = ".ci/quality-manifest.json"
 New-Item -ItemType Directory -Force -Path .ci | Out-Null
-python (Join-Path $PSScriptRoot "write-quality-manifest.py")
-$writeExit = $LASTEXITCODE
-if ($Failed -or $writeExit -ne 0) { exit 1 }
+try {
+    $python = if (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } else { 'python' }
+    Invoke-CheckedNative $python @((Join-Path $PSScriptRoot 'write-quality-manifest.py'))
+} catch {
+    Write-Error $_
+    exit 1
+}
+if ($Failed) { exit 1 }

@@ -329,3 +329,29 @@ fn social_graph_requires_unique_sorted_ties_and_preserves_references() {
     assert_ne!(invalid, json);
     assert!(CivilianSnapshot::from_json(invalid.as_bytes()).is_err());
 }
+
+#[test]
+fn identical_live_snapshots_can_have_different_next_entity_ids() {
+    let mut left = World::new();
+    let mut right = World::new();
+    let mut entities = Vec::new();
+    for id in 40..43 {
+        let mut item = civilian();
+        item.0.id = id;
+        entities.push((left.spawn(item.clone()), right.spawn(item)));
+    }
+    left.despawn(entities[1].0).unwrap();
+    left.despawn(entities[2].0).unwrap();
+    right.despawn(entities[2].1).unwrap();
+    right.despawn(entities[1].1).unwrap();
+    assert_eq!(
+        CivilianSnapshot::capture(&left).unwrap().to_json().unwrap(),
+        CivilianSnapshot::capture(&right)
+            .unwrap()
+            .to_json()
+            .unwrap()
+    );
+    let mut next = civilian();
+    next.0.id = 100;
+    assert_ne!(left.spawn(next.clone()), right.spawn(next));
+}

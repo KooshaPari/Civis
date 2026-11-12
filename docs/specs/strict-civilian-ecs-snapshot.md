@@ -7,3 +7,5 @@ Its contract is current component and entity identity only. Faction identifiers 
 The experimental extension recognizes optional cluster membership, psyche, social graph, and psyche-driven behavior components. Social ties are capped at the engine limit and must be strictly ordered by target ID; non-finite social and psyche values are rejected. Graph references are not validated against a restored registry; unsupported components still fail closed. Missing optional fields retain their previous canonical representation.
 
 Compatibility is one-way: this reader accepts canonical v1 snapshots lacking these fields, but older strict v1 readers reject records containing them. Version negotiation or a new schema version is required before persisted or cross-version use.
+
+A negative control demonstrates that worlds with identical live snapshots but different despawn order can allocate different next entity IDs. Preserving live identities alone does not preserve the allocator.

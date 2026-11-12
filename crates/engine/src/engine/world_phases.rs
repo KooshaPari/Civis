@@ -39,7 +39,12 @@ fn propagate_cohort_wardrobe_with_lod(
     };
 
     let mut promoted_this_tick = 0_u32;
-    for (_, (wardrobe, lod)) in world.query_mut::<(&mut Wardrobe, &LodTier)>().into_iter() {
+    let mut entities: Vec<_> = world
+        .query_mut::<(&mut Wardrobe, &LodTier)>()
+        .into_iter()
+        .collect();
+    entities.sort_unstable_by_key(|(entity, _)| entity.to_bits());
+    for (_, (wardrobe, lod)) in entities {
         if !should_tick_entity_with_policy(tick, *lod, policy) {
             continue;
         }
@@ -61,6 +66,96 @@ fn propagate_cohort_wardrobe_with_lod(
         currently_at_target,
         total_civilians,
         current_fraction,
+    }
+}
+
+#[cfg(test)]
+mod wardrobe_order_tests {
+    use super::*;
+    use crate::strict_seed_world_snapshot::SeedWorldSnapshot;
+    use rand::{Rng, SeedableRng};
+    use std::collections::BTreeMap;
+
+    fn eras(world: &hecs::World) -> BTreeMap<u64, u16> {
+        world
+            .query::<&Wardrobe>()
+            .iter()
+            .map(|(e, w)| (e.to_bits().get(), w.era))
+            .collect()
+    }
+
+    #[test]
+    fn wardrobe_draws_follow_identity_across_reordered_worlds() {
+        let mut sim = Simulation::with_seed(42);
+        sim.tick();
+        sim.tick();
+        let mut restored = SeedWorldSnapshot::capture(&sim.world)
+            .unwrap()
+            .restore()
+            .unwrap();
+        let original_order: Vec<_> = sim
+            .world
+            .query::<(&Wardrobe, &LodTier)>()
+            .iter()
+            .map(|(e, _)| e)
+            .collect();
+        let restored_order: Vec<_> = restored
+            .query::<(&Wardrobe, &LodTier)>()
+            .iter()
+            .map(|(e, _)| e)
+            .collect();
+        assert_ne!(
+            original_order, restored_order,
+            "test requires different query order"
+        );
+        let assignments = |order: &[hecs::Entity]| {
+            let mut rng = SimRng::seed_from_u64(91);
+            order
+                .iter()
+                .map(|entity| (entity.to_bits().get(), rng.gen::<f32>() < 0.5))
+                .collect::<BTreeMap<_, _>>()
+        };
+        let unsorted_a = assignments(&original_order);
+        let unsorted_b = assignments(&restored_order);
+        assert_ne!(
+            unsorted_a, unsorted_b,
+            "native-order negative control must expose reassigned draws"
+        );
+        assert!(unsorted_a.values().any(|&value| value));
+        assert!(unsorted_a.values().any(|&value| !value));
+        let initial = eras(&sim.world);
+        assert_eq!(initial, eras(&restored));
+        assert!(initial.values().all(|&era| era < u16::MAX));
+        let mut canonical_order = original_order.clone();
+        canonical_order.sort_unstable_by_key(|entity| entity.to_bits());
+        let expected = assignments(&canonical_order);
+        let mut rng_a = SimRng::seed_from_u64(91);
+        let mut rng_b = SimRng::seed_from_u64(91);
+        let params = DiffusionParams { p: 0.5, q: 0.0 };
+        let a = propagate_cohort_wardrobe_with_lod(
+            &mut sim.world,
+            u16::MAX,
+            params,
+            &mut rng_a,
+            0,
+            LodPolicy::default(),
+        );
+        let b = propagate_cohort_wardrobe_with_lod(
+            &mut restored,
+            u16::MAX,
+            params,
+            &mut rng_b,
+            0,
+            LodPolicy::default(),
+        );
+        let actual = eras(&sim.world);
+        assert_eq!(actual, eras(&restored));
+        for (entity, promoted) in expected {
+            assert_eq!(actual[&entity], initial[&entity] + u16::from(promoted));
+        }
+        assert_eq!(a.promoted_this_tick, b.promoted_this_tick);
+        assert!(a.promoted_this_tick > 0 && a.promoted_this_tick < original_order.len() as u32);
+        assert_eq!(rng_a.get_word_pos(), rng_b.get_word_pos());
     }
 }
 

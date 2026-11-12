@@ -1,0 +1,18 @@
+# Save continuity: authoritative state gaps
+
+Status: partial source audit and unverified v8 candidate atop PR 1641. This is not a complete inventory or a claim that saves preserve the simulation.
+
+| State | Current save path | Required evidence |
+| --- | --- | --- |
+| ECS world and spawned civilians | Rebuilt from replay; the spawn operation is absent from that log. The strict seed-world snapshot is opt-in and is not used by the bundle. | Real client spawn/save/load, exact entity and component roundtrip, allocator and reference continuity, unsupported-component rejection. |
+| RNG seed, stream, word position | Version 6 `rng.json`, validated by bundle loader. | Independent save/load replay from a non-default stream, including negative controls and actual random-dependent outcomes. |
+| Research cache and queued work | Version 7 omits `Simulation::research_cache` from the bundle; the v8 candidate adds an integrity-bound sidecar and requires its fields. | Mutate research before save and compare it and subsequent progression after load. |
+| Market prices | Version 7 omits `Simulation::market_state` from the bundle; the v8 candidate adds an integrity-bound sidecar. | Set non-default prices before save, load and compare them and subsequent market evolution. |
+| Civilian identifier counter | Not in version 6 bundle; proposed separately in PR 1641. | Counter roundtrip and independent subsequent allocation without identity reuse. |
+| Building graph, allocator and external ECS references | No complete persistence proof in current snapshot. | Inventory complete field/component coverage and validate allocation and references after loading. |
+| Voxel state | Replay records explicit voxel writes; coastal data has an environment sidecar. | Demonstrate all mutation paths and post-load terrain evolution; do not infer full coverage from those paths alone. |
+| Session replacement | Server loads into a candidate before replacing the active simulation. | Corrupt, incomplete and unsupported saves must reject without changing world, RNG or generation. |
+
+Primary sources: `crates/engine/src/engine.rs` (`Simulation`, `save_state_mirror_to`, `tick`), `crates/engine/src/save_bundle.rs` (`save_dir`, `load_dir`), `crates/server/src/ws_bridge.rs` (`DispatchEffect::LoadSlot`), `docs/specs/cross-client-persistence-regression.md`. The sidecar prototype and its bounds are specified in `docs/specs/strict-seed-world-snapshot.md` on PR 1640.
+
+Archive save replacement currently writes directly to the destination and may destroy a previous slot on failure. Directory saves also mutate in place. Atomicity and crash durability remain unverified.

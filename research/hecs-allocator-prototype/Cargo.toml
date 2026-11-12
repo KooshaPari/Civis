@@ -87,6 +87,7 @@ version = "1.0.117"
 version = "1.0.23"
 
 [features]
+allocator-image = ["serde", "serde/derive", "serde/alloc"]
 column-serialize = ["serde"]
 default = ["std"]
 macros = ["hecs-macros"]
